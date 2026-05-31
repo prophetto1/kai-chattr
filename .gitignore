@@ -15,3 +15,6 @@ __pycache__/
 
 # Machine-local worker access map (pointers to SOPS, no secrets) — not shared
 WORKER-ACCESS.md
+
+# Local-only external reference repos (e.g. OpenHands) — never committed (size + license boundary)
+_references/

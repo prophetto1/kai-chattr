@@ -1,0 +1,42 @@
+# Back-merge: after anything lands on `main` (a production release or a direct hotfix),
+# sync it down to `dev` so dev never falls behind production. Standard GitLab-Flow safety net.
+# Clean merge -> push dev. Conflict -> open a PR (never force-overwrite dev).
+name: Back-merge main to dev
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  backmerge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Merge main -> dev, or open a PR on conflict
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git ls-remote --exit-code --heads origin dev >/dev/null 2>&1; then
+            echo "dev branch missing — nothing to back-merge."; exit 0
+          fi
+          git fetch origin dev
+          git checkout -B dev origin/dev
+          if git merge --no-edit origin/main; then
+            git push origin dev
+            echo "Back-merged main -> dev cleanly."
+          else
+            git merge --abort
+            gh pr create --base dev --head main \
+              --title "Back-merge main into dev" \
+              --body "Automated sync: \`main\` has commits not in \`dev\` (e.g. a hotfix) that conflict. Resolve and merge to keep dev current." \
+              || echo "A main->dev PR already exists; leaving it for manual resolution."
+          fi
