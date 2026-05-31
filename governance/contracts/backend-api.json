@@ -1,0 +1,22 @@
+{
+  "$comment": "SOURCE OF TRUTH for the Backend & API contract. ONE contract holds endpoint shape, error envelope, auth/session, pagination, and telemetry as rules. chattr backend is Python FastAPI (chat server + MCP bridge + agent wrappers). Rules locked only as a migrated slice demands them.",
+  "id": "backend-api",
+  "title": "Backend & API",
+  "status": "planned",
+  "summary": "The FastAPI surface and its conventions: endpoint definitions and routing, a single error-envelope shape, auth / session validation, pagination, the WebSocket event vocabulary, and telemetry / logging. Localhost-only security posture (session token + loopback registration + origin checks) carried forward from legacy chattr.",
+  "covers": ["endpoints", "error-envelope", "auth-session", "websocket-events", "pagination", "telemetry-logging", "localhost-security"],
+  "rules": [],
+  "enforcedBy": "contract tests / OpenAPI diff + ast-grep — derived from these rules",
+  "enforcement": [
+    "Endpoint rule (pending) — routes follow the agreed router/path layout.",
+    "Error-envelope rule (pending) — all error responses match one shape."
+  ],
+  "openItems": [
+    "Endpoint definitions: router layout + path conventions — define and lock.",
+    "Error envelope: the single error response shape — define and lock.",
+    "Auth / session: how the server validates the session token — define and lock.",
+    "WebSocket event vocabulary (agents, agent_renamed, status, clear, etc.) — define and lock.",
+    "Localhost security posture (session token, loopback-only registration, origin checks, no shell=True) — confirm and lock.",
+    "Telemetry & logging conventions — define and lock."
+  ]
+}

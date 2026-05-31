@@ -1,0 +1,17 @@
+node_modules
+dist
+out
+.next
+.source
+*.tsbuildinfo
+.wrangler
+*.local
+.DS_Store
+.env
+.env.*
+__pycache__/
+*.pyc
+.venv
+
+# Machine-local worker access map (pointers to SOPS, no secrets) — not shared
+WORKER-ACCESS.md
