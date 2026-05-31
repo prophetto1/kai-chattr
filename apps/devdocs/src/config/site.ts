@@ -6,6 +6,6 @@ export const SITE_NAME = 'kai · chattr docs'
 export const SITE_TAGLINE =
   'Governance and architecture for the kai-chattr coordination room.'
 export const DOCS_URL =
-  process.env.NEXT_PUBLIC_DOCS_URL ?? 'http://localhost:8370'
+  process.env.NEXT_PUBLIC_DOCS_URL ?? 'http://localhost:8870'
 export const KAI_CHATTR_WEB_URL =
-  process.env.NEXT_PUBLIC_KAI_CHATTR_WEB_URL ?? 'http://localhost:8360'
+  process.env.NEXT_PUBLIC_KAI_CHATTR_WEB_URL ?? 'http://localhost:8800'

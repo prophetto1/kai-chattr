@@ -16,3 +16,19 @@ apart.
 - **[Platform Contracts](/contracts)** — the design system, frontend, backend
   API, coordination, data, repo-process, and dependency contracts that define
   how kai-chattr is built.
+- **[Migration](/migration)** — the chattr + Letta + OpenHands fusion, repo
+  structure, and terminal runtime.
+
+## Platform ports & surfaces
+
+Canonical map of local dev ports and deployed surfaces across the repo family.
+
+| Project | Localhost dev | Localhost docs | Cloudflare dev | Cloudflare docs | Production site | Production docs |
+|---|---|---|---|---|---|---|
+| writing-system *(legacy)* | `:7530` | `:7570` | — | — | — | — |
+| blockdata *(new)* | `:6300` | `:6370` | `blockdata-eal.pages.dev` | `blockdata-docs.pages.dev` | `blockdata.run` | `docs.blockdata.run` |
+| chattr *(legacy)* | `:8300` | — | — | — | — | — |
+| kai-chattr *(new)* | `:8800` | `:8870` | `kai-chattr.pages.dev` | `kai-chattr-docs.pages.dev` | — | — |
+| kai *(new)* | `:9500` | `:9560` | _TBD_ | _TBD_ | _TBD_ | _TBD_ |
+
+`—` = surface not created · `_TBD_` = exists but URL pending confirmation. Legacy **chattr** has only its localhost dev server (docs site never created). **kai-chattr** and **kai** have no production custom domain yet — the `.pages.dev` URL is the dev surface.

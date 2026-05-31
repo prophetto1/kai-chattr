@@ -10,8 +10,8 @@
     "predev": "pnpm run generate:mdx",
     "prebuild": "pnpm run generate:mdx",
     "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",
-    "dev": "cross-env NODE_OPTIONS=--no-deprecation NEXT_PUBLIC_DOCS_URL=http://localhost:8370 NEXT_PUBLIC_KAI_CHATTR_WEB_URL=http://localhost:8360 next dev -p 8370 -H 0.0.0.0",
-    "start": "cross-env NODE_OPTIONS=--no-deprecation next start -p 8370 -H 0.0.0.0"
+    "dev": "cross-env NODE_OPTIONS=--no-deprecation NEXT_PUBLIC_DOCS_URL=http://localhost:8870 NEXT_PUBLIC_KAI_CHATTR_WEB_URL=http://localhost:8800 next dev -p 8870 -H 0.0.0.0",
+    "start": "cross-env NODE_OPTIONS=--no-deprecation next start -p 8870 -H 0.0.0.0"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.0",

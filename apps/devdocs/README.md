@@ -9,7 +9,7 @@ The `content/contracts/*.mdx` files are **generated** by
 
 ```sh
 pnpm install
-pnpm run dev    # http://localhost:8370
+pnpm run dev    # http://localhost:8870
 ```
 
 ## Static build
