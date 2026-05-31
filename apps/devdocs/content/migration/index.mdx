@@ -1,0 +1,56 @@
+---
+title: "Overview"
+description: "How kai-chattr is built — a fusion of chattr's coordination core, Letta's memory substrate, and OpenHands' frontend, migrated outside-in by the blockdata method."
+---
+
+# Migration · Overview
+
+{/* Hand-authored design thesis — NOT generated from contracts. Status: drafting. */}
+
+kai-chattr is not a rewrite from scratch. It is a **composition** of proven
+pieces lifted from across the family and conformed to kai-chattr's locked
+contracts.
+
+## The fusion
+
+| Source | Lifts | Becomes |
+|---|---|---|
+| **chattr** (this repo) | coordination/runtime spine — room, MCP bridge, agent registry/router/heartbeat, rules/jobs/sessions, the external-CLI wrapper runtime | `services/api` |
+| **Letta** (extracted) | memory/identity substrate — editable + shared memory blocks, tag-based identity, persistent context | reached via a **memory-as-MCP-tools** seam over the ported block store |
+| **OpenHands** (MIT) | the frontend stack + surface — chat, tabbed RightDock tool-dock, xterm Terminal, Monaco Code | `apps/web` |
+
+> **Unifying frame:** backend spine = chattr · memory engine = Letta (via MCP
+> tools) · frontend stack & surface = OpenHands (reskinned to v3/KAI).
+> `xterm.js` is the shared terminal across runtime and UI. All borrows are
+> MIT/AGPL-compatible.
+
+## Locked decisions (2026-05-31)
+
+1. **CLI agents stay the runtime.** chattr keeps its external-CLI,
+   terminal-injection execution model. We do **not** adopt Letta's agent loop or
+   make agents Letta-managed — we only *sophisticate the presentation* via
+   OpenHands' `xterm.js`. See [Terminal runtime](/migration/terminal-runtime).
+2. **Adopt the OpenHands frontend stack** as kai-chattr's working stack —
+   React 19 · React Router v7 · Vite · Tailwind v4 · TanStack Query · Zustand ·
+   Monaco. It is near-identical to the writing-system legacy stack, so OH's
+   surface becomes *adapt-and-reskin*, not rebuild.
+3. **Migrate by the blockdata method** — outside-in, governance-first.
+
+## The migration method (from blockdata)
+
+1. **Governed shell first.** Contracts (`governance/`), enforcement scripts, and
+   the devdocs site are completed before app code lands. Docs and enforcement
+   read the same JSON so they cannot drift.
+2. **Copy-only.** Legacy `chattr` is never touched — files are copied into the
+   new structure; the legacy app keeps operating.
+3. **Slice by slice, outside-in.** Each capability updates its contract *before*
+   its code is brought in; deny-by-default gates keep every slice conformant.
+
+## Pages
+
+- **[Repo structure](/migration/repo-structure)** — target layout + the
+  legacy→new copy manifest.
+- **[Terminal runtime](/migration/terminal-runtime)** — agent → PTY → WebSocket
+  → embedded xterm.js, with elevated approval cards.
+- *Planned:* fusion architecture (the Letta MCP-tools seam in detail), frontend
+  stack adoption + cut-plan from OpenHands.

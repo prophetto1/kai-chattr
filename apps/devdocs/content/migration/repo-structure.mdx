@@ -1,0 +1,139 @@
+---
+title: "Repo structure"
+description: "The proposed target layout for kai-chattr and how the legacy chattr codebase is copied into it — outside-in, copy-only, legacy untouched."
+---
+
+# Migration · Repo structure
+
+{/* Hand-authored design proposal — NOT generated from contracts. Status: drafting. Layout/naming decisions here are intended to be fed back and locked into the repo-process and backend-api contracts. */}
+
+The target repository layout for **kai-chattr** and the manifest for moving the
+legacy **chattr** codebase into it. See the [Overview](/migration) for the
+fusion thesis and the migration method this page operates within.
+
+> **Status: drafting.** The `repo-process` and `backend-api` contracts leave
+> layout and naming as open items. This proposal defines them so they can be
+> reviewed and locked back into those contracts.
+
+## Principles
+
+- **Copy-only — legacy is never touched.** Every file lands in kai-chattr by
+  copy. The legacy repo keeps operating from its original location with its
+  original files. No moves, no deletions, no edits to the legacy tree.
+- **Outside-in.** The governed shell (contracts · enforcement · docs) is
+  completed first; application code is brought in afterward, one slice at a
+  time, each slice conforming to its contract.
+- **Reorganize the backend, rebuild the frontend.** The Python backend is
+  genuinely portable and is copied into a clean package. The legacy `static/`
+  frontend is **reference only** — the [frontend contract](/contracts/frontend)
+  requires a v3 rebuild on the adopted stack.
+- **Contracts are the source of truth.** Python via `uv` only, no repo-local
+  `.venv`, dependencies allowlisted, secrets via SOPS — see
+  [repo-process](/contracts/repo-process).
+
+## Target layout
+
+```text
+kai-chattr/
+├─ apps/                          # deployable end-user apps
+│  ├─ web/                        # v3 UI — OpenHands stack (React 19 · RR7 · Vite · Tailwind v4 · TanStack · Zustand · Monaco), reskinned to v3/KAI
+│  ├─ desktop/                    # RESERVED — local Tauri build, scoped later
+│  └─ devdocs/                    # this fumadocs site
+├─ services/
+│  └─ api/                        # FastAPI chat server (Python, uv, src-layout)
+│     ├─ src/chattr_api/
+│     │  ├─ core/                 # store · registry · router · rules · summaries · archive · jobs
+│     │  ├─ sessions/             # session_engine · session_store · schedules
+│     │  ├─ agents/               # agents
+│     │  ├─ mcp/                  # mcp_bridge · mcp_proxy
+│     │  ├─ api/                  # main.py (app factory) + routes (platform · terminal · desktop_runtime)
+│     │  ├─ events/               # jsonl_stream · terminal_event_schema
+│     │  ├─ launch/               # chattr_launcher + agents.toml
+│     │  ├─ wrappers/             # wrapper · wrapper_api · wrapper_unix · wrapper_windows
+│     │  ├─ config.py             # from config_loader
+│     │  └─ __main__.py           # entry, from run.py
+│     ├─ pyproject.toml           # merged from legacy pyproject + requirements
+│     └─ tests/                   # the pytest suite
+├─ packages/
+│  └─ schemas/                    # JSON schemas + session_templates (shared web↔api)
+├─ scripts/launchers/             # windows/*.bat + unix/*.sh agent launchers
+├─ governance/  secrets/  docs/   # governance · SOPS · working docs
+└─ package.json + pnpm-workspace.yaml + turbo.json
+```
+
+The `apps/* · services/* · packages/*` split is the standard polyglot-monorepo
+pattern (Turborepo / pnpm-workspaces). The Python service is a single
+installable package with **src-layout** and its own PEP-621 `pyproject.toml` —
+completing the modularization the legacy `server/` package began.
+
+## Copy manifest
+
+### `services/api/` — Python backend (copy + repackage)
+
+| Legacy | New — `services/api/src/chattr_api/` |
+|---|---|
+| `store · registry · router · rules · summaries · archive · jobs` | `core/` |
+| `session_engine · session_store · schedules` | `sessions/` |
+| `agents` | `agents/` |
+| `mcp_bridge · mcp_proxy` | `mcp/` |
+| `app.py` + `server/api/{platform,terminal,desktop_runtime}` | `api/` (`app.py` → `main.py` factory) |
+| `server/events/*` | `events/` |
+| `server/launch/{chattr_launcher,agents.toml}` | `launch/` |
+| `wrapper · wrapper_api · wrapper_unix · wrapper_windows` | `wrappers/` |
+| `config_loader` | `config.py` |
+| `run.py` | `__main__.py` / `[project.scripts]` |
+| `config.toml`, `config.local.toml.example` | templates (not `config.local.toml`) |
+| `pyproject.toml` + `requirements.txt` | merged → `pyproject.toml` (lock regenerated; deps must pass the allowlist) |
+| `tests/*` + `conftest.py` | `services/api/tests/` |
+
+### `packages/schemas/` — shared (copy)
+
+`schemas/*.json` (`session-draft-message-metadata`, `session-start-request`,
+`session-template`) + `session_templates/*.json` (`code-review`, `debate`,
+`design-critique`, `planning`).
+
+### `apps/web/` — frontend (rebuild on the adopted stack; copy assets only)
+
+- **Stack:** the OpenHands frontend stack (see [Overview](/migration)) — adopt
+  it so OH's chat surface, tabbed RightDock tool-dock, xterm Terminal tab, and
+  Monaco Code tab are **adapt-and-reskin**, not rebuild-from-zero.
+- **Copy → `apps/web/public/`:** `sounds/*`, `logo.png`, `favicon.ico`.
+- **Reconcile (rebuild input):** legacy `design-system.css` tokens → v3/KAI
+  theme; the v3 standalone specimen is the design canon.
+- **Not copied:** every `static/*.{js,css,html}` and `mocks/` — reimplemented as
+  components per the frontend contract.
+
+### `scripts/launchers/` (copy)
+
+`windows/*.bat` + `uv-env.bat` → `windows/`; `macos-linux/*.sh` → `unix/`.
+Internal paths updated for the new layout.
+
+### New wiring (authored, not copied)
+
+Root `package.json` workspaces + `pnpm-workspace.yaml` + `turbo.json`;
+`services/api/pyproject.toml` with an external `UV_PROJECT_ENVIRONMENT`.
+
+## Excluded / deferred
+
+- **Runtime state:** `data/`, `logs/` (gitignored — not migrated).
+- **Dev scratch:** `_diag_imports.py`, `build_release.py`, `__pycache__/`.
+- **Desktop (open):** `apps/desktop/` is reserved. The legacy `desktop/` is a
+  Phase-1 Tauri scaffold (PTY/xterm not wired) whose React pages are borrowed,
+  incomplete IDT donations on conflicting tokens; its one durable asset is the
+  native PTY/OSC/Job-Object layer (`src-tauri`, borrowed from Terax, Apache-2.0,
+  attribution must travel). **What to bring over is a later decision** — the
+  local desktop build is out of scope for now.
+- **Backend desktop-runtime host:** `server/api/desktop_runtime.py` + events +
+  its contract tests are part of `services/api` and travel regardless of the
+  Tauri-client decision.
+
+## Suggested build order
+
+1. Workspace wiring + reserved dirs (`apps/desktop/`, `packages/schemas/`).
+2. `services/api` skeleton — `pyproject.toml`, `src/chattr_api/` package dirs,
+   external `UV_PROJECT_ENVIRONMENT`.
+3. Copy backend modules per the manifest; fix imports to the new package paths;
+   copy tests; get the suite green under `uv`.
+4. Copy shared schemas + launcher scripts (path-corrected).
+5. `apps/web` scaffold on the adopted stack + asset copy (the UI rebuild is a
+   later frontend slice).
