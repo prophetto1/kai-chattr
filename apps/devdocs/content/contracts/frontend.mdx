@@ -1,0 +1,32 @@
+---
+title: "Frontend (shell, components, a11y)"
+description: "How the frontend is built, from the v3 standard: one slot-based seven-region shell every route mounts into, the agent-native message-type vocabulary, page states (loading/empty/error), the component set, composition leveling, and accessibility basics."
+---
+
+# Frontend (shell, components, a11y) contract
+
+{/* GENERATED from governance/contracts/frontend.json by governance/scripts/build-contract-docs.mjs — do not edit by hand. */}
+
+How the frontend is built, from the v3 standard: one slot-based seven-region shell every route mounts into, the agent-native message-type vocabulary, page states (loading/empty/error), the component set, composition leveling, and accessibility basics.
+
+## The rule
+
+1. 🔒 One slot-based frame wraps every route: TopBar · LeftRail · Sidebar · Main · RightDock · RightRail · StatusBar. Pages own ONLY `Main`; the shell owns all chrome. New pages inherit a correct frame — they never redraw chrome or fork the layout.
+2. 🔒 A surface has at most one scroll region; everything else fits. If a region will not fit, fix the information architecture — do not add a second scrollbar.
+3. 🔒 The RightDock is a single slot — inspector panels never stack. A page's co-equal second column lives inside `Main`, not as a second dock. No double right rails, ever.
+4. 🔒 Regions are separated by hairline borders only. Shadows are reserved for things that float (modals, popovers, the projector canvas). Flat, ruled, engineer-grade calm.
+5. 🔒 Agent-native moments render as dedicated, recognisable shapes — agent message, reasoning (with inline tool-call ledger), thought, proposal envelope, plan-ready, MCP event — not as plain chat text. A human scanning the thread sees structure, not a wall of prose.
+
+## Enforced by
+
+`governance/rules/depcruise.cjs (dependency-cruiser) + ast-grep — derived from these rules`
+
+- Shell rule (pending) — every route mounts the shell; pages render into Main only.
+- Composition rule (pending, dependency-cruiser) — Page→Section→Component→Primitive leveling; no data/routing in leaf primitives.
+
+## Open items (confirm to lock)
+
+- Region sizes (tokens, draggable, persisted) — confirm and lock.
+- Page states (loading/empty/error) scaffold — define and lock.
+- Component contracts (buttons, fields, toggles/segments, pills) — define as pages need them.
+- Accessibility floor (labels, focus, contrast, keyboard) — define and lock.

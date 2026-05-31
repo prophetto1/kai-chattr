@@ -1,0 +1,34 @@
+---
+title: "Multi-agent coordination"
+description: "How agents and humans coordinate in a room: behavioral roles, an authoritative ground-truth ledger, a real gate-runner instead of self-reported checks, a shared step-state board, message discipline, and turn-taking. Targets the real friction — duplicated effort and self-reported truth — not output quality."
+---
+
+# Multi-agent coordination contract
+
+{/* GENERATED from governance/contracts/coordination.json by governance/scripts/build-contract-docs.mjs — do not edit by hand. */}
+
+How agents and humans coordinate in a room: behavioral roles, an authoritative ground-truth ledger, a real gate-runner instead of self-reported checks, a shared step-state board, message discipline, and turn-taking. Targets the real friction — duplicated effort and self-reported truth — not output quality.
+
+## The rule
+
+1. Roles are first-class and behavioral, not cosmetic: one Lead/implementer + two adversarial Reviewers, rotating per slice. Reviewers flag wrong/missing/better and NEVER re-author. The role is injected into the agent's wrapper prompt as a hard constraint, not just a display pill.
+2. An append-only, ORDERED, authoritative Verified-Facts + Decisions ledger exists, SEPARATE from semantic memory. Repo facts and every human ruling are recorded once and are canonical; no agent re-litigates or re-asserts a stale fact against it. (Semantic memory is for recall; this is for authority.)
+3. Gate results are produced by ONE authoritative runner that executes the gates and posts the real result to the room. Agents never self-report a gate as passing (no manual '✓'); the gate is green only when the runner says so.
+4. One shared step-state board holds current-step / owner / blocked-on. Agents read it instead of re-emitting the whole plan. Plan step-lists are not pasted into chat repeatedly.
+5. Summary in chat, detail in doc: chat posts are a few lines plus a doc link; full step-by-step content lives in `docs/`, not pasted inline multiple times.
+6. Silent-if-already-answered: the first responder claims a question; others +1 or stay silent. No near-duplicate confirmations of the same point.
+
+## Enforced by
+
+`contract tests + server invariants — derived from these rules`
+
+- Gate-runner invariant (pending) — a gate status message is only accepted from the runner identity.
+- Role invariant (pending) — a Reviewer-role agent's turns are constrained to review actions, not authoring.
+
+## Open items (confirm to lock)
+
+- Ledger storage + UI surface (append-only, ordered) — design and lock; this is new server + UI work.
+- Role rotation mechanism and how Lead/Reviewer is assigned per slice — define and lock.
+- Gate-runner: which gates, what signed-result shape it posts — define and lock.
+- Step-board: upgrade the existing jobs model (To Do→Active→Closed threads) vs build new — decide.
+- Keep working (do not change): divergence-detection round, option-buttons with a recommended default, encode-governance-before-code.

@@ -1,0 +1,6 @@
+<svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="kai chattr">
+  <rect x="5" y="5" width="15" height="15" rx="2" fill="#ff7a1a" />
+  <rect x="24" y="5" width="15" height="15" rx="2" fill="#2e6bff" />
+  <rect x="5" y="24" width="15" height="15" rx="2" fill="#7c5cff" />
+  <rect x="24" y="24" width="15" height="15" rx="2" fill="currentColor" fill-opacity="0.28" />
+</svg>

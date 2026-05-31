@@ -1,0 +1,13 @@
+{
+  "title": "Platform Contracts",
+  "pages": [
+    "index",
+    "backend-api",
+    "coordination",
+    "data",
+    "design-system",
+    "frontend",
+    "repo-process",
+    "dependencies"
+  ]
+}

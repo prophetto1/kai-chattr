@@ -1,0 +1,31 @@
+---
+title: "Design system"
+description: "The visual language in one place, from the v3 design standard: one token contract for both themes and all layers — surfaces (six-layer ladder), ink (five steps), accent/semantic, typography (IBM Plex Sans/Mono, role-named scale), spacing (4px grid, eight steps), radius, elevation, motion, icons. Components reference semantic roles, never raw hex."
+---
+
+# Design system contract
+
+{/* GENERATED from governance/contracts/design-system.json by governance/scripts/build-contract-docs.mjs — do not edit by hand. */}
+
+The visual language in one place, from the v3 design standard: one token contract for both themes and all layers — surfaces (six-layer ladder), ink (five steps), accent/semantic, typography (IBM Plex Sans/Mono, role-named scale), spacing (4px grid, eight steps), radius, elevation, motion, icons. Components reference semantic roles, never raw hex.
+
+## The rule
+
+1. 🔒 Every color, size, and space is a semantic token. Hardcoding a hex/rgb/px where a token role exists is forbidden — if you are typing a raw value into a component, a role is missing; add the role, do not hardcode.
+2. 🔒 One token file is the source for both themes (dark + light) and all layers. Day/night is a MODE within this contract, not a separate file. Components pick a layer by role; tokens supply the per-theme color.
+3. IBM Plex Sans for UI, IBM Plex Mono for code/metadata. Type is role-named on a single scale (display/title/heading/body/body-2/caption/micro/eyebrow). No second font system, no Inter/JetBrains overlay.
+4. The K/A/I layer sets `[data-layer]` on `<html>`; selection, focus rings, and primary CTAs follow it (K=orange, A=blue, I=violet). Chat lives in the A (blue) layer.
+
+## Enforced by
+
+`governance/rules/*.yml (ast-grep) — derived from these rules`
+
+- Token rule (pending) — flags hardcoded hex/rgb/px where a token role exists.
+- Icon rule (pending) — one icon source, fixed sizes, currentColor only.
+
+## Open items (confirm to lock)
+
+- Extract the exact token set (surfaces, ink, accent, semantic) from the v3 standard into the canonical CSS variable contract and lock it.
+- Typography: confirm and lock the role-named scale values.
+- Spacing/radius/elevation/motion scales — confirm and lock.
+- Icon library + sizes + stroke + brand-logo exception (Google/GitHub have no library equivalent) — confirm and lock.

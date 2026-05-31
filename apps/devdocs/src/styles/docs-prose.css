@@ -1,0 +1,193 @@
+/*
+ * Docs article prose — mirrors web/src/theme.css (.docling-md-preview).
+ * Scoped to Fumadocs DocsBody (`prose kc-prose`); do not fight layout grid IDs.
+ */
+
+/* ── Page title / description (notebook DocsPage slots) ── */
+
+#nd-page > h1,
+#nd-page .text-\[1\.75em\] {
+  font-family: var(--bd-font-prose);
+  font-size: var(--bd-docs-page-title-size);
+  font-weight: var(--bd-docs-page-title-weight);
+  letter-spacing: var(--bd-docs-prose-heading-letter-spacing);
+  line-height: 1.2;
+  margin-bottom: 0.25rem;
+  color: var(--color-fd-foreground);
+}
+
+#nd-page > p.text-lg.text-fd-muted-foreground,
+#nd-page > .text-lg.text-fd-muted-foreground {
+  font-family: var(--bd-font-prose);
+  font-size: var(--bd-docs-description-size);
+  line-height: var(--bd-docs-prose-line-height);
+  margin-bottom: 1rem;
+  color: var(--color-fd-muted-foreground);
+}
+
+/* ── Prose body (workbench MD) ── */
+
+.prose.kc-prose {
+  font-family: var(--bd-font-prose);
+  font-size: var(--bd-docs-prose-font-size);
+  line-height: var(--bd-docs-prose-line-height);
+  color: var(--color-fd-foreground);
+  max-width: none;
+}
+
+.prose.kc-prose > :first-child {
+  margin-top: 0;
+}
+
+.prose.kc-prose > :last-child {
+  margin-bottom: 0;
+}
+
+.prose.kc-prose :is(p, ul, ol, blockquote, pre, .fd-callout) {
+  margin: var(--bd-docs-prose-block-gap) 0;
+}
+
+.prose.kc-prose li + li {
+  margin-top: 0.25rem;
+}
+
+.prose.kc-prose :is(ul, ol) {
+  padding-left: 1.25rem;
+}
+
+.prose.kc-prose :is(h1, h2, h3, h4) {
+  font-family: var(--bd-font-prose);
+  letter-spacing: var(--bd-docs-prose-heading-letter-spacing);
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--color-fd-foreground);
+}
+
+.prose.kc-prose h1 {
+  font-size: var(--bd-docs-prose-h1-size);
+}
+
+.prose.kc-prose h2 {
+  font-size: var(--bd-docs-prose-h2-size);
+  margin-top: var(--bd-docs-prose-h2-top);
+  margin-bottom: var(--bd-docs-prose-heading-bottom);
+}
+
+.prose.kc-prose h3 {
+  font-size: var(--bd-docs-prose-h3-size);
+  margin-top: var(--bd-docs-prose-h3-top);
+  margin-bottom: 0.35rem;
+}
+
+.prose.kc-prose h4 {
+  font-size: var(--bd-docs-prose-h4-size);
+  margin-top: var(--bd-docs-prose-h4-top);
+  margin-bottom: 0.3rem;
+}
+
+.prose.kc-prose
+  :not(h1, h2, h3, h4, h5, h6)
+  + :is(h1, h2, h3, h4, h5, h6) {
+  margin-top: 1.15rem;
+}
+
+.prose.kc-prose a {
+  color: var(--color-fd-primary);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.prose.kc-prose :not(pre) > code,
+.prose.kc-prose code:not(pre code) {
+  font-family: var(--bd-font-mono);
+  font-size: 0.88em;
+  border: 0;
+  border-radius: 0.2rem;
+  background: var(--bd-inline-code-bg);
+  padding: var(--workbench-prose-code-inline-padding);
+  color: inherit;
+}
+
+.prose.kc-prose blockquote {
+  border-inline-start: 3px solid var(--color-fd-border);
+  padding: 0.12rem 0 0.12rem 0.72rem;
+  color: var(--color-fd-muted-foreground);
+  font-style: normal;
+}
+
+.prose.kc-prose hr {
+  border: 0;
+  border-top: 1px solid var(--color-fd-border);
+  margin: 1.5rem 0;
+}
+
+/* Fumadocs MDX Table wraps in overflow-auto; drop full-width card chrome */
+.prose.kc-prose .relative.overflow-auto {
+  margin: var(--bd-docs-prose-block-gap) 0;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.prose.kc-prose table {
+  display: table;
+  width: auto;
+  max-width: none;
+  border-collapse: collapse;
+  font-size: var(--bd-docs-table-size);
+  font-variant-numeric: tabular-nums;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  overflow: visible;
+}
+
+.prose.kc-prose :is(th, td) {
+  border: 1px solid var(--color-fd-border);
+  padding: 0.5rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.prose.kc-prose th {
+  font-weight: 600;
+  background: color-mix(in oklab, var(--color-fd-card) 92%, var(--color-fd-foreground) 8%);
+}
+
+/* ── Code blocks (Shiki / Fumadocs figure) ── */
+
+.prose.kc-prose figure.shiki {
+  border-radius: calc(var(--bd-radius) + 0.2rem);
+  border-color: var(--color-fd-border);
+  background: var(--bd-pre-bg);
+  box-shadow: none;
+  font-size: var(--bd-docs-code-block-size);
+  line-height: 1.5;
+}
+
+.prose.kc-prose figure.shiki pre {
+  font-family: var(--bd-font-mono);
+}
+
+.prose.kc-prose figure.shiki [data-line-numbers] {
+  font-variant-numeric: tabular-nums;
+}
+
+.prose.kc-prose pre:not(figure pre) {
+  overflow: auto;
+  max-width: 100%;
+  border: 1px solid var(--color-fd-border);
+  border-radius: calc(var(--bd-radius) + 0.2rem);
+  padding: 0.75rem 0.9rem;
+  background: var(--bd-pre-bg);
+  font-family: var(--bd-font-mono);
+  font-size: var(--bd-docs-code-block-size);
+  line-height: 1.5;
+}
+
+.prose.kc-prose pre code {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font-size: inherit;
+}

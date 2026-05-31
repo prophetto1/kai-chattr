@@ -1,0 +1,31 @@
+---
+title: "Platform Contracts"
+description: "The registry of every enforced platform rule. Source of truth lives in governance/; this view is generated."
+---
+
+# Platform Contracts
+
+{/* GENERATED from governance/contracts/registry.json by governance/scripts/build-contract-docs.mjs — do not edit by hand. */}
+
+The machine-readable **source of truth lives in `governance/`** (JSON/YAML). This page is **generated** from it; the `governance/` scripts enforce that the source is never violated. Status: 🔒 locked · ✍️ drafting · ⏳ planned · ↗ elsewhere
+
+## Platform
+
+| Contract | Status | Enforced by |
+|---|---|---|
+| [Design system](/contracts/design-system) | ✍️ | ast-grep (derived from rules) |
+| [Frontend (shell, components, a11y)](/contracts/frontend) | ✍️ | dependency-cruiser + ast-grep |
+| [Backend & API](/contracts/backend-api) | ⏳ | contract tests / OpenAPI |
+| [Multi-agent coordination](/contracts/coordination) | ✍️ | contract tests + server invariants |
+
+## Process & repo
+
+| Contract | Status | Enforced by |
+|---|---|---|
+| [Data](/contracts/data) | ⏳ | schema lint / CI |
+| [Repo & process](/contracts/repo-process) | ✍️ | scripted scan + dependency-cruiser |
+| [Dependencies](/contracts/dependencies) | 🔒 | governance/scripts/check-deps.mjs |
+
+---
+
+A new contract = a new JSON/YAML in `governance/contracts/` + a matching enforcement script. This page regenerates from those.

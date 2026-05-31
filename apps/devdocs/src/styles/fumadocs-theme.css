@@ -1,0 +1,80 @@
+/*
+ * kai-chattr platform tokens for Fumadocs (--color-fd-*).
+ * Source of truth: web/src/tailwind.css (--ds-*).
+ * Do not use fumadocs-ui/css/ocean.css — it applies an unrelated blue identity.
+ */
+
+@theme {
+  --color-fd-background: #f7f4ef;
+  --color-fd-foreground: #1c1917;
+  --color-fd-muted: #f3f0ec;
+  --color-fd-muted-foreground: rgba(28, 25, 23, 0.48);
+  --color-fd-popover: #fefdfa;
+  --color-fd-popover-foreground: #1c1917;
+  --color-fd-card: #fbf9f5;
+  --color-fd-card-foreground: #1c1917;
+  --color-fd-border: rgba(28, 25, 23, 0.1);
+  --color-fd-primary: #2e6bff;
+  --color-fd-primary-foreground: #ffffff;
+  --color-fd-secondary: rgba(28, 25, 23, 0.04);
+  --color-fd-secondary-foreground: #1c1917;
+  --color-fd-accent: rgba(28, 25, 23, 0.035);
+  --color-fd-accent-foreground: #1c1917;
+  --color-fd-ring: rgba(29, 85, 232, 0.28);
+
+  --font-sans: var(--bd-font-ui);
+}
+
+/*
+ * Total docs shell width (sidebar + main + TOC). Fumadocs default is 97rem.
+ * Do not set this to article/prose width — notebook computes main column as:
+ *   layout-width − sidebar (268px) − toc (268px at xl+)
+ */
+:root {
+  --fd-layout-width: 97rem;
+}
+
+.dark {
+  --color-fd-background: #0e0e0e;
+  --color-fd-foreground: rgb(238, 238, 238);
+  --color-fd-muted: rgb(25, 25, 25);
+  --color-fd-muted-foreground: rgba(255, 255, 255, 0.447);
+  --color-fd-popover: rgb(25, 25, 25);
+  --color-fd-popover-foreground: rgb(238, 238, 238);
+  --color-fd-card: rgb(25, 25, 25);
+  --color-fd-card-foreground: rgb(238, 238, 238);
+  --color-fd-border: rgba(255, 255, 255, 0.1);
+  --color-fd-primary: #2e6bff;
+  --color-fd-primary-foreground: #ffffff;
+  --color-fd-secondary: rgb(29, 29, 29);
+  --color-fd-secondary-foreground: rgb(238, 238, 238);
+  --color-fd-accent: rgba(255, 255, 255, 0.05);
+  --color-fd-accent-foreground: rgb(238, 238, 238);
+  --color-fd-ring: rgba(46, 107, 255, 0.35);
+
+  --font-sans: var(--bd-font-ui);
+}
+
+.dark #nd-sidebar {
+  --color-fd-muted: rgb(17, 17, 17);
+  --color-fd-secondary: rgb(25, 25, 25);
+  --color-fd-muted-foreground: rgba(255, 255, 255, 0.447);
+}
+
+/* Notebook layout — UI chrome density aligned with kai-chattr workbench */
+#nd-sidebar,
+#nd-sidebar button,
+#nd-sidebar a,
+header[data-fd-nav] {
+  font-family: var(--bd-font-ui);
+  font-size: var(--bd-fs-sidebar);
+}
+
+#nd-sidebar [data-radix-scroll-area-viewport] {
+  padding-top: 1.25rem;
+}
+
+#nd-sidebar .font-medium,
+#nd-sidebar [data-active='true'] {
+  font-weight: 500;
+}

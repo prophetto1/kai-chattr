@@ -1,0 +1,84 @@
+/*
+ * kai-chattr design tokens for Fumadocs.
+ * Aligned with web/src/tailwind.css (--ds-*) and workbench prose (--workbench-prose-*).
+ */
+
+:root {
+  color-scheme: light dark;
+
+  --bd-font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --bd-font-prose: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --bd-font-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas,
+    monospace;
+
+  --bd-brand: #2e6bff;
+  --bd-radius: 0.625rem;
+
+  /* Workbench prose scale (web/src/tailwind.css) */
+  --workbench-prose-font-size: 1rem;
+  --workbench-prose-line-height: 1.6;
+  --workbench-prose-block-gap: 0.8rem;
+  --workbench-prose-heading-letter-spacing: -0.02em;
+  --workbench-prose-h1-size: clamp(1.8rem, 2.6vw, 2.35rem);
+  --workbench-prose-h2-size: clamp(1.3rem, 2vw, 1.6rem);
+  --workbench-prose-h3-size: clamp(1.1rem, 1.6vw, 1.25rem);
+  --workbench-prose-h4-size: 1.05rem;
+  --workbench-prose-h2-top: 1.55rem;
+  --workbench-prose-h3-top: 1.2rem;
+  --workbench-prose-h4-top: 1rem;
+  --workbench-prose-heading-bottom: 0.5rem;
+  --workbench-prose-code-inline-padding: 0.02rem 0.18rem;
+
+  /*
+   * Docs article scale — one step tighter than workbench MD preview so content
+   * reads closer to sidebar density (13–14px UI) without shrinking chrome.
+   */
+  --bd-docs-page-title-size: clamp(1.25rem, 1.5vw, 1.375rem);
+  --bd-docs-page-title-weight: 600;
+  --bd-docs-description-size: 0.875rem;
+  --bd-docs-prose-font-size: 0.9375rem;
+  --bd-docs-prose-line-height: 1.55;
+  --bd-docs-prose-block-gap: 0.65rem;
+  --bd-docs-prose-heading-letter-spacing: -0.015em;
+  --bd-docs-prose-h1-size: clamp(1.15rem, 1.5vw, 1.25rem);
+  --bd-docs-prose-h2-size: clamp(1.05rem, 1.35vw, 1.125rem);
+  --bd-docs-prose-h3-size: 1rem;
+  --bd-docs-prose-h4-size: 0.9375rem;
+  --bd-docs-prose-h2-top: 1.25rem;
+  --bd-docs-prose-h3-top: 0.95rem;
+  --bd-docs-prose-h4-top: 0.75rem;
+  --bd-docs-prose-heading-bottom: 0.4rem;
+  --bd-docs-code-block-size: 0.8125rem;
+  --bd-docs-table-size: 0.8125rem;
+
+  /* UI chrome */
+  --bd-fs-body: 14px;
+  --bd-fs-label: 12px;
+  --bd-fs-sidebar: 13px;
+
+  /* Light (default for Fumadocs until .dark) */
+  --bd-text: #1c1917;
+  --bd-text-muted: rgba(28, 25, 23, 0.48);
+  --bd-border: rgba(28, 25, 23, 0.1);
+  --bd-card: #ffffff;
+  --bd-background: #faf9f7;
+  --bd-muted: #f0eeed;
+  --bd-inline-code-bg: color-mix(in oklab, #f5ebe6 72%, #faf9f7 28%);
+  --bd-pre-bg: color-mix(in oklab, #ffffff 88%, #faf9f7 12%);
+
+  --shiki-light-bg: var(--bd-pre-bg);
+  --shiki-dark-bg: rgb(20, 20, 20);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --bd-text: rgb(238, 238, 238);
+  --bd-text-muted: rgba(255, 255, 255, 0.447);
+  --bd-border: rgba(255, 255, 255, 0.1);
+  --bd-card: rgb(25, 25, 25);
+  --bd-background: #0e0e0e;
+  --bd-muted: rgb(29, 29, 29);
+  --bd-inline-code-bg: color-mix(in oklab, rgba(148, 163, 184, 0.14) 88%, #0e0e0e 12%);
+  --bd-pre-bg: color-mix(in oklab, rgb(25, 25, 25) 88%, #0e0e0e 12%);
+}

@@ -1,0 +1,18 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+@import '../../styles/design-tokens.css';
+@import '../../styles/fumadocs-theme.css';
+@import '../../styles/docs-prose.css';
+
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  font-family: var(--bd-font-ui);
+  font-size: var(--bd-fs-body);
+  line-height: 1.43;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
