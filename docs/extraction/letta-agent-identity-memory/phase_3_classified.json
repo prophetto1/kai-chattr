@@ -1,0 +1,301 @@
+{
+  "schema_version": "1.0",
+  "edges": [
+    {
+      "from": "letta/orm/identity.py",
+      "to": "letta/orm/agent.py",
+      "kind": "import",
+      "label": "CUT",
+      "rationale": "R3 \u2014 full Agent ORM pulls tools/sources/runs/groups/messages; kai-chattr owns its own agent/session entity, not Letta's"
+    },
+    {
+      "from": "letta/orm/identity.py",
+      "to": "letta/orm/block.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/orm/identity.py",
+      "to": "letta/orm/mixins.py",
+      "kind": "import",
+      "label": "SHIM",
+      "rationale": "R2 \u2014 Organization/Project mixins are Letta multi-tenancy scoping; kai-chattr defines its own scoping"
+    },
+    {
+      "from": "letta/orm/identity.py",
+      "to": "letta/orm/organization.py",
+      "kind": "import",
+      "label": "CUT",
+      "rationale": "R3 \u2014 Letta org multi-tenancy; kai-chattr is not multi-org"
+    },
+    {
+      "from": "letta/orm/identity.py",
+      "to": "letta/orm/sqlalchemy_base.py",
+      "kind": "import",
+      "label": "SHIM",
+      "rationale": "R2 \u2014 generic CRUD base mixin is framework infrastructure, not capability logic"
+    },
+    {
+      "from": "letta/orm/block.py",
+      "to": "letta/constants.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/orm/block.py",
+      "to": "letta/orm/__init__.py",
+      "kind": "import",
+      "label": "LEAF",
+      "rationale": "R6 \u2014 package init, no logic"
+    },
+    {
+      "from": "letta/orm/block.py",
+      "to": "letta/orm/agent.py",
+      "kind": "import",
+      "label": "CUT",
+      "rationale": "R3 \u2014 full Agent ORM pulls tools/sources/runs/groups/messages; kai-chattr owns its own agent/session entity, not Letta's"
+    },
+    {
+      "from": "letta/orm/block.py",
+      "to": "letta/orm/block_history.py",
+      "kind": "import",
+      "label": "KEEP",
+      "rationale": "R1 \u2014 block versioning/optimistic-lock is part of the memory capability"
+    },
+    {
+      "from": "letta/orm/block.py",
+      "to": "letta/orm/blocks_tags.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/orm/block.py",
+      "to": "letta/orm/group.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/orm/block.py",
+      "to": "letta/orm/identity.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/orm/block.py",
+      "to": "letta/orm/mixins.py",
+      "kind": "import",
+      "label": "SHIM",
+      "rationale": "R2 \u2014 Organization/Project mixins are Letta multi-tenancy scoping; kai-chattr defines its own scoping"
+    },
+    {
+      "from": "letta/orm/block.py",
+      "to": "letta/orm/sqlalchemy_base.py",
+      "kind": "import",
+      "label": "SHIM",
+      "rationale": "R2 \u2014 generic CRUD base mixin is framework infrastructure, not capability logic"
+    },
+    {
+      "from": "letta/orm/blocks_agents.py",
+      "to": "letta/orm/base.py",
+      "kind": "import",
+      "label": "SHIM",
+      "rationale": "R2 \u2014 SQLAlchemy declarative Base is a framework-wide primitive; kai-chattr supplies its own"
+    },
+    {
+      "from": "letta/orm/identities_blocks.py",
+      "to": "letta/orm/base.py",
+      "kind": "import",
+      "label": "SHIM",
+      "rationale": "R2 \u2014 SQLAlchemy declarative Base is a framework-wide primitive; kai-chattr supplies its own"
+    },
+    {
+      "from": "letta/orm/identities_agents.py",
+      "to": "letta/orm/base.py",
+      "kind": "import",
+      "label": "SHIM",
+      "rationale": "R2 \u2014 SQLAlchemy declarative Base is a framework-wide primitive; kai-chattr supplies its own"
+    },
+    {
+      "from": "letta/services/block_manager.py",
+      "to": "letta/errors.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/services/block_manager.py",
+      "to": "letta/log.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/services/block_manager.py",
+      "to": "letta/orm/agent.py",
+      "kind": "import",
+      "label": "CUT",
+      "rationale": "R3 \u2014 full Agent ORM pulls tools/sources/runs/groups/messages; kai-chattr owns its own agent/session entity, not Letta's"
+    },
+    {
+      "from": "letta/services/block_manager.py",
+      "to": "letta/orm/block.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/services/block_manager.py",
+      "to": "letta/orm/block_history.py",
+      "kind": "import",
+      "label": "KEEP",
+      "rationale": "R1 \u2014 block versioning/optimistic-lock is part of the memory capability"
+    },
+    {
+      "from": "letta/services/block_manager.py",
+      "to": "letta/orm/blocks_agents.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/services/block_manager.py",
+      "to": "letta/orm/blocks_tags.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/services/block_manager.py",
+      "to": "letta/orm/errors.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/services/block_manager.py",
+      "to": "letta/orm/sqlalchemy_base.py",
+      "kind": "import",
+      "label": "SHIM",
+      "rationale": "R2 \u2014 generic CRUD base mixin is framework infrastructure, not capability logic"
+    },
+    {
+      "from": "letta/services/block_manager.py",
+      "to": "letta/otel/tracing.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/services/block_manager.py",
+      "to": "letta/server/db.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/services/block_manager.py",
+      "to": "letta/services/agent_manager.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/services/block_manager.py",
+      "to": "letta/settings.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/services/block_manager.py",
+      "to": "letta/utils.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/services/block_manager.py",
+      "to": "letta/validators.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/services/identity_manager.py",
+      "to": "letta/orm/agent.py",
+      "kind": "import",
+      "label": "CUT",
+      "rationale": "R3 \u2014 full Agent ORM pulls tools/sources/runs/groups/messages; kai-chattr owns its own agent/session entity, not Letta's"
+    },
+    {
+      "from": "letta/services/identity_manager.py",
+      "to": "letta/orm/block.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/services/identity_manager.py",
+      "to": "letta/orm/errors.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/services/identity_manager.py",
+      "to": "letta/orm/identity.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/services/identity_manager.py",
+      "to": "letta/otel/tracing.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/services/identity_manager.py",
+      "to": "letta/server/db.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/services/identity_manager.py",
+      "to": "letta/settings.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/services/identity_manager.py",
+      "to": "letta/utils.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    },
+    {
+      "from": "letta/services/identity_manager.py",
+      "to": "letta/validators.py",
+      "kind": "import",
+      "label": "UNCLASSIFIED",
+      "rationale": null
+    }
+  ],
+  "licensed_paths": [],
+  "fanin_hits": [],
+  "counts": {
+    "license": 0,
+    "external": 0,
+    "unclassified": 41
+  },
+  "mode": "full",
+  "instructions_for_llm": "Replace every edge with label='UNCLASSIFIED' by applying the rules in references/edge_classification_rules.md. Every edge must end with label in {KEEP, SHIM, CUT, EXTERNAL, LICENSE, LEAF, AMBIGUOUS} and a rationale beginning with the rule number (e.g., 'R2 \u2014 logger is a framework-wide primitive'). Do not overwrite LICENSE or EXTERNAL labels unless you also remove the prefilter determination."
+}

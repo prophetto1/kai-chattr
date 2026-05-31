@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "source_repo": "E:\\REPOS\\letta",
+  "target_repo": "E:\\kai-chattr",
+  "capability_name": "agent-identity-memory",
+  "entry_points": [
+    "letta/orm/identity.py",
+    "letta/orm/block.py",
+    "letta/orm/blocks_agents.py",
+    "letta/orm/identities_blocks.py",
+    "letta/orm/identities_agents.py",
+    "letta/services/block_manager.py",
+    "letta/services/identity_manager.py"
+  ],
+  "out_of_scope": [],
+  "target_language": "python",
+  "created_at": "2026-05-31T10:33:56.210957+00:00",
+  "mode": "full",
+  "degraded_reason": null
+}
