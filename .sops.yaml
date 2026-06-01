@@ -3,5 +3,5 @@
 # Private age keys never belong in this repo. Only the PUBLIC recipients live here.
 # The matching private key stays on the operator's machine (SOPS age key file).
 creation_rules:
-  - path_regex: .*secrets[\/\\]dev[\/\\](db|storage|llm-providers|cloudflare|neon|auth)\.yaml$
+  - path_regex: .*secrets[\/\\]dev[\/\\](db|storage|llm-providers|cloudflare|neon|auth|fly)\.yaml$
     age: age1k2mkuzjnk4twgpjqwrl9hznze0khdpj7eyty5lwam6f5rlrpyckqfn2hqe,age16cxxwpw279j6pugl8c8e5yxg8w6ly3h39p2h3uu3zsnj0esyscmsyvju9l
