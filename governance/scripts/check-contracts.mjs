@@ -7,6 +7,16 @@ const ROOT = process.cwd();
 const CONTRACT_DIR = join(ROOT, 'governance', 'contracts');
 const SCHEMA_DIR = join(ROOT, 'governance', 'schemas');
 
+// No contracts exist until Jon explicitly signs one off (decide -> encode -> render).
+// The directory is intentionally empty/absent; the gate no-ops rather than inventing law.
+const _existingContracts = existsSync(CONTRACT_DIR)
+  ? readdirSync(CONTRACT_DIR).filter((n) => n.endsWith('.json'))
+  : [];
+if (_existingContracts.length === 0) {
+  console.log('OK: no governance contracts — nothing to validate. Contracts are authored ONLY on Jon\'s explicit sign-off (decide -> encode -> render).');
+  process.exit(0);
+}
+
 const contractSchema = JSON.parse(readFileSync(join(SCHEMA_DIR, 'contract.schema.json'), 'utf8'));
 const registrySchema = JSON.parse(readFileSync(join(SCHEMA_DIR, 'registry.schema.json'), 'utf8'));
 

@@ -1,8 +1,6 @@
 {
   "title": "kai-chattr",
   "pages": [
-    "index",
-    "contracts",
-    "migration"
+    "index"
   ]
 }
