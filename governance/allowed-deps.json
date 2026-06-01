@@ -23,5 +23,13 @@
     "@types/react-dom",
     "typescript",
     "wrangler"
+  ],
+  "services/api": [
+    "fastapi",
+    "uvicorn",
+    "pydantic-settings",
+    "ruff",
+    "pytest",
+    "httpx"
   ]
 }
