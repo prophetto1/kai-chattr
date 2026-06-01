@@ -1,5 +1,27 @@
 {
   "$comment": "CONTROLLED allowlist — built incrementally, ONE SLICE AT A TIME. Never bulk-copied from legacy chattr. Process when a migrated slice needs a dependency: (1) confirm it with Jon and add it here, (2) THEN move the code. Anything in a package.json or pyproject.toml not listed here fails check-deps and the gates. The repo starts EMPTY — no deps are permitted yet; they get added only as the slice that needs them is migrated.",
   "shared": [],
-  "tooling": []
+  "tooling": [
+    "ajv"
+  ],
+  "apps/devdocs": [
+    "@tailwindcss/postcss",
+    "@types/mdx",
+    "cross-env",
+    "fumadocs-core",
+    "fumadocs-mdx",
+    "fumadocs-ui",
+    "mermaid",
+    "next",
+    "next-themes",
+    "react",
+    "react-dom",
+    "remark-directive",
+    "shiki",
+    "@types/node",
+    "@types/react",
+    "@types/react-dom",
+    "typescript",
+    "wrangler"
+  ]
 }

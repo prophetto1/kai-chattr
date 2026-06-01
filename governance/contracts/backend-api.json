@@ -5,15 +5,16 @@
   "status": "planned",
   "summary": "The FastAPI surface and its conventions: endpoint definitions and routing, a single error-envelope shape, auth / session validation, pagination, the WebSocket event vocabulary, and telemetry / logging. Localhost-only security posture (session token + loopback registration + origin checks) carried forward from legacy chattr.",
   "covers": ["endpoints", "error-envelope", "auth-session", "websocket-events", "pagination", "telemetry-logging", "localhost-security"],
-  "rules": [],
+  "rules": [
+    { "key": "router-layout", "locked": true, "text": "HTTP/WS routes live in `app/api/` modules and are registered on the app factory in `app/main.py`. System/operational routes (e.g. `/health`, `/ws`) are unprefixed; product routes are mounted under `/v1`." },
+    { "key": "error-envelope", "locked": true, "text": "Every error response uses one shape: `{\"error\": {\"code\": \"<machine_code>\", \"message\": \"<human message>\"}}`." }
+  ],
   "enforcedBy": "contract tests / OpenAPI diff + ast-grep — derived from these rules",
   "enforcement": [
     "Endpoint rule (pending) — routes follow the agreed router/path layout.",
     "Error-envelope rule (pending) — all error responses match one shape."
   ],
   "openItems": [
-    "Endpoint definitions: router layout + path conventions — define and lock.",
-    "Error envelope: the single error response shape — define and lock.",
     "Auth / session: how the server validates the session token — define and lock.",
     "WebSocket event vocabulary (agents, agent_renamed, status, clear, etc.) — define and lock.",
     "Localhost security posture (session token, loopback-only registration, origin checks, no shell=True) — confirm and lock.",

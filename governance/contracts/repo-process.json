@@ -7,7 +7,9 @@
   "covers": ["secrets", "python-toolchain", "imports", "file-naming", "commit-conventions"],
   "rules": [
     { "key": "secrets", "locked": true, "text": "Secrets go through SOPS only. No plaintext `.env` files anywhere, under any name. A `.gitignore` is NOT protection. Docs reference SOPS pointers + commands, never raw values." },
-    { "key": "python-toolchain", "locked": true, "text": "`uv` is the only Python package manager/toolchain for the backend. No repo-local `.venv` (cross-drive hardlink failures) — `UV_PROJECT_ENVIRONMENT` points uv at an environment outside the checkout. Python dependencies are declared in `pyproject.toml` and allowlisted in `governance/allowed-deps.json`." }
+    { "key": "python-toolchain", "locked": true, "text": "`uv` is the only Python package manager/toolchain for the backend. No repo-local `.venv` (cross-drive hardlink failures) — `UV_PROJECT_ENVIRONMENT` points uv at an environment outside the checkout for LOCAL dev; in CI it is an ephemeral uv env, and inside a container the container itself is the env. Python dependencies are declared in `pyproject.toml` and allowlisted in `governance/allowed-deps.json`." },
+    { "key": "imports-paths", "locked": true, "text": "Backend imports use the installed package root `app`: modules import as `app.<domain>.*` (e.g. `app.core.store`, `app.api.system`). No `src/`-layout, no `sys.path` hacks, no relative imports across domain packages." },
+    { "key": "file-naming", "locked": true, "text": "Monorepo layout `apps/<app>/`, `services/<service>/`, `packages/<pkg>/` on plain pnpm-workspaces (NO Turborepo). `services/api` is one installable package named `app` (distribution `kai-chattr-api`) with domain subpackages `core/ sessions/ agents/ mcp/ events/ launch/ wrappers/ api/`. Python modules are snake_case; JS workspace packages are kebab-case." }
   ],
   "enforcedBy": "scripted scan + dependency-cruiser — derived from these rules",
   "enforcement": [
@@ -15,8 +17,6 @@
     "Venv scan (pending) — flags a repo-local `.venv`."
   ],
   "openItems": [
-    "Imports & path conventions — define and lock.",
-    "File & directory naming — define and lock.",
     "Commit conventions (commitlint) — confirm and lock."
   ]
 }

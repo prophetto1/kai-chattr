@@ -40,31 +40,34 @@ kai-chattr/
 │  ├─ desktop/                    # RESERVED — local Tauri build, scoped later
 │  └─ devdocs/                    # this fumadocs site
 ├─ services/
-│  └─ api/                        # FastAPI chat server (Python, uv, src-layout)
-│     ├─ src/chattr_api/
-│     │  ├─ core/                 # store · registry · router · rules · summaries · archive · jobs
-│     │  ├─ sessions/             # session_engine · session_store · schedules
-│     │  ├─ agents/               # agents
-│     │  ├─ mcp/                  # mcp_bridge · mcp_proxy
-│     │  ├─ api/                  # main.py (app factory) + routes (platform · terminal · desktop_runtime)
-│     │  ├─ events/               # jsonl_stream · terminal_event_schema
-│     │  ├─ launch/               # chattr_launcher + agents.toml
-│     │  ├─ wrappers/             # wrapper · wrapper_api · wrapper_unix · wrapper_windows
-│     │  ├─ config.py             # from config_loader
-│     │  └─ __main__.py           # entry, from run.py
-│     ├─ pyproject.toml           # merged from legacy pyproject + requirements
-│     └─ tests/                   # the pytest suite
+│  ├─ api/                        # FastAPI chat server (Python, uv) — package `app`, dist `kai-chattr-api`
+│  │  ├─ app/
+│  │  │  ├─ core/                 # store · registry · router · rules · summaries · archive · jobs
+│  │  │  ├─ sessions/             # session_engine · session_store · schedules
+│  │  │  ├─ agents/               # agents
+│  │  │  ├─ mcp/                  # mcp_bridge · mcp_proxy
+│  │  │  ├─ api/                  # routes — system unprefixed + product under /v1
+│  │  │  ├─ events/               # jsonl_stream · terminal_event_schema
+│  │  │  ├─ launch/               # chattr_launcher + agents.toml
+│  │  │  ├─ wrappers/             # wrapper · wrapper_api · wrapper_unix · wrapper_windows
+│  │  │  ├─ settings.py           # pydantic-settings (from config_loader)
+│  │  │  └─ main.py               # app factory + entry (from app.py / run.py)
+│  │  ├─ pyproject.toml  uv.lock  # uv; deps allowlisted
+│  │  ├─ Dockerfile  fly.toml     # container + Fly deploy surface (fly.toml reserved)
+│  │  └─ tests/                   # pytest suite
+│  └─ memory/                     # RESERVED — future extracted-Letta substrate (cross-repo-shareable), NOT inside api/
 ├─ packages/
-│  └─ schemas/                    # JSON schemas + session_templates (shared web↔api)
+│  └─ schemas/                    # canonical JSON Schemas + session_templates — Python reads BY PATH (jsonschema); TS imports the same JSON. Not copied, not codegen'd.
 ├─ scripts/launchers/             # windows/*.bat + unix/*.sh agent launchers
 ├─ governance/  secrets/  docs/   # governance · SOPS · working docs
-└─ package.json + pnpm-workspace.yaml + turbo.json
+└─ package.json + pnpm-workspace.yaml   # plain pnpm-workspaces (NO Turborepo)
 ```
 
 The `apps/* · services/* · packages/*` split is the standard polyglot-monorepo
-pattern (Turborepo / pnpm-workspaces). The Python service is a single
-installable package with **src-layout** and its own PEP-621 `pyproject.toml` —
-completing the modularization the legacy `server/` package began.
+pattern on **plain pnpm-workspaces** (no Turborepo — a future explicit decision,
+not a default). The Python service is a single installable package (`app`, dist
+`kai-chattr-api`) mirroring `blockdata/services/api`, with its own PEP-621
+`pyproject.toml`.
 
 ## Copy manifest
 
@@ -110,8 +113,10 @@ Internal paths updated for the new layout.
 
 ### New wiring (authored, not copied)
 
-Root `package.json` workspaces + `pnpm-workspace.yaml` + `turbo.json`;
-`services/api/pyproject.toml` with an external `UV_PROJECT_ENVIRONMENT`.
+Root `package.json` workspaces + `pnpm-workspace.yaml` (**plain pnpm-workspaces, no Turborepo**);
+`services/api/pyproject.toml` under `uv`. `UV_PROJECT_ENVIRONMENT` resolves by
+context: an env **outside the checkout** locally, an **ephemeral uv env** in CI,
+and **the container itself** on Fly.
 
 ## Excluded / deferred
 
@@ -129,11 +134,19 @@ Root `package.json` workspaces + `pnpm-workspace.yaml` + `turbo.json`;
 
 ## Suggested build order
 
-1. Workspace wiring + reserved dirs (`apps/desktop/`, `packages/schemas/`).
-2. `services/api` skeleton — `pyproject.toml`, `src/chattr_api/` package dirs,
-   external `UV_PROJECT_ENVIRONMENT`.
-3. Copy backend modules per the manifest; fix imports to the new package paths;
-   copy tests; get the suite green under `uv`.
-4. Copy shared schemas + launcher scripts (path-corrected).
+0. **Gate — contract-encode (governance-first, BLOCKING).** Encode this layout +
+   naming into `repo-process.json` (imports/path conventions, file & directory
+   naming) and `backend-api.json` (router layout, error envelope); port
+   `check-contracts.mjs` (kai-chattr lacks it) + `governance/schemas/`; run
+   `check-contracts` **GREEN before any code is copied**. This is the
+   decide→encode→check→code discipline; no code-before-contract.
+1. Workspace wiring + reserved dirs (`apps/desktop/`, `packages/schemas/`, `services/memory/`).
+2. `services/api` skeleton — `pyproject.toml`, `app/` package dirs, `uv`
+   (see `docs/plans/0001-services-api-skeleton-plan.md`).
+3. Copy backend modules per the manifest; fix imports to `app.<domain>.*`.
+   **Top risk — the import-rewrite is the highest-breakage step:** gate it on the
+   suite going green under `uv`, and **lock the count (22 `test_*.py` modules +
+   `conftest.py`)** to catch dropped coverage.
+4. Copy shared schemas (consumed by path) + launcher scripts (path-corrected).
 5. `apps/web` scaffold on the adopted stack + asset copy (the UI rebuild is a
    later frontend slice).

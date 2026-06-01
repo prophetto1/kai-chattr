@@ -11,6 +11,8 @@ The FastAPI surface and its conventions: endpoint definitions and routing, a sin
 
 ## The rule
 
+1. 🔒 HTTP/WS routes live in `app/api/` modules and are registered on the app factory in `app/main.py`. System/operational routes (e.g. `/health`, `/ws`) are unprefixed; product routes are mounted under `/v1`.
+2. 🔒 Every error response uses one shape: `{"error": {"code": "<machine_code>", "message": "<human message>"}}`.
 
 ## Enforced by
 
@@ -21,8 +23,6 @@ The FastAPI surface and its conventions: endpoint definitions and routing, a sin
 
 ## Open items (confirm to lock)
 
-- Endpoint definitions: router layout + path conventions — define and lock.
-- Error envelope: the single error response shape — define and lock.
 - Auth / session: how the server validates the session token — define and lock.
 - WebSocket event vocabulary (agents, agent_renamed, status, clear, etc.) — define and lock.
 - Localhost security posture (session token, loopback-only registration, origin checks, no shell=True) — confirm and lock.
