@@ -18,3 +18,7 @@ WORKER-ACCESS.md
 
 # Local-only external reference repos (e.g. OpenHands) — never committed (size + license boundary)
 _references/
+
+# Runtime-owned SQLite + data dirs (services/api owns its DB; never committed)
+data/
+*.sqlite3
