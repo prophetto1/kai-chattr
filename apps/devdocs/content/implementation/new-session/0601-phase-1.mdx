@@ -1,0 +1,997 @@
+---
+title: "0601 Phase 1"
+description: "V3 implementation plan contract for the legacy-first New Session runtime control plane and later kai-chattr extraction."
+---
+
+**Goal:** Build and prove the New Session runtime control plane in legacy `E:/chattr`, then extract only the locked core pieces into `E:/kai-chattr`.
+
+**Architecture:** The parent Chattr instance owns child instance lifecycle only: port allocation, child process launch, health, open-browser, status, and stop. The child Chattr instance owns its own chat room, MCP ports, worker launch, worker identity, and browser terminal runtime.
+
+**Tech stack:** FastAPI, Python 3.11, existing static frontend, MCP bridge, JSONL event streams, OpenTelemetry, FastAPI WebSockets, dependency-gated `xterm.js`, dependency-gated Windows PTY backend.
+
+**Status:** V3 draft for re-evaluation. Not approved for implementation until the pre-implementation review passes.
+
+## Evaluation Disposition
+
+| # | Review finding | Class | Root cause | V2 fix |
+|---|---|---|---|---|
+| 1 | API contracts incomplete | Confirmed | V1 listed endpoints without full auth, request, response, error, and cleanup contracts. | Added locked endpoint contracts for all parent instance endpoints. |
+| 2 | Storage and system of record not locked | Confirmed | V1 mixed in-memory state, JSONL, registry JSON, and SQLite without deciding. | Locked P0 to in-memory `InstanceRegistry` plus JSONL audit; no restart recovery. |
+| 3 | Frontend inventory under-specified | Confirmed | V1 named files without exact counts, mount behavior, or current launcher disposition. | Added Workbench mount contract, file inventory counts, and required pre-edit baseline. |
+| 4 | MCP contracts vague | Confirmed | V1 named tool categories without actions, args, returns, or write boundaries. | Added MCP tool contracts and kept the four-tab right rail contract intact. |
+| 5 | Observability not contractible | Confirmed | V1 listed names but not emit points, result labels, metric types, or verification. | Added trace, metric, log, attributes, and verification contracts. |
+| 6 | Dependency decisions open | Confirmed | V1 let later tasks depend on unapproved `xterm.js`, PTY backend, and durable registry choices. | Added explicit dependency gates and locked FastAPI WebSocket as already available. |
+| 7 | Event stream unresolved | Confirmed | V1 left open whether to widen `chattr.runtime_event.v1`. | Locked separate `chattr.instance_event.v1`; existing runtime stream remains unchanged. |
+| 8 | Task coverage incomplete | Confirmed | V1 used broad multi-file tasks that could skip endpoint and failure paths. | Replaced with endpoint-by-endpoint and gate-by-gate tasks. |
+| 9 | Zero-cases missing | Confirmed | V1 did not state database migration or edge-function scope. | Added explicit zero-cases for DB migrations and edge functions. |
+| 10 | Extraction criteria weak | Confirmed | V1 used qualitative extraction criteria. | Added file, endpoint, MCP, persistence, observability, and evidence-linked extraction gates. |
+
+## V2 Review Disposition
+
+The review page remains the audit record. This plan carries the corrected execution contract.
+
+| # | V2 review finding | Class | V3 plan update |
+|---|---|---|---|
+| 1 | Legacy-first implementation is a blocker. | Contradicted | No plan change. Legacy-first proof is the approved basis for this tranche. |
+| 2 | Parent API contracts incomplete. | Obsolete | No new V3 change; parent endpoint contracts remain locked below. |
+| 3 | Storage and system of record unresolved. | Obsolete | No new V3 change; P0 remains parent in-memory `InstanceRegistry` plus JSONL audit. |
+| 4 | Event stream unresolved. | Obsolete | No new V3 change; `chattr.instance_event.v1` remains separate from `chattr.runtime_event.v1`. |
+| 5 | DB and edge zero-cases missing. | Obsolete | No new V3 change; P0 remains zero database migrations and zero edge functions. |
+| 6 | Child endpoint contracts missing. | Confirmed | Added full child worker and browser-terminal endpoint contracts. |
+| 7 | Child endpoint file and task coverage inconsistent. | Confirmed | Added child worker router/test inventory and a dedicated child worker API task. |
+| 8 | Observability contract still incomplete. | Confirmed | Expanded traces, metrics, and logs with purpose, emit location, result semantics, and verification. |
+| 9 | Task contract incomplete. | Confirmed | Added expected outputs, commit boundaries, and smaller execution slices. |
+| 10 | Explicit risks missing. | Confirmed | Added explicit accepted risks and mitigations. |
+
+## Source Reality Checked
+
+| Surface | Current reality |
+|---|---|
+| Legacy source repo | `E:/chattr` is the working implementation repo for this tranche. |
+| Clean destination | `E:/kai-chattr` is the future extraction destination and docs home. |
+| Launch flags | `E:/chattr/run.py` accepts `--data-dir`, `--port`, `--mcp-http-port`, `--mcp-sse-port`, `--upload-dir`. |
+| Config overrides | `E:/chattr/config_loader.py` maps `CHATTR_*` and legacy `AGENTCHATTR_*` env vars. |
+| Launcher safety | `E:/chattr/server/launch/chattr_launcher.py` rejects `visible_terminal = true` profiles in browser-start paths. |
+| Launcher control gap | `E:/chattr/server/launcher_control.py` status and stop remain `501` until a process ownership model exists. |
+| Runtime events | `chattr.runtime_event.v1` currently covers desktop-host terminal events and `runtime.events.dropped`. |
+| Runtime state | `SessionRegistry` is in-memory; durable runtime event history is JSONL. |
+| Terminal API | `server/api/terminal.py` is snapshot-only and is not the final browser terminal path. |
+| WebSocket availability | FastAPI `WebSocket` and `uvicorn[standard]` already exist; `websockets` is present in `uv.lock`. |
+| Missing terminal deps | No current `xterm`, `@xterm`, `pywinpty`, or ConPTY dependency reference exists. |
+| Right rail | Active right-rail tabs are MCP-backed `rules`, `jobs`, `locked`, and `pins`; do not reintroduce ad hoc tabs. |
+| Existing session launcher | `static/index.html` calls `showSessionLauncher()`, and `static/sessions.js` opens workflow-template UI. |
+| Legacy worktree | `E:/chattr` is currently clean on `main`. |
+| Kai-chattr worktree | `E:/kai-chattr` is already dirty with unrelated docs/governance and untracked `apps/web` content. This plan edit must touch only this MDX file. |
+
+## Pre-Implementation Contract
+
+No major product, API, observability, persistence, dependency, event-stream, or inventory decision may be improvised during implementation.
+
+If a locked item below is wrong, implementation must stop and this plan must be revised before code changes continue.
+
+## System Shape
+
+```text
+Parent browser on :8300
+  |
+  | calls parent instance API
+  v
+Parent Chattr process
+  - owns child process handle
+  - owns child port set
+  - owns child health and stop
+  - writes instance lifecycle audit events
+  |
+  | launches child with CHATTR_* overrides
+  v
+Child Chattr process on :8400 style port set
+  - owns child chat room
+  - owns child MCP HTTP/SSE ports
+  - owns worker launch and registration
+  - owns browser terminal sessions
+  - emits child runtime events
+```
+
+There is no cycle: the parent may request child actions through the child API after health passes, but parent state must not become the source of truth for child worker internals.
+
+## Locked Product Decisions
+
+1. Build this tranche in `E:/chattr` first.
+2. Use `E:/kai-chattr` as the clean destination after the tranche is proven.
+3. New Session means a new local Chattr instance, not clearing the current chat.
+4. Parent owns child instance lifecycle only.
+5. Child owns worker lifecycle and browser terminal runtime.
+6. P0 source of record is parent in-memory `InstanceRegistry` plus JSONL audit.
+7. P0 has no restart recovery.
+8. P0 has no SQLite registry and no database migration.
+9. P0 uses a separate `chattr.instance_event.v1` stream.
+10. Existing `chattr.runtime_event.v1` remains unchanged in P0.
+11. The left Workbench owns the New Session entry point.
+12. Existing workflow-template `Start a session` is renamed or relocated before New Session is added.
+13. Right rail remains the four existing MCP-backed tabs: Rules, Jobs, Locked, Pinned.
+14. Runtime MCP tools may exist for agents, but no fifth right-rail tab is added in this plan.
+15. No full legacy repo copy into `E:/kai-chattr`.
+
+## Scope
+
+### In Scope
+
+- Parent instance API.
+- Parent in-memory instance registry.
+- Parent child-process launch and stop.
+- Child port allocation and health check.
+- Instance event JSONL audit.
+- Workbench New Session UI entry point.
+- Existing workflow-template launcher rename or relocation.
+- Read-only runtime MCP tools plus confirmation-gated propose actions.
+- Browser terminal dependency and implementation gates.
+- Observability for instance launch, health, stop, worker request, and terminal attach.
+- Extraction criteria for the later move into `E:/kai-chattr`.
+
+### Out Of Scope
+
+- Clearing current chat as a substitute for New Session.
+- Cloud sandboxing, production multi-tenant isolation, auth, billing, or org administration.
+- Letta, agent identity, org role, and persistent DB memory.
+- SQLite registry or restart recovery.
+- Edge functions.
+- Database migrations.
+- Turning visible-terminal profiles into hidden browser-started processes.
+- Snapshot polling as the final terminal implementation.
+- New right-rail tabs beyond Rules, Jobs, Locked, and Pinned.
+
+## Backend Manifest
+
+### New Parent API Endpoints
+
+| Verb | Path | Owner | Purpose |
+|---|---|---|---|
+| `GET` | `/api/instances` | Parent | List parent-known child instances. |
+| `GET` | `/api/instances/ports/available` | Parent | Preview next available port set. |
+| `POST` | `/api/instances` | Parent | Allocate ports, create child roots, launch one child server, health-check it. |
+| `GET` | `/api/instances/{instance_id}` | Parent | Read one parent-known instance, including child URL and parent-known child health. |
+| `POST` | `/api/instances/{instance_id}/open-browser` | Parent | Open the child browser route from a loopback, token-valid request. |
+| `POST` | `/api/instances/{instance_id}/workers` | Parent proxy | Request worker start on the child after health passes; child owns workers. |
+| `POST` | `/api/instances/{instance_id}/stop` | Parent | Stop the owned child server and mark parent-owned state stopped or failed. |
+
+### New Child API Endpoints
+
+| Verb | Path | Owner | Purpose |
+|---|---|---|---|
+| `POST` | `/api/workers` | Child | Start child-scoped workers from whitelisted launcher profiles. |
+| `GET` | `/api/workers/{worker_id}` | Child | Read one child-owned worker status. |
+| `GET` | `/api/terminal-sessions/{terminal_id}` | Child | Read browser terminal session metadata. |
+| `WebSocket` | `/api/browser-terminal/{terminal_id}/ws` | Child | Attach xterm-compatible browser input/output to a child-owned PTY. |
+
+The child endpoints are required only after the dependency gates for worker browser terminal work are approved.
+
+## Parent Endpoint Contracts
+
+All parent endpoints use:
+
+- Auth: loopback client and existing browser session token.
+- Header: `X-Session-Token`.
+- Raw command rule: browser never sends raw argv, cwd, env, shell, token, or command text.
+- Error shape: `{ "ok": false, "error": { "code": string, "message": string, "step": string } }`.
+- Success shape: `{ "ok": true, ... }`.
+
+### `GET /api/instances`
+
+- Request: no body.
+- Response: `{ "ok": true, "instances": InstanceState[] }`.
+- Errors: `403 invalid_session`, `403 non_loopback`.
+- Side effects: none.
+- Test: lists empty array before any launch; lists parent-known running, stopped, and failed states after state changes.
+
+### `GET /api/instances/ports/available`
+
+- Request query: optional `base_port`.
+- Response: `{ "ok": true, "port_set": { "web": 8400, "mcp_http": 8401, "mcp_sse": 8402 }, "available": true }`.
+- Errors: `403 invalid_session`, `403 non_loopback`, `409 ports_unavailable`.
+- Side effects: none.
+- Test: rejects occupied web, MCP HTTP, or MCP SSE port.
+
+### `POST /api/instances`
+
+- Request: `{ "base_port": 8400, "open_browser": true, "worker_profiles": ["agent.codex"] }`.
+- Request defaults: if `base_port` is omitted, server picks the next available block.
+- Response: `{ "ok": true, "instance": InstanceState }`.
+- Errors: `403 invalid_session`, `403 non_loopback`, `409 ports_unavailable`, `500 spawn_failed`, `502 health_check_failed`.
+- Cleanup: failed spawn or failed health must stop the child process if present, release the port reservation, and mark the instance `failed` without a running process leak.
+- Test: verifies argv includes only server-built `run.py` flags and isolated paths.
+
+### `GET /api/instances/{instance_id}`
+
+- Request: no body.
+- Response: `{ "ok": true, "instance": InstanceState }`.
+- Errors: `403 invalid_session`, `403 non_loopback`, `404 instance_not_found`.
+- Side effects: may refresh `last_health_at` only if a health probe is explicitly requested by query.
+- Test: unknown instance returns `404`; known failed instance includes `error`.
+
+### `POST /api/instances/{instance_id}/open-browser`
+
+- Request: `{ "path": "/" }`.
+- Response: `{ "ok": true, "url": "http://127.0.0.1:8400/" }`.
+- Errors: `403 invalid_session`, `403 non_loopback`, `404 instance_not_found`, `409 instance_not_running`, `500 browser_open_failed`.
+- Side effects: opens browser on the server host only after URL validation.
+- Test: rejects external URLs and path values that are not relative child paths.
+
+### `POST /api/instances/{instance_id}/workers`
+
+- Request: `{ "profiles": ["agent.codex"], "attach_terminal": true }`.
+- Response: `{ "ok": true, "workers": WorkerState[] }`.
+- Errors: `403 invalid_session`, `403 non_loopback`, `404 instance_not_found`, `409 instance_not_running`, `502 child_api_unreachable`, `502 child_worker_start_failed`.
+- Ownership: parent proxies the request to the child; child owns worker process state.
+- Test: parent does not construct raw worker argv; child launcher allowlist decides.
+
+### `POST /api/instances/{instance_id}/stop`
+
+- Request: `{ "mode": "graceful" }`.
+- Response: `{ "ok": true, "instance": InstanceState }`.
+- Errors: `403 invalid_session`, `403 non_loopback`, `404 instance_not_found`, `409 stop_already_in_progress`, `500 stop_failed`.
+- Cleanup: stops only the child process owned by this parent registry entry.
+- Test: cannot stop unknown pid or non-owned process.
+
+## Child Endpoint Contracts
+
+All child HTTP endpoints use:
+
+- Auth: loopback client and existing child browser session token.
+- Header: `X-Session-Token`.
+- Raw command rule: browser never sends raw argv, cwd, env, shell, token, or command text.
+- Error shape: `{ "ok": false, "error": { "code": string, "message": string, "step": string } }`.
+- Success shape: `{ "ok": true, ... }`.
+
+The child process is the source of truth for worker and terminal state. The parent may proxy requests but must not construct child worker argv or mutate child worker internals.
+
+### `POST /api/workers`
+
+- Request: `{ "profiles": ["agent.codex"], "attach_terminal": true }`.
+- Request rule: every profile id must exist in the child launcher allowlist.
+- Response: `{ "ok": true, "workers": WorkerState[] }`.
+- Errors: `403 invalid_session`, `403 non_loopback`, `400 invalid_profile`, `409 worker_already_starting`, `500 worker_spawn_failed`, `500 terminal_attach_failed`.
+- Side effects: starts child-owned worker processes from launcher profiles; creates child-owned terminal sessions only when `attach_terminal = true`.
+- Touched state: child worker registry and child terminal registry.
+- Cleanup: failed worker spawn must not leave a registered running worker; failed terminal attach must either stop the new worker or return a worker with `terminal_id = null` and `error.step = "terminal_attach"` according to the implementation's explicit branch.
+- Test: rejects raw argv/env/cwd fields; rejects unknown profile; starts an allowlisted worker; returns `WorkerState`; does not weaken `visible_terminal` safety.
+
+### `GET /api/workers/{worker_id}`
+
+- Request: no body.
+- Response: `{ "ok": true, "worker": WorkerState }`.
+- Errors: `403 invalid_session`, `403 non_loopback`, `404 worker_not_found`.
+- Side effects: none.
+- Touched state: reads child worker registry only.
+- Cleanup: none.
+- Test: unknown worker returns `404`; known worker returns pid, status, profile id, and terminal id without raw command or env fields.
+
+### `GET /api/terminal-sessions/{terminal_id}`
+
+- Request: no body.
+- Response: `{ "ok": true, "terminal": TerminalState, "ws_path": "/api/browser-terminal/{terminal_id}/ws" }`.
+- Errors: `403 invalid_session`, `403 non_loopback`, `404 terminal_not_found`, `409 terminal_not_attachable`.
+- Side effects: none.
+- Touched state: reads child terminal registry only.
+- Cleanup: none.
+- Test: unknown terminal returns `404`; known terminal returns metadata only and never returns raw terminal bytes.
+
+### `WebSocket /api/browser-terminal/{terminal_id}/ws`
+
+- Auth protocol: first client message within two seconds must be `{ "type": "auth", "session_token": string }`; tokens must not be logged or emitted.
+- Client messages after auth: `{ "type": "input", "data": string }`, `{ "type": "resize", "rows": number, "cols": number }`, `{ "type": "close", "mode": "detach" | "terminate" }`, `{ "type": "ping" }`.
+- Server messages: `{ "type": "auth_ok" }`, `{ "type": "output", "data": string }`, `{ "type": "status", "status": string }`, `{ "type": "error", "code": string, "message": string }`, `{ "type": "pong" }`.
+- Errors: `403 invalid_session`, `404 terminal_not_found`, `409 terminal_not_attachable`, `500 pty_attach_failed`, `500 pty_io_failed`.
+- Side effects: attaches browser IO to a child-owned PTY; resize updates terminal rows and columns; close detaches or terminates according to message mode.
+- Touched state: child terminal registry and PTY manager.
+- Cleanup: socket disconnect detaches from browser; terminate mode stops the PTY only if the terminal is child-owned and no ownership conflict exists.
+- Test: bad auth rejected; unknown terminal rejected; input reaches PTY; PTY output reaches browser; resize updates rows and cols; close path cleans attachment state.
+
+## State Contract
+
+### `InstanceState`
+
+```json
+{
+  "instance_id": "inst_20260601_8400",
+  "parent_instance_id": "parent_8300",
+  "status": "running",
+  "port_set": { "web": 8400, "mcp_http": 8401, "mcp_sse": 8402 },
+  "data_dir": "E:/chattr/data/instances/inst_20260601_8400",
+  "upload_dir": "E:/chattr/data/instances/inst_20260601_8400/uploads",
+  "pid": 12345,
+  "url": "http://127.0.0.1:8400",
+  "created_at": "2026-06-01T00:00:00Z",
+  "last_health_at": "2026-06-01T00:00:04Z",
+  "error": null
+}
+```
+
+Allowed `status`: `allocating`, `starting`, `health_checking`, `running`, `stopping`, `stopped`, `failed`.
+
+### `WorkerState`
+
+```json
+{
+  "worker_id": "worker_codex_1",
+  "instance_id": "inst_20260601_8400",
+  "profile_id": "agent.codex",
+  "agent_name": "codex",
+  "terminal_id": "term_worker_codex_1",
+  "pid": 23456,
+  "status": "running",
+  "created_at": "2026-06-01T00:01:00Z",
+  "last_seen_at": "2026-06-01T00:01:05Z",
+  "error": null
+}
+```
+
+Allowed `status`: `starting`, `running`, `failed`, `stopping`, `stopped`.
+
+### `TerminalState`
+
+```json
+{
+  "terminal_id": "term_worker_codex_1",
+  "instance_id": "inst_20260601_8400",
+  "worker_id": "worker_codex_1",
+  "pid": 23456,
+  "shell": "powershell",
+  "cwd": "E:/chattr",
+  "rows": 30,
+  "cols": 120,
+  "status": "attached",
+  "last_event_at": "2026-06-01T00:01:10Z"
+}
+```
+
+Allowed `status`: `opening`, `attached`, `detached`, `closed`, `failed`.
+
+## Persistence Contract
+
+| Area | P0 decision |
+|---|---|
+| Live instance state | In-memory parent `InstanceRegistry`. |
+| Worker state | Child-owned in-memory state. Parent stores only child-returned summary. |
+| Terminal state | Child-owned in-memory state. |
+| Audit history | Parent writes `data/instance_events.jsonl` using schema `chattr.instance_event.v1`. |
+| Existing runtime history | `data/runtime_events.jsonl` remains `chattr.runtime_event.v1`. |
+| Restart recovery | Not implemented in P0. Parent restart loses live registry and does not try to reclaim old child processes. |
+| Durable registry file | Not created in P0. |
+| SQLite | Not used in P0. |
+
+Runtime-created instance dirs under `data/instances/{instance_id}` require explicit implementation approval under the `E:/chattr` file-creation rule before code execution starts.
+
+## Event Contract
+
+Create a new instance event schema instead of widening the desktop terminal runtime schema.
+
+| Event | Payload |
+|---|---|
+| `instance.allocating` | `instance_id`, `requested_base_port` |
+| `instance.starting` | `instance_id`, `web_port`, `mcp_http_port`, `mcp_sse_port` |
+| `instance.health_checking` | `instance_id`, `url` |
+| `instance.running` | `instance_id`, `pid`, `url` |
+| `instance.failed` | `instance_id`, `step`, `reason` |
+| `instance.stopping` | `instance_id`, `pid_present` |
+| `instance.stopped` | `instance_id`, `cleanup_result` |
+| `worker.requested` | `instance_id`, `profiles_count`, `attach_terminal` |
+| `worker.proxy_failed` | `instance_id`, `reason` |
+| `terminal.attach_requested` | `instance_id`, `terminal_id`, `worker_id` |
+| `terminal.attach_failed` | `instance_id`, `terminal_id`, `reason` |
+
+Forbidden in instance events: raw argv, env values, tokens, full stdout/stderr, raw terminal bytes, user prompt text.
+
+## MCP Contract
+
+Existing right rail remains exactly:
+
+| Tab | MCP category | Required tools |
+|---|---|---|
+| Rules | `rules` | `chat_rules` |
+| Jobs | `jobs` | `chat_jobs` |
+| Locked | `locked` | `chat_locked` |
+| Pinned | `pins` | `chat_pins` |
+
+New runtime MCP tools are agent-facing and must not create a fifth right-rail tab in this tranche.
+
+| Tool | Category | Side effect | Args | Return |
+|---|---|---|---|---|
+| `chat_instances` | `runtime` | `read_only` | `action`, optional `instance_id` | JSON list or one instance summary |
+| `chat_instance_request` | `runtime` | `proposes_change` | `action`, optional `base_port`, optional `profiles`, `reason`, `sender` | JSON proposal object for browser/PM confirmation |
+| `chat_runtime` | `runtime` | `read_only` | `action`, optional `instance_id` | JSON runtime summary |
+
+Allowed `chat_instances.action`: `list`, `get`.
+
+Allowed `chat_instance_request.action`: `start`, `stop`, `open_browser`, `start_workers`.
+
+Allowed `chat_runtime.action`: `ports`, `health`, `terminals`.
+
+Rules:
+
+- MCP tools must keep existing identity/sender validation.
+- MCP may propose process starts and stops; it must not directly start or stop processes without browser/PM confirmation.
+- `/api/right-rail/capabilities` must continue deriving the four active rail tabs from MCP metadata.
+- If a fifth runtime tab is later desired, stop and create a separate confirmed UI contract first.
+
+## Observability Contract
+
+### Traces
+
+| Type | Name | Emit location | Purpose | Result semantics | Verification |
+|---|---|---|---|---|---|
+| Span | `instance.launch.request` | `POST /api/instances` entry | Measures one parent launch request end to end. | End with `ok`, `ports_unavailable`, `spawn_failed`, or `health_failed`. | `tests/test_instances_api.py` asserts span name and result. |
+| Span | `instance.port.allocate` | `InstanceManager` port allocator | Proves port choice was checked before spawn. | End with `ok` or `occupied`. | `tests/test_instance_manager.py` covers free and occupied ports. |
+| Span | `instance.launch.spawn_child` | child process spawn helper | Isolates process-spawn failures from health failures. | End with `ok` or `spawn_failed`. | `tests/test_instance_manager.py` covers spawn success and failure cleanup. |
+| Span | `instance.health_check` | child health probe loop | Proves child readiness before parent reports running. | End with `ok`, `timeout`, or `unreachable`. | `tests/test_instance_manager.py` covers timeout/unreachable. |
+| Span | `instance.open_browser` | `POST /api/instances/{id}/open-browser` | Measures validated browser-open request. | End with `ok` or `browser_open_failed`. | `tests/test_instances_api.py` covers URL validation and failure. |
+| Span | `instance.stop.request` | `POST /api/instances/{id}/stop` | Measures parent-owned child stop. | End with `ok`, `not_found`, or `stop_failed`. | `tests/test_instances_api.py` covers owned and unknown process stop. |
+| Span | `worker.proxy.request` | parent worker proxy endpoint | Separates parent proxy failures from child worker failures. | End with `ok`, `child_unreachable`, or `child_failed`. | `tests/test_instances_api.py` covers proxy branches. |
+| Span | `worker.child.start` | child `POST /api/workers` | Measures child-owned worker launch. | End with `ok`, `invalid_profile`, or `worker_spawn_failed`. | `tests/test_child_workers_api.py` covers allowlist and spawn branches. |
+| Span | `terminal.ws.connect` | browser terminal WebSocket connect | Measures terminal attach and auth. | End with `ok`, `invalid_session`, `not_found`, or `pty_attach_failed`. | `tests/test_browser_terminal_api.py` covers auth, attach, and missing terminal. |
+
+### Metrics
+
+| Type | Name | Emit location | Purpose | Result semantics | Verification |
+|---|---|---|---|---|---|
+| Counter | `chattr.instance.launch.count` | end of `POST /api/instances` | Counts launch outcomes. | Increment once per request with final `result`. | `tests/test_instances_api.py` asserts success and failure increments. |
+| Histogram | `chattr.instance.launch.duration_ms` | end of `POST /api/instances` | Measures launch latency including health check. | Observe once per request with final `result`. | `tests/test_instances_api.py` asserts observation exists. |
+| Counter | `chattr.instance.health.count` | each child health probe completion | Counts health probe outcomes. | Increment per probe with `ok`, `timeout`, or `unreachable`. | `tests/test_instance_manager.py` asserts failure branches. |
+| Counter | `chattr.instance.stop.count` | end of stop endpoint | Counts stop outcomes. | Increment once per stop request with final `result`. | `tests/test_instances_api.py` asserts owned stop and not-found branches. |
+| Counter | `chattr.worker.proxy.count` | end of parent worker proxy endpoint | Counts parent-to-child worker proxy outcomes. | Increment once per proxy request with final `result`. | `tests/test_instances_api.py` asserts child unreachable and success. |
+| Counter | `chattr.worker.start.count` | end of child `POST /api/workers` | Counts child worker launch outcomes. | Increment once per worker request with final `result`. | `tests/test_child_workers_api.py` asserts invalid profile and success. |
+| UpDownCounter | `chattr.terminal.ws.connections` | WebSocket accept and disconnect | Tracks active browser terminal sockets. | Add `1` after auth success; add `-1` on detach/close. | `tests/test_browser_terminal_api.py` asserts connect/disconnect balance. |
+
+### Structured Logs
+
+| Type | Name | Emit location | Purpose | Result semantics | Verification |
+|---|---|---|---|---|---|
+| Log | `chattr.instance.launch.requested` | before allocation | Records user-visible launch intent without raw command data. | Includes `instance_id`, requested base port if present, and `profiles_count`. | `tests/test_instances_api.py` asserts forbidden fields absent. |
+| Log | `chattr.instance.started` | after child health passes | Records the moment a child becomes user-openable. | Includes `instance_id`, `pid_present`, and `status = running`. | `tests/test_instance_manager.py` asserts status transition. |
+| Log | `chattr.instance.failed` | after failed spawn or health | Records failed step for UI and audit correlation. | Includes `instance_id`, `step`, and redacted reason. | `tests/test_instance_manager.py` asserts failure branch. |
+| Log | `chattr.instance.stopped` | after stop cleanup | Records parent-owned cleanup result. | Includes `instance_id`, `pid_present`, and cleanup result. | `tests/test_instances_api.py` asserts stop branch. |
+| Log | `chattr.worker.requested` | before parent-to-child worker proxy | Records confirmed worker request without raw argv. | Includes `instance_id`, `profiles_count`, and `attach_terminal`. | `tests/test_instances_api.py` asserts proxy request. |
+| Log | `chattr.worker.started` | after child worker start | Records child-owned worker creation. | Includes `worker_id`, `profile_id`, `instance_id`, and `status`. | `tests/test_child_workers_api.py` asserts worker launch. |
+| Log | `chattr.terminal.closed` | after browser terminal close | Records detach or terminate path. | Includes `terminal_id`, `worker_id`, and close mode. | `tests/test_browser_terminal_api.py` asserts close cleanup. |
+
+Allowed trace and metric attributes: `instance_id`, `profile_id`, `status`, `result`, `port`, `pid_present`, `http.status_code`, `step`.
+
+Forbidden trace and metric attributes: raw command text, tokens, env values, full stdout/stderr, raw terminal bytes, secret names or values, user prompt text, full filesystem paths.
+
+## Dependency Gates
+
+| Gate | Dependency | Current state | Approval needed before |
+|---|---|---|---|
+| DG1 | `xterm.js` or local xterm asset package | Not present | Adding `static/browser-terminal.js` xterm integration. |
+| DG2 | Windows PTY backend, likely `pywinpty` or a ConPTY wrapper | Not present | Implementing real browser PTY input/output. |
+| DG3 | Durable registry JSON or SQLite | Not in P0 | Any restart recovery work. |
+| DG4 | Additional frontend package manager workflow | Not needed for static P0 unless DG1 chooses package install | Any package install or lockfile change. |
+
+FastAPI WebSocket transport is already available through FastAPI and `uvicorn[standard]`; no new Python WebSocket dependency is required for the route itself.
+
+No dependency may be added to `pyproject.toml`, `package.json`, governance contracts, or generated docs without the specific gate approval.
+
+## Explicit Risks And Accepted Limitations
+
+| Risk | Accepted limitation | Mitigation in this plan | Verification |
+|---|---|---|---|
+| No P0 restart recovery | Parent restart loses live `InstanceRegistry` and does not reclaim old child processes. | P0 records JSONL audit only; restart recovery stays behind DG3. | Completion criteria require no SQLite or durable registry in P0. |
+| Orphaned child process on unexpected parent exit | A child process may outlive a crashed parent. | Normal stop path owns cleanup; rollback requires checking active child process before deleting dirs. | `tests/test_instance_manager.py` covers graceful failure cleanup and owned stop. |
+| Port allocation race | A port can become occupied after availability preview. | `POST /api/instances` rechecks ports immediately before spawn and returns `409 ports_unavailable`. | `tests/test_instance_manager.py` and `tests/test_instances_api.py` cover occupied ports. |
+| Windows browser-open behavior | Browser open can fail or open on the wrong host if URL validation is weak. | Parent opens only validated loopback child URLs from server-built paths. | `tests/test_instances_api.py` covers external URL rejection and open failure. |
+| Terminal dependency compatibility | `xterm.js` and the Windows PTY backend may not be approved or compatible. | DG1 and DG2 block real browser terminal implementation until approved. | Dependency gate task records exact dependency decision before code proceeds. |
+| Parent-child ownership split | Parent could accidentally become source of truth for child worker internals. | Parent only proxies worker requests; child owns workers and terminals. | Child endpoint contracts and tests assert child-owned state. |
+| MCP process-control boundary | MCP tools could become direct process starters instead of proposal tools. | `chat_instance_request` returns proposals only and browser/PM confirms process changes. | `tests/test_runtime_mcp_tools.py` asserts no direct start/stop side effect. |
+| Extraction drift from legacy-only code | P0 could become tightly coupled to legacy static UI or launcher internals. | Extraction gate requires a smaller extractable set mapped to backend API, runtime, terminal, MCP, frontend, and observability boundaries. | Final extraction gate checklist must pass before copying into `E:/kai-chattr`. |
+| File creation approval drift | Runtime dirs and new source files could be created without PM approval. | Task 0 requires PM approval for new source files and runtime-created `data/instances/*` dirs before code execution. | Task 0 baseline records approval before implementation starts. |
+
+## Database Migrations
+
+Zero database migrations in P0.
+
+Reason: live state is in memory and audit history is JSONL. SQLite/durable registry is explicitly out of scope for this phase.
+
+## Edge Functions
+
+Zero edge functions created or modified.
+
+Reason: this is a local legacy Chattr runtime control-plane tranche, not a Cloudflare Pages or Worker runtime slice.
+
+## Frontend Surface Area
+
+This tranche touches more than eight files. That is intentional and count-locked because the feature spans runtime control, Workbench UI, browser terminal, MCP metadata, and observability.
+
+### New Frontend Files: `2`
+
+| File | Purpose |
+|---|---|
+| `E:/chattr/static/instances.js` | Workbench New Session UI, launch progress, status list, open child route. |
+| `E:/chattr/static/browser-terminal.js` | Browser terminal attach, resize, input/output, reconnect, close. |
+
+### Modified Frontend Files: `4`
+
+| File | Change |
+|---|---|
+| `E:/chattr/static/index.html` | Rename or relocate existing workflow-template `Start a session`; mount New Session entry point. |
+| `E:/chattr/static/channels.js` | Keep channel rail behavior separate from New Session controls. |
+| `E:/chattr/static/chat.js` | Keep snapshot terminal as legacy viewer; route browser terminal through new module. |
+| `E:/chattr/static/right-panel.js` | Preserve four-tab MCP rail; no runtime tab added. |
+
+### Existing Workflow Launcher Disposition
+
+The existing workflow-template launcher must be renamed to `Workflow session` or relocated under workflow/session-template UI before New Session is introduced.
+
+New Session copy must refer only to launching a new local Chattr instance.
+
+## Backend File Inventory
+
+### New Backend Files: `6`
+
+| File | Purpose |
+|---|---|
+| `E:/chattr/server/launch/instance_manager.py` | Parent `InstanceRegistry`, port allocation, child argv, spawn, health, stop. |
+| `E:/chattr/server/api/instances.py` | Parent FastAPI router for all `/api/instances` endpoints. |
+| `E:/chattr/server/api/workers.py` | Child FastAPI router for `POST /api/workers` and `GET /api/workers/{worker_id}`. |
+| `E:/chattr/server/events/instance_event_schema.py` | `chattr.instance_event.v1` validation. |
+| `E:/chattr/server/runtime/pty_manager.py` | Child-owned PTY sessions after DG2 approval. |
+| `E:/chattr/server/api/browser_terminal.py` | Child browser terminal WebSocket API after DG1/DG2 approval. |
+
+### Modified Backend Files: `5`
+
+| File | Change |
+|---|---|
+| `E:/chattr/app.py` | Mount instance router and browser terminal router; expose child health as needed. |
+| `E:/chattr/server/launch/chattr_launcher.py` | Add owned-process helpers without weakening visible-terminal safety. |
+| `E:/chattr/server/launcher_control.py` | Keep launcher status/stop coherent with the new ownership model. |
+| `E:/chattr/server/observability/runtime_obs.py` | Add locked spans, metrics, logs, and attribute filters. |
+| `E:/chattr/mcp_bridge.py` | Add runtime MCP tools without changing active right-rail tabs. |
+
+### Files Not Modified In P0
+
+| File | Reason |
+|---|---|
+| `E:/chattr/server/events/terminal_event_schema.py` | Existing `chattr.runtime_event.v1` remains unchanged. |
+| `E:/chattr/run.py` | Existing override flags are sufficient unless tests prove otherwise. |
+| `E:/chattr/config_loader.py` | Existing `CHATTR_*` override mapping is sufficient unless tests prove otherwise. |
+
+## Test Inventory
+
+### New Test Files: `6`
+
+| File | Coverage |
+|---|---|
+| `E:/chattr/tests/test_instance_manager.py` | port allocation, argv construction, spawn cleanup, stop ownership. |
+| `E:/chattr/tests/test_instances_api.py` | all parent endpoints, auth, loopback, errors, cleanup. |
+| `E:/chattr/tests/test_child_workers_api.py` | child worker endpoint auth, profile allowlist, worker state, terminal attach branching. |
+| `E:/chattr/tests/test_instance_events.py` | `chattr.instance_event.v1` validation and JSONL audit. |
+| `E:/chattr/tests/test_browser_terminal_api.py` | browser terminal WebSocket after DG1/DG2. |
+| `E:/chattr/tests/test_runtime_mcp_tools.py` | runtime MCP tool contracts. |
+
+### Modified Test Files: `3`
+
+| File | Coverage |
+|---|---|
+| `E:/chattr/tests/test_mcp_right_rail_tools.py` | four-tab right rail remains stable while runtime tools exist. |
+| `E:/chattr/tests/test_chattr_launcher.py` | visible-terminal safety remains enforced. |
+| `E:/chattr/tests/test_launcher_control_api.py` | status/stop behavior no longer conflicts with owned child process model. |
+
+## Implementation Tasks
+
+Execution rules:
+
+- Run each task as its own implementation slice.
+- Do not start the next task until the current task check passes.
+- If a task needs a new file or runtime-created directory, confirm PM approval under `E:/chattr/__start-here/file-creation-approval-rule.md` before creating it.
+- Use the commit message listed below after the task passes, unless the work remains intentionally uncommitted for review.
+- Expected output means the named command exits `0` and the described behavior is visible in the test output or manual check.
+
+| Task | Execution slices | Expected output | Commit message |
+|---|---|---|---|
+| 0 | baseline only | clean/understood `E:/chattr` status and PM approval recorded for new files/dirs | none |
+| 1 | event schema, validator tests | `tests/test_instance_events.py` and existing runtime-event tests pass | `feat(runtime): add instance lifecycle event schema` |
+| 2 | port allocator, child argv, spawn/health, stop cleanup | `tests/test_instance_manager.py` passes | `feat(runtime): add parent instance manager` |
+| 3 | launcher helper ownership, launcher-control status/stop coherence | launcher safety/control tests pass | `feat(runtime): wire owned launcher control` |
+| 4 | parent router, auth/errors, parent proxy, app mount | `tests/test_instances_api.py` passes | `feat(api): add parent instance endpoints` |
+| 5 | child worker router, allowlist enforcement, child worker state | `tests/test_child_workers_api.py` passes | `feat(api): add child worker endpoints` |
+| 6 | Workbench entry, workflow launcher rename, status/progress UI, right-rail preservation | JS checks pass and manual parent/child route check passes | `feat(ui): add workbench new session controls` |
+| 7 | runtime MCP read tools, proposal actions, right-rail capability stability | runtime MCP and right-rail tests pass | `feat(mcp): add runtime instance tools` |
+| 8 | DG1/DG2 approval checkpoint only | exact dependency decision recorded before package changes | none until approved dependency change |
+| 9 | PTY manager, browser terminal API, browser terminal JS | browser terminal tests and JS checks pass | `feat(runtime): add browser terminal attachment` |
+| 10 | spans, metrics, logs, attribute filtering | observability assertions pass in task test files | `feat(observability): instrument instance runtime` |
+| 11 | full automated and manual verification | full test command exits `0`; manual checklist passes | `test(runtime): verify new session tranche` |
+
+### Task 0: Preflight Baseline
+
+Files: none.
+
+Steps:
+
+1. Run `git status --short --branch --untracked-files=all` in `E:/chattr`.
+2. Run `git log --oneline -5` in `E:/chattr`.
+3. If the worktree is dirty, read relevant diffs before editing and update this plan if inventory changes.
+4. Confirm PM approval for any new source files and runtime-created `data/instances/*` directories.
+
+Check:
+
+```powershell
+git status --short --branch --untracked-files=all
+```
+
+### Task 1: Instance Event Schema
+
+Files:
+
+- `E:/chattr/server/events/instance_event_schema.py`
+- `E:/chattr/tests/test_instance_events.py`
+
+Required tests:
+
+- Accepts every event listed in the Event Contract.
+- Rejects unknown event names.
+- Rejects forbidden raw command/env/stdout/terminal-byte fields.
+- Writes records with `schema_version = "chattr.instance_event.v1"`.
+- Does not change `chattr.runtime_event.v1` tests.
+
+Check:
+
+```powershell
+pytest -q tests/test_instance_events.py tests/test_desktop_runtime_events.py
+```
+
+### Task 2: Instance Manager
+
+Files:
+
+- `E:/chattr/server/launch/instance_manager.py`
+- `E:/chattr/tests/test_instance_manager.py`
+
+Required tests:
+
+- Allocates free web/MCP HTTP/MCP SSE port set.
+- Rejects occupied web/MCP HTTP/MCP SSE ports.
+- Builds child argv with `--data-dir`, `--port`, `--mcp-http-port`, `--mcp-sse-port`, `--upload-dir`.
+- Uses isolated child data and upload dirs.
+- Records pid and status for owned child process.
+- Failed spawn leaves no running process and no running registry state.
+- Failed health check stops the spawned child and marks instance `failed`.
+- Stop touches only owned child process.
+
+Check:
+
+```powershell
+pytest -q tests/test_instance_manager.py
+```
+
+### Task 3: Launcher Ownership Integration
+
+Files:
+
+- `E:/chattr/server/launch/chattr_launcher.py`
+- `E:/chattr/server/launcher_control.py`
+- `E:/chattr/tests/test_chattr_launcher.py`
+- `E:/chattr/tests/test_launcher_control_api.py`
+
+Execution slices:
+
+1. Add owned-process helper behavior without weakening visible-terminal safety.
+2. Keep browser-start paths rejecting `visible_terminal = true` profiles.
+3. Make launcher-control status reflect parent-owned child state where applicable.
+4. Make launcher-control stop avoid non-owned processes.
+
+Required tests:
+
+- Visible-terminal profile rejection still passes.
+- Owned child process status is reportable.
+- Stop touches only owned child process.
+- Unknown or non-owned pid stop is rejected.
+
+Check:
+
+```powershell
+pytest -q tests/test_chattr_launcher.py tests/test_launcher_control_api.py
+```
+
+### Task 4: Parent Instance API
+
+Files:
+
+- `E:/chattr/server/api/instances.py`
+- `E:/chattr/app.py`
+- `E:/chattr/tests/test_instances_api.py`
+
+Required tests:
+
+- Every endpoint rejects missing token.
+- Every endpoint rejects invalid token.
+- Every mutating endpoint rejects non-loopback client.
+- `GET /api/instances` returns `[]` before launch.
+- `GET /api/instances/ports/available` detects occupied ports.
+- `POST /api/instances` rejects raw argv/env/cwd fields.
+- `POST /api/instances` returns `InstanceState`.
+- `GET /api/instances/{id}` returns `404` for unknown id.
+- `POST /api/instances/{id}/open-browser` rejects external URL values.
+- `POST /api/instances/{id}/workers` proxies to child only when child is running.
+- `POST /api/instances/{id}/stop` stops only owned child.
+
+Check:
+
+```powershell
+pytest -q tests/test_instances_api.py
+```
+
+### Task 5: Child Worker API
+
+Files:
+
+- `E:/chattr/server/api/workers.py`
+- `E:/chattr/app.py`
+- `E:/chattr/tests/test_child_workers_api.py`
+- `E:/chattr/tests/test_chattr_launcher.py`
+
+Execution slices:
+
+1. Mount child worker router in the child process.
+2. Enforce loopback and child browser session token.
+3. Accept only launcher allowlist profile ids.
+4. Create child-owned `WorkerState`.
+5. Branch terminal attach behavior according to `attach_terminal`.
+
+Required tests:
+
+- `POST /api/workers` rejects missing or invalid session token.
+- `POST /api/workers` rejects raw argv/env/cwd fields.
+- `POST /api/workers` rejects unknown profile ids.
+- `POST /api/workers` starts allowlisted profile ids through child-owned launcher logic.
+- `GET /api/workers/{worker_id}` returns child-owned worker state without raw command/env fields.
+- Failed terminal attach follows the cleanup branch in the child endpoint contract.
+- Visible-terminal safety remains enforced.
+
+Check:
+
+```powershell
+pytest -q tests/test_child_workers_api.py tests/test_chattr_launcher.py
+```
+
+### Task 6: Workbench New Session UI
+
+Files:
+
+- `E:/chattr/static/index.html`
+- `E:/chattr/static/channels.js`
+- `E:/chattr/static/instances.js`
+- `E:/chattr/static/right-panel.js`
+
+Required behavior:
+
+- Left Workbench shows New Session.
+- Existing workflow-template launcher is renamed or relocated.
+- New Session launch progress shows: port allocation, child start, health check, browser open, optional worker request.
+- Failed launch shows the failed step and does not imply a live child exists.
+- Parent and child URLs are visually distinguishable.
+- Right rail still shows only Rules, Jobs, Locked, and Pinned; no runtime tab appears.
+
+Checks:
+
+```powershell
+node --check static/instances.js
+node --check static/channels.js
+node --check static/chat.js
+node --check static/right-panel.js
+```
+
+Manual check:
+
+1. Open parent `http://127.0.0.1:8300`.
+2. Click New Session.
+3. Confirm child route opens on a different web port.
+4. Confirm parent and child status remain distinguishable.
+5. Confirm right rail still shows only Rules, Jobs, Locked, Pinned.
+
+### Task 7: Runtime MCP Tools
+
+Files:
+
+- `E:/chattr/mcp_bridge.py`
+- `E:/chattr/tests/test_runtime_mcp_tools.py`
+- `E:/chattr/tests/test_mcp_right_rail_tools.py`
+
+Required tests:
+
+- `chat_instances(action="list")` returns JSON list.
+- `chat_instances(action="get", instance_id=...)` returns JSON detail or not-found error.
+- `chat_instance_request(action="start")` returns a proposal, not a direct process start.
+- `chat_instance_request(action="stop")` returns a proposal, not a direct process stop.
+- `chat_runtime(action="ports")` returns parent and child port metadata.
+- `/api/right-rail/capabilities` still exposes only Rules, Jobs, Locked, Pinned.
+
+Check:
+
+```powershell
+pytest -q tests/test_runtime_mcp_tools.py tests/test_mcp_right_rail_tools.py
+```
+
+### Task 8: Dependency Gate DG1/DG2
+
+Files:
+
+- `E:/chattr/package.json` only if the approved `xterm.js` path requires a package declaration.
+- `E:/chattr/pyproject.toml` only if the approved PTY backend is a Python package.
+
+Steps:
+
+1. Stop before dependency addition.
+2. Present the exact dependency name, version constraint, source, and affected lockfile.
+3. Wait for Jon approval.
+4. Add only the approved dependency.
+
+Check after approval:
+
+```powershell
+rg -n -- "xterm|@xterm|pywinpty|conpty|ConPTY" package.json pyproject.toml uv.lock
+```
+
+### Task 9: Browser Terminal
+
+Files:
+
+- `E:/chattr/server/runtime/pty_manager.py`
+- `E:/chattr/server/api/browser_terminal.py`
+- `E:/chattr/static/browser-terminal.js`
+- `E:/chattr/static/chat.js`
+- `E:/chattr/tests/test_browser_terminal_api.py`
+
+Required tests:
+
+- Browser terminal WebSocket rejects bad session token.
+- Browser terminal WebSocket rejects unknown terminal id.
+- PTY launch uses whitelisted child profile only.
+- PTY launch does not expose raw env or token values.
+- Browser input writes to PTY.
+- PTY output streams back to browser.
+- Resize updates rows and cols.
+- Close terminates or detaches according to explicit mode.
+
+Check:
+
+```powershell
+pytest -q tests/test_browser_terminal_api.py
+node --check static/browser-terminal.js
+```
+
+### Task 10: Observability
+
+Files:
+
+- `E:/chattr/server/observability/runtime_obs.py`
+- `E:/chattr/tests/test_instance_manager.py`
+- `E:/chattr/tests/test_instances_api.py`
+- `E:/chattr/tests/test_browser_terminal_api.py`
+
+Required tests:
+
+- Instance launch emits the locked spans.
+- Failed launch emits result labels.
+- Health check emits `instance.health_check`.
+- Stop emits `instance.stop.request`.
+- Worker proxy emits `worker.proxy.request`.
+- Child worker start emits `worker.child.start`.
+- Terminal WebSocket emits connection metric.
+- Forbidden attributes are absent.
+
+Check:
+
+```powershell
+pytest -q tests/test_instance_manager.py tests/test_instances_api.py tests/test_child_workers_api.py tests/test_browser_terminal_api.py
+```
+
+### Task 11: End-To-End Verification
+
+Run after the tranche is implemented:
+
+```powershell
+pytest -q tests/test_chattr_launcher.py tests/test_launcher_control_api.py tests/test_instance_events.py tests/test_instance_manager.py tests/test_instances_api.py tests/test_child_workers_api.py tests/test_runtime_mcp_tools.py tests/test_mcp_right_rail_tools.py tests/test_runtime_health.py tests/test_runtime_events_ingest_auth.py tests/test_runtime_dropped_envelope.py tests/test_desktop_runtime_contract.py tests/test_terminal_snapshots.py tests/test_browser_terminal_api.py
+```
+
+Manual verification:
+
+1. Parent instance running at `:8300`.
+2. Child instance starts on a different web port, for example `:8400`.
+3. Child MCP HTTP and MCP SSE ports differ from parent.
+4. Child data and upload dirs differ from parent.
+5. Worker registers to child room, not parent.
+6. Browser terminal is visible and input-capable in child browser.
+7. Right rail still shows only Rules, Jobs, Locked, Pinned.
+8. Stop cleans owned child server and no non-owned process.
+
+## Rollback And Cleanup
+
+- Stop all parent-owned child processes through the instance manager.
+- Remove or ignore `data/instance_events.jsonl`; it is audit-only and has no migration semantics.
+- Remove runtime-created `data/instances/{instance_id}` dirs only after confirming no active child process uses them.
+- Revert source edits in the locked file inventory only.
+- No database rollback is needed.
+- No edge-function rollback is needed.
+
+## Extraction Gate
+
+Extract to `E:/kai-chattr` only after all conditions pass:
+
+1. Endpoint contracts in this plan exist exactly as specified.
+2. `InstanceRegistry` ownership behavior passes tests.
+3. `chattr.instance_event.v1` audit stream exists and `chattr.runtime_event.v1` remains unchanged.
+4. MCP runtime tools pass tests and right rail remains four-tab.
+5. Browser terminal is interactive and input-capable.
+6. Observability tests prove locked spans, metrics, logs, result labels, and forbidden attributes.
+7. Frontend inventory counts match the actual changed files.
+8. Dependency gates have explicit approvals recorded.
+9. No SQLite, DB migration, or edge function has been introduced in P0.
+10. Extractable set is smaller than the legacy repo and maps to backend API, runtime, terminal, MCP, frontend, and observability boundaries.
+
+## Cross-Reference Check
+
+### Endpoint Coverage
+
+| Endpoint or surface | Task | Verification |
+|---|---|---|
+| `GET /api/instances` | Task 4 | `pytest -q tests/test_instances_api.py` |
+| `GET /api/instances/ports/available` | Task 4 | `pytest -q tests/test_instances_api.py` |
+| `POST /api/instances` | Task 4 | `pytest -q tests/test_instances_api.py` |
+| `GET /api/instances/{instance_id}` | Task 4 | `pytest -q tests/test_instances_api.py` |
+| `POST /api/instances/{instance_id}/open-browser` | Task 4 | `pytest -q tests/test_instances_api.py` |
+| `POST /api/instances/{instance_id}/workers` | Task 4 and Task 5 | `pytest -q tests/test_instances_api.py tests/test_child_workers_api.py` |
+| `POST /api/instances/{instance_id}/stop` | Task 3 and Task 4 | `pytest -q tests/test_launcher_control_api.py tests/test_instances_api.py` |
+| `POST /api/workers` | Task 5 | `pytest -q tests/test_child_workers_api.py` |
+| `GET /api/workers/{worker_id}` | Task 5 | `pytest -q tests/test_child_workers_api.py` |
+| `GET /api/terminal-sessions/{terminal_id}` | Task 9 | `pytest -q tests/test_browser_terminal_api.py` |
+| `WebSocket /api/browser-terminal/{terminal_id}/ws` | Task 9 | `pytest -q tests/test_browser_terminal_api.py` |
+
+### File Coverage
+
+| File group | Task |
+|---|---|
+| Instance event schema and tests | Task 1 |
+| Instance manager and tests | Task 2 |
+| Launcher helper and launcher-control API | Task 3 |
+| Parent instance router and app mount | Task 4 |
+| Child worker router and tests | Task 5 |
+| Workbench New Session UI and right rail | Task 6 |
+| Runtime MCP tools and right-rail capability tests | Task 7 |
+| Dependency manifests if approved | Task 8 |
+| PTY manager, browser terminal API, terminal JS | Task 9 |
+| Observability module and instrumentation tests | Task 10 |
+
+### Dependency Gate Coverage
+
+| Gate | Task | Required disposition |
+|---|---|---|
+| DG1 `xterm.js` | Task 8 before Task 9 | Dependency approved with name, version, source, and lockfile impact, or browser terminal implementation stops. |
+| DG2 Windows PTY backend | Task 8 before Task 9 | Dependency approved with name, version, source, and lockfile impact, or real PTY IO stops. |
+| DG3 durable registry | Not in P0 | Any restart recovery request stops and revises this plan. |
+| DG4 frontend package workflow | Task 8 if package install is required | Package workflow approved before lockfile or package edits. |
+
+### Completion Criteria Coverage
+
+| Completion criterion | Task evidence |
+|---|---|
+| Parent starts child on new port set. | Task 2, Task 4, Task 11 manual check. |
+| Parent and child storage roots are isolated. | Task 2 and Task 11 manual check. |
+| Worker CLIs launch against child instance. | Task 5 and Task 11 manual check. |
+| Worker terminals are browser-visible and input-capable. | Task 9 and Task 11 manual check. |
+| Lifecycle observable through API, JSONL, logs, traces, and metrics. | Task 1, Task 4, Task 10. |
+| MCP runtime tools read same instance state model. | Task 7. |
+| Right rail remains Rules, Jobs, Locked, Pinned. | Task 6 and Task 7. |
+| Workflow-template launcher no longer conflicts with New Session. | Task 6. |
+| Final file inventory matches plan or plan is revised first. | Task 11. |
+
+## Completion Criteria
+
+The tranche is complete only when:
+
+1. A parent instance can start a child instance on a new port set.
+2. Parent and child storage roots are isolated.
+3. Worker CLIs can be launched against the child instance.
+4. Worker terminals are browser-visible and input-capable.
+5. Runtime lifecycle is observable through API, JSONL audit, logs, traces, and metrics.
+6. MCP runtime tools read from the same instance state model.
+7. Right rail remains Rules, Jobs, Locked, Pinned.
+8. The current workflow-template session launcher no longer conflicts with New Session.
+9. The final file inventory matches this plan or this plan is revised before implementation proceeds.

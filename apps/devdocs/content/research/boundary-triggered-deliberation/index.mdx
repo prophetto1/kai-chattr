@@ -1,0 +1,126 @@
+---
+title: "Checkpoint Enforcement System — Requirements"
+description: "Locked requirements (R1–R13 + R5a) and decisions (L1–L15) for the deterministic hook control plane over Claude Code and Codex: boundary-inferred, steer-by-default, zero workflow modification."
+---
+
+- **Status:** Requirements locked (Section 1 + Section 2). Architecture/state-machine items partially open (Section 3).
+- **Owner:** Jon
+- **Date:** 2026-06-02
+- **Scope:** The deterministic hook control plane over Claude Code and Codex (`E:/hooks`). Defines *what* the system must do; not yet an implementation plan. The Codex-authored `thinking-gate-grant-and-plan-token-implementation-plan.md` is one implementation attempt and must conform to these requirements.
+
+---
+
+## 0. Framing (the conceptual foundation)
+
+These three statements are the ground the requirements stand on. They were excavated and confirmed in design; they are stated here as settled framing, not opinion.
+
+**0.1 — The system is defined by what its boundary exposes, not by "owning a loop."**
+"Owning the loop" is not a real property anyone holds — execution is a tower of loops, each layer owning its own orchestration and blind to the layer beneath. LangGraph owns an orchestration loop but is blind to the model's generative loop; Anthropic/OpenAI own the serving loop but not the hardware scheduler. What matters is the **boundary** a system sits at and the surface that boundary exposes. This system sits at the **tool-call boundary** of Claude Code / Codex (PreToolUse, PostToolUse, Stop, etc.). That boundary exposes: tool name, one collapsed target (command/file_path/path/pattern/url/query), status, timestamp, session id — **and nothing else.** The agent's reasoning and orchestration both live below this boundary, sealed. Every requirement below is a function of that exposed surface.
+
+**0.2 — The real difference between orchestration and this system: authored structure vs. inferred structure.**
+An orchestration framework (LangGraph/Temporal) *possesses* the work's phase-structure because it authored it up front; the runtime walks an explicit graph and can enforce legal transitions. This system *infers* the work's phase-structure by observing the trajectory through its boundary, because the structure lives inside an agent it did not author and cannot open. The dividing line is whether the phase-structure is **an artifact you hold** or **a behavior you watch.** This system watches.
+
+**0.3 — Convenience is bought with approximation; the back half of these requirements is the price.**
+Authored structure is correct by stipulation (the graph *is* ground truth) but costs the user up-front authoring effort and goes stale for novel work. Inferred structure costs the user nothing and refreshes continuously, but is correct only to the accuracy of the detector — a boundary the detector draws is a *guess* about where the real transition was. For novel work (an arbitrary task), a machine's continuously-refreshed guess beats a human's frozen-at-t=0 guess, so inference wins on accuracy too — but via continuously-corrected approximation, not ground truth. **R5a, R8, R10, and R12 exist to make that approximation safe. They are the cost of convenience, paid in engineering rather than in user effort.**
+
+---
+
+## 1. Requirements (R1–R13)
+
+### A. WHAT — Checkpoint Contract
+
+**R1 — Pluggable checkpoint contract.** The enforced action is abstract: "a deliberate reassessment occurred." It can be satisfied by ST, structured-schema output, context reread, drift review, critique, partial evaluation, or another configured mechanism. Swapping the mechanism must not change trigger or modality logic.
+
+**R2 — Observable evidence.** Every checkpoint mechanism must leave a verifiable trace: tool event, schema-valid output, audit row, review artifact, context-refresh record, or equivalent.
+
+**R3 — Prospective and retrospective.** Checkpoints support both plan-ahead reassessment before a new phase and corrective reassessment during work when drift, loop risk, or viability loss appears.
+
+### B. WHEN — Boundary Signal
+
+**R4 — Boundary-triggered, never endpoint-triggered.** The system acts at material work boundaries, not only at task start, not only at task end, and not before every action.
+
+**R5 — Deterministic predicate over observable state.** Phase transition is semantic, but enforcement must compute it from observable signals — none mandatory, combinable: work-kind shift, first high-risk/protected action, failure/loop signal, scope change (new file/module/path), task-lifecycle event (runtime-emitted), elapsed/tool-count budget. No agent-volunteered signal participates in boundary detection.
+
+**R5a — Anti-flap floor.** Boundary signals must be hysteretic: a shift must persist for N actions before it counts as a transition, and re-arming has a floor (no two arms within K actions / T seconds). Without this, R6's auto-rearm becomes a hidden per-action toll loop.
+
+**R6 — Auto-issued, auto-rearmed windows.** A valid checkpoint opens an internal **window** over a coherent batch of related actions. Windows are issued and rearmed automatically by the system; the agent never requests one. A window closes at the next qualifying boundary (R5) or a backstop (time/tool-count), whichever comes first.
+
+**R7 — Risk-proportional.** Low-risk work gets longer, quieter windows. Higher-risk actions require earlier reassessment or stronger enforcement, up to the grant/approval tier (R10).
+
+**R8 — Self-calibrating baselines.** Start with static time/tool estimates; mature toward learned baselines per task type, repo, tool mix, and historical duration. Learned baselines must be derived from data not contaminated by the trigger itself, or the budget signal drifts.
+
+### C. HOW — Enforcement Modality
+
+**R9 — Zero workflow modification.** The hook system may modify agent runtime behavior, but must not require users or agents to manually change how they work. No required manual checkpoint command, special file format, ST ritual, plan template, save convention, or user workflow change. The system adapts to the work; the work does not adapt to the system.
+
+**R10 — Steer by default, grant/approval by exception.** At ordinary boundaries the system injects or routes reassessment without stopping normal work (advisory steering). Hard enforcement — a **grant/approval**, the one place permission is actually withheld until satisfied — is reserved for the narrow high-risk/protected tier. Blocking is rationed on throughput grounds; blocking the agent does not violate R9. The single sanctioned manual act in the system is the user's explicit approval of a protected/destructive write.
+
+### D. Cross-Cutting
+
+**R11 — Auditable.** Every checkpoint, window, boundary detection, expiration, skip, grant/approval, and enforcement action is recorded as internal audit state.
+
+**R12 — Fail-open.** Detector failure, missing telemetry, or runtime mismatch must not stop work. Each signal declares its telemetry dependency and self-disables when its inputs are unavailable, rather than failing the whole detector. Infra failure cannot become a work blocker.
+
+**R13 — Runtime-portable.** The same contract must work across Claude Code and Codex. The *contract* is identical; the *enforcement surface degrades explicitly* on thinner runtimes (e.g., Codex PreToolUse sees only Bash, so the high-risk tier leans on native approval/sandbox there). "Same contract," not "identical coverage."
+
+### Terminology
+
+- **Window** — the boundary-to-boundary validity over a coherent batch; auto-issued, auto-rearmed, advisory; the common case. A window licenses nothing on its own (see L6).
+- **Grant / approval** — the narrow high-risk tier where permission is genuinely withheld until a checkpoint or user approval is satisfied. Two words because there are two enforcement postures.
+
+### Short form
+
+The system is allowed to change agent execution. It is not allowed to make the user or agent adopt new manual habits.
+
+---
+
+## 2. Locked Decisions (confirmed)
+
+Points explicitly agreed in design. They constrain implementation and are not reopened without an explicit decision.
+
+**L1 — The checkpoint is mechanism-agnostic; ST is not a requirement.** ST was only the convenient instance because it is loggable. Any mechanism satisfying R1+R2 is valid.
+
+**L2 — No agent-authored control artifact.** The agent does not design, issue, or maintain any artifact the system trusts as control — no agent-issued plan token, no agent-declared boundary marker, no agent-written phase notes, no required plan/document format. Agent outputs are observed as data, never trusted as control. (Settled across the rejected agent-authored plan-token, the rejected "optional" marker, and the rejected phase-note format — three instances of the same pattern: structure the agent hands the system is gameable and re-introduces the opacity problem.)
+
+**L3 — The word "optional" does not appear in these requirements as applied to agent inputs.** An agent-side behavior the system relies on is a hidden requirement (a behavior modification); one it does not rely on is noise. There is no third reading; "optional" only smuggles in discretion.
+
+**L4 — Boundary detection is deterministic and gate-side.** Deciding *that* a phase transition occurred is computed by the gate from observable state (R5). No model decides when or whether a boundary fires.
+
+**L5 — The steerer/injector is deterministic.** What gets injected at a boundary is gate-emitted (static or state-templated) text. No separate model produces the steer. A model may appear only as the *content of the checkpoint the agent performs* (R1's pluggable mechanism), never as the boundary detector or the issuer of the steer. The enforcement path is deterministic end-to-end; models are confined strictly to the agent's side of the line.
+
+**L6 — Two enforcement postures, named distinctly.** *Window* = advisory, auto-issued, the common case; licenses nothing on its own (it is an audit/segment interval). *Grant/approval* = the narrow high-risk tier where permission is withheld until satisfied. The terminology split is deliberate: it prevents an implementer from building a request/approve handshake into ordinary work (a "grant everywhere" model would make the agent ask permission for routine work — the exact behavior modification R9/R10 forbid).
+
+**L7 — R9 governs *workflow*, not *agent runtime behavior*.** "Behavior" in R9 means the way the user and agent operate. The system may freely change what the agent does at runtime (inject, steer, deny high-risk, issue/expire windows, route to reassessment) — improving agent behavior is the system's purpose. It may not require the user or the agent to adopt new manual habits. The user's workflow is untouched; the agent's runtime behavior is in scope to improve.
+
+**L8 — The single sanctioned manual act is the user's explicit approval of a protected/destructive write.** This is the one human-in-the-loop point and the one place a hard block lives. It is the sole carve-out to the no-new-manual-habits rule.
+
+**L9 — Format compliance lives on the system's state/audit object, not on the agent.** As in LangGraph's typed-state checkpoints, the rigid, serializable, schema-shaped record is written and owned by the system (R11). The agent is never required to produce structure the system then reads. Format belongs to the pluggable checkpoint mechanism's own output contract (R1), never to the agent's workflow.
+
+**L10 — Phases are detected at runtime, not pre-declared.** The system has no authoring-time enumeration of a task's phases; it detects boundaries from the deterministic predicate (R5). Justification, in priority order: (1) **Novelty** — an arbitrary task's phases cannot be enumerated in advance, so a pre-declared graph would be a guess frozen at t=0 that the work drifts away from; (2) **R9** — requiring the user to author a phase graph is a new manual habit, forbidden; (3) **Boundary exposure (runtime-specific)** — the agent's decision logic lives below this system's boundary (it did not author Claude Code/Codex and cannot reach inside their loop), so pre-declaration is not merely undesirable but *impossible* here. Reasons (1) and (2) hold even if the runtime changed; reason (3) is the additional hard constraint specific to governing Claude Code / Codex. Trade accepted: dropping pre-declared topology means dropping declared *edges* (legal transitions), so the system cannot diff against an expected route to catch a *skipped* phase. If that is ever wanted, it returns as a runtime-built expectation, never a pre-declared one (consistent with this decision and with R3).
+
+**L11 — Architecture model: borrow the checkpoint/state primitive only.** The system adopts the *concept* of a typed, serializable, scope-keyed state object written as a snapshot at a detected boundary (L10) and resumable — node/edge/checkpoint as the conceptual blueprint. The boundary's *origin* is R5 detection, not a pre-declared node graph; the snapshot *record* is the node/checkpoint concept. It does **not** adopt LangGraph (or any framework) as an orchestrator: the runtime stays the hook control plane we define over Claude Code / Codex, the agent owns its own loop, and the checkpoint store is not in the execution path. (L11 = the record; L10 = where the boundary comes from; L12 = why the two are not re-fused by importing a bundled checkpointer.)
+
+**L12 — Do not import LangGraph's code for the state store.** The state/window store is built on the existing `hooks.db` substrate (currently migrating into `_db/`), accessed through the shared path (`shared.paths.hooksDb` / `hooks_db(config)`). This requirements work introduces no hardcoded DB path and does not move the DB; the `_db` migration is an external, in-flight dependency. If any code is borrowed, it comes from a simpler source than LangGraph, whose checkpointer is coupled to its own execution model. LangGraph remains a reference architecture, not a dependency.
+
+**L13 — The defining axis is boundary exposure, superseding "own the loop."** "Own the loop" is rejected as the framing primitive (no layer truly owns the loop; it is a tower, and even orchestrators are blind to the model's generative loop). The system is defined by the surface its boundary exposes (tool name, one collapsed target, status, timestamp, session id, via PreToolUse/PostToolUse/Stop) and by the fact that the vendor chooses where the hook doorways are. R5 detects from exactly those fields; R10's veto is exactly what that boundary grants; L11 checkpoints exactly what is visible there; R13's Codex degradation follows from Codex exposing fewer doorways (Bash-only).
+
+**L14 — This system is the inference camp, by necessity, and accepts the approximation cost.** It belongs to the runtime-trajectory-governance camp (observe-and-infer), not the orchestration camp (author-and-walk) — the same camp as AEGIS / Progent / AgentSpec / the behavioral-firewall and TraceSafe lines — because it governs agents it did not author. This is not a stylistic choice but a consequence of L13. Therefore the system's structure is inferred, not stipulated, and the mitigations for inference error (R5a/R8/R10/R12) are first-class, not afterthoughts.
+
+**L15 — Enforcement posture is per-identity: a role axis over R7.** Steer-vs-block is not a global setting; it is a property of the acting identity's loadout, computed as *action-irreversibility (R7) × role-trust*. (a) **Per-identity state is the precondition** — role-differentiated enforcement requires role-differentiated identity (the loadout-backed identity of the platform thesis; the enforcement profile is part of the loadout, so the lean vs complex inject profiles are *per-role loadouts*, not a global toggle). (b) **Director / human-proxy = all steer, zero hard blocks** — the principal is not blocked; safety is bought by *engineered reversibility* (god-mode + an always-on separate backup, constant sync), consistent with "a block is justified only by irreversibility": making everything recoverable removes every block's justification. The director carries a complex decision matrix because it *absorbs escalations* — R10's `ask` tier routes to the director (the in-system human proxy), not the actual human; the director is the unblocker, and the real human is the rare final escalation. (c) **Workers = steer for recoverable either-or choices, hard blocks where the cost is irreversible** — two classes: (i) destructive/data blocks (which the director escapes via backup), and (ii) *method/approach* blocks (wrong tool, build-before-plan, skipped verification). Class (ii) is unavoidable because backups make *data* reversible but not *wasted work*: a worker's burned trajectory — the wrong-implementation-shipped-N-times failure — is the irreversible cost recoverability cannot refund. Net: trust descends human → director → worker; blocks rise inversely; the director buys out of blocks with recoverability, while workers retain method-blocks because wasted effort is the one irreversibility a backup cannot undo.
+
+---
+
+## 3. Open (NOT locked — decisions pending)
+
+Discussed and directionally explored, but not ratified. Tracked here so they are not lost; nothing here is confirmed.
+
+- **R2-vs-R10 tier-scoping.** Apparent tension: R2 requires evidence; R10 says ordinary boundaries steer without stopping work. Direction explored: evidence is *recorded-not-gated* at ordinary boundaries (advisory), and R2's evidence requirement *binds* only at the grant/approval tier where a window must arm to permit the gated action. **Decision pending.**
+- **Per-tier enforcement-mode switch.** Direction explored: a closed mode set `{observe, steer, gate}` configured per risk tier, with model involvement confined to R1 checkpoint providers (never a detector or steerer mode), plus an observe→steer→gate promotion ladder using the audit trail (R11) as the evidence to promote. **Decision pending.**
+- **Risk-classification owner.** R7/R10 pivot on "high-risk/protected" but no requirement yet defines who classifies and how. Direction: deterministic, gate-side, computed from tool + target against a protected-pattern/destructive set, no model call. **Decision pending.**
+- **State scope / identity key.** Windows and signal state are per-something; the scope key (session / task / repo) and its behavior on resume, parallel sessions, and subagents are unspecified, and interact with R13 (a Claude Code session and a Codex turn are different boundaries). **Decision pending.**
+
+---
+
+## Provenance
+
+This document is the captured output of an extended design thread. The 13 requirements (R1–R13 + R5a), the window/grant terminology split, and Locked Decisions L1–L15 were each agreed explicitly in that thread. Section 0 records the conceptual framing that the requirements rest on. Section 3 records what remains open.

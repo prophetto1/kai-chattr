@@ -1,18 +1,64 @@
 /*
- * kai-chattr design tokens for Fumadocs.
- * Aligned with web/src/tailwind.css (--ds-*) and workbench prose (--workbench-prose-*).
+ * kai-chattr design tokens for Fumadocs — KAI CIBI brand (K/A/I + Space Grotesk / IBM Plex).
+ * Brand source of truth: E:\kai-ai\apps\web\src\styles\kai-brand.css
  */
 
 :root {
   color-scheme: light dark;
 
-  --bd-font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --bd-font-prose: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --bd-font-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas,
-    monospace;
+  /* KAI CIBI fonts: Space Grotesk display, IBM Plex Sans UI/body, IBM Plex Mono code */
+  --kai-font-display: 'Space Grotesk', 'IBM Plex Sans', system-ui, sans-serif;
+  --kai-font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --kai-font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --kai-font-serif: 'Instrument Serif', 'Times New Roman', serif;
+  --font-display: var(--kai-font-display);
+  --font-sans: var(--kai-font-sans);
+  --font-nav: var(--kai-font-sans);
+  --font-mono: var(--kai-font-mono);
+  --app-font-sans: var(--kai-font-sans);
+  --bd-font-ui: var(--kai-font-sans);
+  --bd-font-display: var(--kai-font-display);
+  --bd-font-prose: var(--kai-font-sans);
+  --bd-font-serif: var(--kai-font-serif);
+  --bd-font-mono: var(--kai-font-mono);
 
-  --bd-brand: #2e6bff;
+  /* KAI CIBI brand: K (Kit, lead) orange · A (Agent) blue · I (Intelligence) violet */
+  --kai-brand-k: #f06138;
+  --kai-brand-a: #4a8cf7;
+  --kai-brand-i: #a87cf7;
+  --kai-brand-i-strong: #8a5cd9;
+  --kai-ink: #14141a;
+  --kai-ink-2: #3a3a40;
+  --kai-ink-3: #6a6a72;
+  --kai-paper: #f6f4ef;
+  --kai-paper-border: #d8d3c8;
+  --layer-k: var(--kai-brand-k);
+  --layer-a: var(--kai-brand-a);
+  --layer-i: var(--kai-brand-i);
+  --layer-k-bg: rgba(240, 97, 56, 0.16);
+  --layer-a-bg: rgba(74, 140, 247, 0.16);
+  --layer-i-bg: rgba(168, 124, 247, 0.18);
+  --brand: var(--kai-brand-i-strong);
+  --brand-2: var(--kai-brand-i);
+  --brand-bg: var(--layer-i-bg);
+  --brand-text: var(--kai-brand-i-strong);
+  --bd-brand: var(--brand);
   --bd-radius: 0.625rem;
+
+  /* KAI A8 typography roles */
+  --type-a8-display-size: 56px;
+  --type-a8-display-lh: 1.07;
+  --type-a8-display-tracking: -0.03em;
+  --type-a8-title-size: 28px;
+  --type-a8-title-lh: 1.21;
+  --type-a8-title-tracking: -0.01em;
+  --type-a8-body-size: 16px;
+  --type-a8-body-lh: 1.55;
+  --type-a8-mono-size: 13px;
+  --type-a8-mono-lh: 1.69;
+  --type-a8-eyebrow-size: 11px;
+  --type-a8-eyebrow-lh: 1.18;
+  --type-a8-eyebrow-tracking: 0.16em;
 
   /* Workbench prose scale (web/src/tailwind.css) */
   --workbench-prose-font-size: 1rem;
@@ -37,9 +83,9 @@
   --bd-docs-page-title-weight: 600;
   --bd-docs-description-size: 0.875rem;
   --bd-docs-prose-font-size: 0.9375rem;
-  --bd-docs-prose-line-height: 1.55;
+  --bd-docs-prose-line-height: var(--type-a8-body-lh);
   --bd-docs-prose-block-gap: 0.65rem;
-  --bd-docs-prose-heading-letter-spacing: -0.015em;
+  --bd-docs-prose-heading-letter-spacing: var(--type-a8-title-tracking);
   --bd-docs-prose-h1-size: clamp(1.15rem, 1.5vw, 1.25rem);
   --bd-docs-prose-h2-size: clamp(1.05rem, 1.35vw, 1.125rem);
   --bd-docs-prose-h3-size: 1rem;
@@ -57,12 +103,22 @@
   --bd-fs-sidebar: 13px;
 
   /* Light (default for Fumadocs until .dark) */
-  --bd-text: #1c1917;
-  --bd-text-muted: rgba(28, 25, 23, 0.48);
-  --bd-border: rgba(28, 25, 23, 0.1);
+  --bd-text: #14141a;
+  --bd-text-muted: rgba(20, 20, 26, 0.52);
+  --bd-border: #d8d3c8;
   --bd-card: #ffffff;
-  --bd-background: #faf9f7;
-  --bd-muted: #f0eeed;
+  --bd-background: #f6f4ef;
+  --bd-muted: #efece5;
+  --bd-on-brand: #ffffff;
+  --bd-fd-background: var(--bd-background);
+  --bd-fd-muted: #f3f0ec;
+  --bd-fd-popover: #fefdfa;
+  --bd-fd-card: #fbf9f5;
+  --bd-fd-secondary: rgba(28, 25, 23, 0.04);
+  --bd-fd-accent: rgba(28, 25, 23, 0.035);
+  --bd-fd-ring: rgba(168, 124, 247, 0.32);
+  --bd-fd-sidebar-muted: var(--bd-fd-muted);
+  --bd-fd-sidebar-secondary: var(--bd-fd-secondary);
   --bd-inline-code-bg: color-mix(in oklab, #f5ebe6 72%, #faf9f7 28%);
   --bd-pre-bg: color-mix(in oklab, #ffffff 88%, #faf9f7 12%);
 
@@ -79,6 +135,15 @@
   --bd-card: rgb(25, 25, 25);
   --bd-background: #0e0e0e;
   --bd-muted: rgb(29, 29, 29);
+  --bd-fd-background: var(--bd-background);
+  --bd-fd-muted: var(--bd-card);
+  --bd-fd-popover: var(--bd-card);
+  --bd-fd-card: var(--bd-card);
+  --bd-fd-secondary: var(--bd-muted);
+  --bd-fd-accent: rgba(255, 255, 255, 0.05);
+  --bd-fd-ring: rgba(168, 124, 247, 0.4);
+  --bd-fd-sidebar-muted: rgb(17, 17, 17);
+  --bd-fd-sidebar-secondary: var(--bd-card);
   --bd-inline-code-bg: color-mix(in oklab, rgba(148, 163, 184, 0.14) 88%, #0e0e0e 12%);
   --bd-pre-bg: color-mix(in oklab, rgb(25, 25, 25) 88%, #0e0e0e 12%);
 }

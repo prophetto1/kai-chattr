@@ -6,7 +6,8 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "generate:mdx": "fumadocs-mdx",
+    "generate:contracts": "node ../../governance/scripts/build-contract-docs.mjs",
+    "generate:mdx": "pnpm run generate:contracts && fumadocs-mdx",
     "predev": "pnpm run generate:mdx",
     "prebuild": "pnpm run generate:mdx",
     "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",

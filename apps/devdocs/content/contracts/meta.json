@@ -1,0 +1,10 @@
+{
+  "title": "Contracts",
+  "root": true,
+  "defaultOpen": true,
+  "pages": [
+    "frontend",
+    "backend",
+    "architecture"
+  ]
+}

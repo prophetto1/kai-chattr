@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import type * as PageTree from 'fumadocs-core/page-tree'
 import { DocsLayout } from 'fumadocs-ui/layouts/notebook'
 
+import { getDocTabs } from '@/lib/docs-navigation'
 import { baseOptions } from '@/lib/layout.shared'
 
 type Props = {
@@ -17,8 +18,9 @@ export function DocsLayoutShell({ children, tree }: Props) {
       {...shared}
       nav={{ ...nav, mode: 'top' }}
       tabMode="navbar"
+      tabs={getDocTabs()}
       tree={tree}
-      sidebar={{ prefetch: false }}
+      sidebar={{ prefetch: false, defaultOpenLevel: 99, collapsible: false }}
     >
       {children}
     </DocsLayout>

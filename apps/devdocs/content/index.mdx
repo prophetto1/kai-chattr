@@ -3,32 +3,45 @@ title: kai-chattr
 description: Governance and architecture for the kai-chattr coordination room.
 ---
 
-# kai · chattr
-
 A clean rebuild of **chattr** — a local, multi-agent coordination room.
 
 This site is governance-gated: its pages are generated from the contracts in
 the `governance/` tree, so the docs and the rules they describe never drift
 apart.
 
+<div className="not-prose kai-cibi-strip" aria-label="KAI layer model">
+  <div className="kai-cibi-strip__item">
+    <span className="kai-cibi-strip__letter">K</span>
+    <strong className="kai-cibi-strip__label">Kit</strong>
+    <span className="kai-cibi-strip__copy">Models, prompts, skills, tools, and loadouts.</span>
+  </div>
+  <div className="kai-cibi-strip__item kai-cibi-strip__item--a">
+    <span className="kai-cibi-strip__letter">A</span>
+    <strong className="kai-cibi-strip__label">Agent</strong>
+    <span className="kai-cibi-strip__copy">Approvals, plans, live rooms, and agent runs.</span>
+  </div>
+  <div className="kai-cibi-strip__item kai-cibi-strip__item--i">
+    <span className="kai-cibi-strip__letter">I</span>
+    <strong className="kai-cibi-strip__label">Intelligence</strong>
+    <span className="kai-cibi-strip__copy">Receipts, evaluations, rankings, and outcomes.</span>
+  </div>
+</div>
+
 ## Where to go next
 
-- **[Platform Contracts](/contracts)** — the design system, frontend, backend
-  API, coordination, data, repo-process, and dependency contracts that define
-  how kai-chattr is built.
-- **[Migration](/migration)** — the chattr + Letta + OpenHands fusion, repo
-  structure, and terminal runtime.
+- **[Contracts](/contracts/frontend)** — Frontend, Backend, and Architecture
+  contract containers for kai-chattr.
 
 ## Platform ports & surfaces
 
-Canonical map of local dev ports and deployed surfaces across the repo family.
+Canonical allocation of local dev ports and deployed surfaces across the repo family. Ports are reserved to avoid collisions, so allocated-but-not-yet-live surfaces are listed and marked `†`.
 
-| Project | Localhost dev | Localhost docs | Cloudflare dev | Cloudflare docs | Production site | Production docs |
-|---|---|---|---|---|---|---|
-| writing-system *(legacy)* | `:7530` | `:7570` | — | — | — | — |
-| blockdata *(new)* | `:6300` | `:6370` | `blockdata-eal.pages.dev` | `blockdata-docs.pages.dev` | `blockdata.run` | `docs.blockdata.run` |
-| chattr *(legacy)* | `:8300` | — | — | — | — | — |
-| kai-chattr *(new)* | `:8800` | `:8870` | `kai-chattr.pages.dev` | `kai-chattr-docs.pages.dev` | — | — |
-| kai *(new)* | `:9500` | `:9560` | _TBD_ | _TBD_ | _TBD_ | _TBD_ |
+| Project | Role | Web | Docs | API / MCP | Cloudflare dev | Cloudflare docs | Production site | Production docs |
+|---|---|---|---|---|---|---|---|---|
+| writing-system *(legacy)* | source → blockdata | `:7530` | `:7570` | — | — | — | — | — |
+| blockdata *(new)* | clean target | `:6300` | `:6370` | `:6400`† | `blockdata-eal.pages.dev` | `blockdata-docs.pages.dev` | `blockdata.run` | `docs.blockdata.run` |
+| chattr *(legacy)* | source → kai-chattr | `:8300` | — | `:8301` MCP-http · `:8302` SSE | — | — | — | — |
+| kai-chattr *(new)* | clean target | `:8800`† | `:8870` | — | `kai-chattr.pages.dev` | `kai-chattr-docs.pages.dev` | — | — |
+| kai-ai *(new)* | clean target | `:9500` | `:9560`† | — | _TBD_ | _TBD_ | `kaiai.dev`† | `docs.kaiai.dev`† |
 
-`—` = surface not created · `_TBD_` = exists but URL pending confirmation. Legacy **chattr** has only its localhost dev server (docs site never created). **kai-chattr** and **kai** have no production custom domain yet — the `.pages.dev` URL is the dev surface.
+`—` = surface not created · `_TBD_` = expected, value not yet set · `†` = allocated/locked, not live yet. Validated against repo configs (2026-05-31): live ports confirmed in `package.json` / `config.toml` / `app.py`; Cloudflare project names confirmed in the deploy workflows. Reserved (`†`): blockdata API `:6400` (FastAPI not yet port-bound), kai-chattr web `:8800` (app still a placeholder), kai-ai docs `:9560` (no docs site yet), and kai-ai's `kaiai.dev` / `docs.kaiai.dev` (domains locked, not provisioned). Legacy **chattr** is localhost-only (no docs site); **kai-chattr** and **kai-ai** have no production custom domain live yet.

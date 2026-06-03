@@ -1,6 +1,9 @@
 <svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="kai chattr">
-  <rect x="5" y="5" width="15" height="15" rx="2" fill="#ff7a1a" />
-  <rect x="24" y="5" width="15" height="15" rx="2" fill="#2e6bff" />
-  <rect x="5" y="24" width="15" height="15" rx="2" fill="#7c5cff" />
-  <rect x="24" y="24" width="15" height="15" rx="2" fill="currentColor" fill-opacity="0.28" />
+  <rect width="44" height="44" rx="7.9" fill="#f06138" />
+  <g fill="#fff">
+    <rect x="11.44" y="9.68" width="5.72" height="24.64" />
+    <polygon points="18.48,22 32.56,9.68 32.56,15.84 24.2,22 32.56,28.16 32.56,34.32 18.48,22" />
+  </g>
+  <circle cx="34.32" cy="34.32" r="2.2" fill="#4a8cf7" />
+  <circle cx="38.72" cy="34.32" r="2.2" fill="#a87cf7" />
 </svg>

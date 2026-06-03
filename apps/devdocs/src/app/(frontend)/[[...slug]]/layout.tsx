@@ -1,21 +1,31 @@
 import { DocsProvider } from '@/components/docs/DocsProvider'
 import { DocsLayoutShell } from '@/components/docs/DocsLayoutShell'
+import { SITE_NAME, SITE_TAGLINE, SITE_TITLE_TEMPLATE } from '@/config/site'
+import { getScopedPageTree } from '@/lib/docs-navigation'
 import { source } from '@/lib/source'
 import type { ReactNode } from 'react'
 
 export const metadata = {
   title: {
-    default: 'kai · chattr docs',
-    template: '%s · kai · chattr docs',
+    default: SITE_NAME,
+    template: SITE_TITLE_TEMPLATE,
   },
-  description:
-    'Governance and architecture for the kai-chattr coordination room.',
+  description: SITE_TAGLINE,
 }
 
-export default function Layout({ children }: { children: ReactNode }) {
+type LayoutProps = {
+  children: ReactNode
+  params: Promise<{ slug?: string[] }>
+}
+
+export default async function Layout({ children, params }: LayoutProps) {
+  const { slug } = await params
+
   return (
     <DocsProvider>
-      <DocsLayoutShell tree={source.getPageTree()}>{children}</DocsLayoutShell>
+      <DocsLayoutShell tree={getScopedPageTree(source.getPageTree(), slug)}>
+        {children}
+      </DocsLayoutShell>
     </DocsProvider>
   )
 }

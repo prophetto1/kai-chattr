@@ -3,6 +3,7 @@
   "private": true,
   "description": "Clean rebuild of chattr — local multi-agent coordination room (web + api), built to the v3 design standard.",
   "devDependencies": {
-    "ajv": "^8.17.1"
+    "ajv": "^8.17.1",
+    "dependency-cruiser": "^17.4.3"
   }
 }

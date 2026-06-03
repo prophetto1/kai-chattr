@@ -86,10 +86,6 @@ if (!registry) {
   }
 }
 
-if (!existsSync(join(ROOT, 'governance', 'allowed-deps.json'))) {
-  errors.push('governance/allowed-deps.json: missing dependencies allowlist');
-}
-
 if (errors.length) {
   console.error(`BLOCKED: ${errors.length} governance contract issue(s):`);
   for (const err of errors) console.error(`- ${err}`);

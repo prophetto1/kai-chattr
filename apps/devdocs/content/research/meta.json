@@ -1,0 +1,10 @@
+{
+  "title": "Research",
+  "root": true,
+  "defaultOpen": true,
+  "pages": [
+    "boundary-triggered-deliberation",
+    "depcruiser-authored-graph-contract",
+    "positioning-and-prior-art"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "$comment": "SOURCE OF TRUTH for the Backend contract container. Rules stay empty until a migrated slice needs one and Jon ratifies it.",
+  "id": "backend",
+  "title": "Backend",
+  "status": "planned",
+  "summary": "Backend contract container for runtime, API, auth/session validation, database, migrations, workers, telemetry, and logging rules.",
+  "covers": ["runtime", "api", "auth-session", "database", "migrations", "workers", "telemetry-logging"],
+  "sections": [
+    { "name": "Runtime", "covers": ["backend service", "workers", "domain services"] },
+    { "name": "API", "covers": ["routes", "OpenAPI", "request/response shape", "errors", "pagination"] },
+    { "name": "Auth/session", "covers": ["session issuer", "validation seam"] },
+    { "name": "Database", "covers": ["schema", "identity", "migrations", "naming"] }
+  ],
+  "rules": [],
+  "enforcedBy": "Pending Jon-ratified rules.",
+  "enforcement": [],
+  "openItems": [
+    "No backend rules are locked in this file yet."
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "title": "Implementation",
+  "root": true,
+  "defaultOpen": true,
+  "pages": [
+    "new-session",
+    "frontend",
+    "json-yaml-render-test",
+    "hooks-config-long-render-test",
+    "agent-tools"
+  ]
+}

@@ -5,6 +5,7 @@
 export const SITE_NAME = 'kai · chattr docs'
 export const SITE_TAGLINE =
   'Governance and architecture for the kai-chattr coordination room.'
+export const SITE_TITLE_TEMPLATE = `%s \u00b7 ${SITE_NAME}`
 export const DOCS_URL =
   process.env.NEXT_PUBLIC_DOCS_URL ?? 'http://localhost:8870'
 export const KAI_CHATTR_WEB_URL =

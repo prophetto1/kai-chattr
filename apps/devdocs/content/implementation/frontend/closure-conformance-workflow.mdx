@@ -1,0 +1,94 @@
+---
+title: Depcruiser Migrations File Audit
+description: Current file-by-file audit for the E:/hooks depcruiser-migrations bundle and its hook-system integration.
+---
+
+Short version: the current `depcruiser-migrations` bundle is mixed. The rewritten skill now matches the new direction, but most runtime files are still the older `closure-gate` implementation. Do **not** merge `closure-gate.register.json` into `config.json` as-is.
+
+## Current Files
+
+| File | What it does now | Conflict with current hook system? |
+| --- | --- | --- |
+| `initialize-depcruiser-migrations/SKILL.md` | Current-version worker instructions: state-backed arming, `guardedPrefixes`, `guardedFiles`, strict reconcile, source-faithful porting. | No conceptual conflict. It intentionally references scripts that do not exist yet, so it will stop workers until runtime is upgraded. |
+| `manifests/` | Artifact directory for donor traces, source manifests, target traces. | No conflict. |
+| `closure-gate.mjs` | Current old hook. On PreToolUse, if `settings.active.name` is set, it blocks edit tools until manifest exists and all nodes have `port/adapter/cut`. | Conflicts with current direction: wrong id, config-backed arming, `targetGlob`, weak path handling, no `.state`, no `guardedPrefixes`. |
+| `closure-gate-core.mjs` | Local JS runtime helper: loads `config.json`, derives hook id from filename, loads manifest path, finds pending verdicts. | Partly useful, but stale. Filename-derived id means `closure-gate.mjs` looks for `hooks[id=closure-gate]`. Current direction needs `depcruiser-migrations.mjs` looking for `hooks[id=depcruiser-migrations]`. |
+| `closure-gate.register.json` | Draft hook config and draft quality domain for old flow. | Do not merge as-is. It registers `closure-gate`, uses `settings.active.name`, and `targetGlob`. |
+| `dependency-cruiser.cjs` | Target-side dependency-cruiser rules: no circular deps, no unresolved deps, scaffold ban. | Mostly compatible. Needs tuning per target; `no-old-scaffold` is placeholder-ish. |
+| `generate-closure-manifest.mjs` | Converts donor depcruise JSON into manifest with `modules`, `port_order`, `external_deps`, `unresolved`, and all verdicts as `TBD`. | Mostly compatible. It can stay, though current direction may add manifest-level `target_extras`. |
+| `validate-closure-manifest.mjs` | `verdicts` mode blocks invalid/TBD verdicts. `reconcile` checks target graph against manifest. | `verdicts` is okay. `reconcile` conflicts: compares basenames, warns on unexpected/leftover nodes instead of blocking, no strict repo-relative paths, no `target_extras`. |
+| `README.md` | Describes old bundle lifecycle. | Stale. Still says `closure-gate`, config arming, `targetGlob`. Needs rewrite after runtime update. |
+
+## What The Current Hook Does Exactly
+
+`closure-gate.mjs`:
+
+1. Loads config using `closure-gate-core.mjs`.
+2. Derives its hook id from filename: `closure-gate`.
+3. Allows immediately if disabled.
+4. Allows if no `settings.active.name`.
+5. Allows if tool is not in `editTools`.
+6. Reads only `tool_input.file_path`.
+7. If `targetGlob` is set, uses substring matching, not glob matching.
+8. Looks for `manifests/<name>/<name>.source-manifest.json`.
+9. Denies if the manifest is missing.
+10. Allows if the manifest is unreadable, fail-open.
+11. Denies if any module verdict is not `port`, `adapter`, or `cut`.
+12. Allows once all verdicts are set.
+
+Main bug: for Codex `apply_patch`, it does not parse patch paths. So path scoping is not reliable.
+
+## What Needs To Go Into `config.json`
+
+Add a **new** hook entry, not the old `closure-gate` entry:
+
+```json
+{
+  "id": "depcruiser-migrations",
+  "name": "Depcruiser Migrations Gate",
+  "category": "gate",
+  "event": "PreToolUse",
+  "match": { "tools": ["Edit", "Write", "MultiEdit", "NotebookEdit", "apply_patch"] },
+  "script": { "path": "depcruiser-migrations/depcruiser-migrations.mjs", "runtime": "node" },
+  "scope": { "projects": ["*"], "paths": ["**"] },
+  "enabled": false,
+  "failPolicy": "open",
+  "settings": {
+    "stateDir": "E:/hooks/.state/depcruiser-migrations",
+    "manifestsDir": "E:/hooks/depcruiser-migrations/manifests",
+    "editTools": ["Edit", "Write", "MultiEdit", "NotebookEdit", "apply_patch"]
+  }
+}
+```
+
+Also update `scripts[id=skill-indexer].settings.scanRoots` if this skill should be auto-indexed:
+
+```json
+{ "path": "E:/hooks/depcruiser-migrations", "source": "hooks", "scope": "all" }
+```
+
+Do **not** put active migration state in `config.json`. Active migration state belongs in:
+
+```text
+E:/hooks/.state/depcruiser-migrations/active.json
+```
+
+## Files Still Needed
+
+Add these runtime files:
+
+- `depcruiser-migrations.mjs`
+- `arm-migration.mjs`
+- `disarm-migration.mjs`
+- `validate-active-state.mjs`
+- `verify-active-closure.mjs`
+- tests for active state, target matching, patch-path extraction, and strict reconcile
+
+Also update `quality-verify-manifest.json` to syntax-check depcruiser scripts and eventually run `verify-active-closure.mjs` for relevant target repos.
+
+## Verification Baseline
+
+Verified locally:
+
+- `node _core/validate-runtime-hooks.mjs` passed.
+- Existing depcruiser JS files pass `node --check`.

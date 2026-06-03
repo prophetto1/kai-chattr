@@ -1,6 +1,9 @@
 {
   "title": "kai-chattr",
   "pages": [
-    "index"
+    "index",
+    "contracts",
+    "implementation",
+    "research"
   ]
 }

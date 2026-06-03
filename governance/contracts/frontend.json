@@ -1,0 +1,18 @@
+{
+  "$comment": "SOURCE OF TRUTH for the Frontend contract container. Rules stay empty until a migrated slice needs one and Jon ratifies it.",
+  "id": "frontend",
+  "title": "Frontend",
+  "status": "planned",
+  "summary": "Frontend contract container for UI, routing, layout, components, accessibility, and design system rules.",
+  "covers": ["ui", "routing", "layout", "components", "accessibility", "design system"],
+  "sections": [
+    { "name": "Frontend", "covers": ["UI", "routing", "layout", "components", "accessibility"] },
+    { "name": "Design system", "covers": ["tokens", "typography", "spacing", "motion", "icons"] }
+  ],
+  "rules": [],
+  "enforcedBy": "Pending Jon-ratified rules.",
+  "enforcement": [],
+  "openItems": [
+    "No frontend rules are locked in this file yet."
+  ]
+}

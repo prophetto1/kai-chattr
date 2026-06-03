@@ -1,0 +1,84 @@
+{
+  "$comment": "SOURCE OF TRUTH for the Architecture contract container. Rules stay empty until a migrated slice needs one and Jon ratifies it. Dependency allowlist data lives here.",
+  "id": "architecture",
+  "title": "Architecture",
+  "status": "planned",
+  "summary": "Architecture contract container for stack, dependency policy, repo/process, secrets, toolchain, validation, and deploy posture rules.",
+  "covers": ["stack", "dependencies", "repo and process", "secrets", "toolchain", "validation", "deploy"],
+  "sections": [
+    { "name": "Stack", "covers": ["runtime topology", "host", "language/runtime boundaries"] },
+    { "name": "Dependencies", "covers": ["dependency policy", "machine allowlist"] },
+    { "name": "Repo and process", "covers": ["repo rules", "process rules", "tooling"] }
+  ],
+  "stack": {
+    "apps/web": {
+      "summary": "Static React workbench frontend aligned to the OpenHands page-pattern stack and themed to the kai-chattr token contract.",
+      "runtime": "Cloudflare Pages static build for clean kai-chattr; legacy chattr may use the same stack as the proving ground while preserving :8300 runtime seams.",
+      "items": [
+        "React 19",
+        "React Router v7",
+        "Vite",
+        "Tailwind v4",
+        "HeroUI",
+        "TanStack Query",
+        "Zustand",
+        "Monaco",
+        "xterm.js",
+        "lucide-react"
+      ]
+    }
+  },
+  "allowedDeps": {
+    "shared": [],
+    "tooling": ["ajv", "dependency-cruiser"],
+    "apps/devdocs": [
+      "@tailwindcss/postcss",
+      "@types/mdx",
+      "cross-env",
+      "fumadocs-core",
+      "fumadocs-mdx",
+      "fumadocs-ui",
+      "mermaid",
+      "next",
+      "next-themes",
+      "react",
+      "react-dom",
+      "remark-directive",
+      "shiki",
+      "@types/node",
+      "@types/react",
+      "@types/react-dom",
+      "typescript",
+      "wrangler"
+    ],
+    "apps/web": [
+      "@heroui/react",
+      "@monaco-editor/react",
+      "@tailwindcss/vite",
+      "@tanstack/react-query",
+      "@vitejs/plugin-react",
+      "@xterm/addon-fit",
+      "@xterm/xterm",
+      "framer-motion",
+      "lucide-react",
+      "monaco-editor",
+      "react",
+      "react-dom",
+      "react-router",
+      "tailwindcss",
+      "typescript",
+      "vite",
+      "zustand",
+      "@types/node",
+      "@types/react",
+      "@types/react-dom"
+    ]
+  },
+  "rules": [],
+  "enforcedBy": "Pending Jon-ratified rules. Dependency allowlist data lives in this Architecture contract.",
+  "enforcement": [],
+  "openItems": [
+    "No architecture rules are locked in this file yet.",
+    "HeroUI is included in the apps/web target stack because OpenHands uses @heroui/react across its frontend primitives."
+  ]
+}

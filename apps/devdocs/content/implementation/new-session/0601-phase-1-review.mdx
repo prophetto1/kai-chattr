@@ -1,0 +1,179 @@
+---
+title: "0601 Phase 1 Review"
+description: "V2 pre-implementation structural review of the New Session Phase 1 plan."
+---
+
+> Status: not approved for implementation. This page preserves the current pre-implementation gate result for the linked Phase 1 plan.
+
+## Plan Reviewed
+
+- Plan page: [0601 Phase 1](/implementation/new-session/0601-phase-1)
+- Plan source: `E:/kai-chattr/apps/devdocs/content/implementation/new-session/0601-phase-1.mdx`
+- Review mode: `$evaluating-plan-before-implementation`
+- Plan version reviewed: V2 draft
+- Plan date: 2026-06-01
+- Review updated: 2026-06-02
+
+The V2 plan proposes proving the New Session runtime control plane inside legacy `E:/chattr`, then extracting the locked core pieces into `E:/kai-chattr`.
+
+## Disposition Correction
+
+Legacy-first proof is an approved constraint for this tranche.
+
+The earlier review treated legacy-first implementation as a target/source-of-truth conflict. That finding is now removed. The correct evaluation basis is:
+
+- implement and prove this tranche in legacy `E:/chattr`
+- keep `E:/kai-chattr` as the clean destination
+- extract only the tested, locked core pieces after the legacy tranche proves the runtime, frontend, MCP, and terminal seams
+
+## Reality Checked
+
+The review compared the V2 plan against current repo reality and the plan contract.
+
+| Surface | Current result |
+|---|---|
+| `E:/chattr` git state | Clean on `main` during review. |
+| Legacy launch flags | `run.py` supports child data, web port, MCP HTTP port, MCP SSE port, and upload-dir overrides. |
+| Legacy launcher safety | `server/launch/chattr_launcher.py` rejects visible-terminal profiles from browser-start paths. |
+| Legacy terminal path | Current terminal API remains snapshot-only; browser PTY is still new work. |
+| Legacy dependency state | FastAPI WebSocket support is present through current dependencies; `xterm` and PTY backend dependencies are not present. |
+| Legacy right rail | Current active tabs are MCP-backed `rules`, `jobs`, `locked`, and `pins`. |
+| File-creation rule | `E:/chattr/__start-here/file-creation-approval-rule.md` requires PM approval before creating new files or runtime dirs. |
+| `E:/kai-chattr` state | Dirty with unrelated devdocs/governance and `apps/web` work; this review update is scoped to the review MDX. |
+
+## Structural Verdict
+
+**Structurally Incomplete.**
+
+The V2 plan is materially stronger than V1. It fixes parent endpoint contracts, storage policy, event stream direction, dependency gates, DB and edge-function zero-cases, MCP read/propose boundaries, right-rail preservation, inventory counts, rollback, and extraction criteria.
+
+It still cannot be approved for implementation because several required plan-contract sections are incomplete or internally inconsistent.
+
+## Finding Matrix
+
+| # | Finding | Classification | Evidence |
+|---|---|---|---|
+| 1 | Legacy-first implementation is a blocker | Contradicted | PM clarified this tranche is being proved in legacy first. Removed from blockers. |
+| 2 | Parent API contracts incomplete | Obsolete | V2 now defines parent endpoint auth, request, response, errors, cleanup, and tests. |
+| 3 | Storage/system of record unresolved | Obsolete | V2 locks P0 to parent in-memory `InstanceRegistry` plus JSONL audit, no restart recovery, no SQLite. |
+| 4 | Event stream unresolved | Obsolete | V2 locks a separate `chattr.instance_event.v1` stream and leaves `chattr.runtime_event.v1` unchanged. |
+| 5 | DB and edge zero-cases missing | Obsolete | V2 explicitly states zero database migrations and zero edge functions. |
+| 6 | Child endpoint contracts missing | Confirmed | V2 declares child endpoints but does not define full contracts for them. |
+| 7 | Child endpoint file/task coverage inconsistent | Confirmed | V2 declares child worker endpoints without a matching child worker router/file/task contract. |
+| 8 | Observability contract still incomplete | Confirmed | V2 names spans, metrics, and logs, but misses required purpose for each item and emit locations for metrics. |
+| 9 | Task contract incomplete | Confirmed | Tasks lack expected outputs and commit messages, and remain broad multi-step bundles. |
+| 10 | Explicit risks missing | Confirmed | Rollback and dependency gates exist, but there is no explicit risks section. |
+
+## Structural Deficiencies
+
+### 1. Child endpoint contracts are missing
+
+The plan declares these child endpoints:
+
+- `POST /api/workers`
+- `GET /api/workers/{worker_id}`
+- `GET /api/terminal-sessions/{terminal_id}`
+- `WebSocket /api/browser-terminal/{terminal_id}/ws`
+
+However, only parent endpoint contracts are defined. Each declared child endpoint still needs:
+
+- auth requirement
+- request shape or WebSocket message protocol
+- response shape
+- error shape
+- side effects
+- touched state/store
+- cleanup semantics where relevant
+- test expectations
+
+This is a structural blocker because the manifest declares the endpoints, the completion criteria require worker launch and browser terminal behavior, and implementation tasks depend on the child surface.
+
+### 2. Child endpoint file and task coverage are inconsistent
+
+The backend inventory includes:
+
+- `server/runtime/pty_manager.py`
+- `server/api/browser_terminal.py`
+
+It does not name a child worker API/router file for `POST /api/workers` and `GET /api/workers/{worker_id}`. The task list also does not give a dedicated child-worker endpoint task that implements and verifies those declared endpoints.
+
+The next revision must either:
+
+- add the child worker router/file/test/task contract, or
+- remove child worker endpoints from P0 and adjust completion criteria accordingly.
+
+### 3. Observability is not fully contractible
+
+The plan lists traces, metrics, structured logs, allowed attributes, and forbidden attributes. It still does not satisfy the required observability contract because every item must have:
+
+- type
+- name
+- emit location
+- purpose
+
+Current gaps:
+
+- trace rows do not state purpose
+- metric rows do not state emit location or purpose
+- structured log rows do not state purpose
+- metric rows do not specify when increments/observations happen on success vs failure
+
+The next revision should make observability independently verifiable without the implementer inferring intent from names.
+
+### 4. Implementation tasks are not execution-ready
+
+The task section is improved but still fails the plan-task contract.
+
+Remaining gaps:
+
+- no expected output is stated for the test commands
+- no conventional commit messages are specified
+- several tasks are broad implementation bundles rather than 2-5 minute execution steps
+- the frontend manifest includes `static/right-panel.js`, but no task explicitly edits or verifies that file beyond capability tests
+- modified backend files such as launcher-control and launcher helper changes are not broken into explicit implementation steps
+
+The next revision must make task coverage traceable from every manifest item to a concrete task, check, and commit boundary.
+
+### 5. Explicit risks are missing
+
+This feature spans process ownership, port allocation, browser opening, MCP proposals, worker lifecycle, terminal IO, audit events, and future extraction. The plan has dependency gates and rollback, but it lacks an explicit risk section.
+
+At minimum, the plan should name the accepted risks around:
+
+- no P0 restart recovery
+- orphaned child processes if parent exits unexpectedly
+- port allocation races
+- browser-open behavior on Windows
+- terminal dependency approval and platform compatibility
+- parent-child ownership split
+- MCP proposal vs direct action boundaries
+- extraction drift from legacy-only code
+
+## Quality Findings
+
+Not evaluated.
+
+Per `$evaluating-plan-before-implementation`, Phase 1 gates Phase 2. Because the plan is structurally incomplete, a holistic architecture and quality review would be premature.
+
+## Approval Recommendation
+
+**Revise - Structural.**
+
+Do not execute this plan yet. Keep the legacy-first proof direction, but revise the plan until the child API, observability, task, and risk contracts are complete.
+
+## Required Next Revision
+
+The next plan revision must add:
+
+1. Full child endpoint contracts for worker and browser-terminal APIs.
+2. Matching child endpoint file inventory and task coverage.
+3. Observability rows with type, name, emit location, purpose, result semantics, and verification.
+4. Task expected outputs.
+5. Conventional commit messages.
+6. Smaller execution steps or explicit subtask breakdowns.
+7. Explicit risks and accepted limitations.
+8. Cross-reference check proving every endpoint, file, dependency gate, and completion criterion has a matching task and verification command.
+
+## Current Assessment
+
+V2 is close enough to be useful as a planning base, but not yet a handoff-ready implementation contract. The most important correction is that legacy-first proof is valid; the remaining work is to make the declared child runtime surface and verification contract precise enough that implementation cannot improvise critical behavior.

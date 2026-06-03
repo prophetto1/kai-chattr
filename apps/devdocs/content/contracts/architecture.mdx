@@ -1,0 +1,92 @@
+---
+title: "Architecture"
+description: "Architecture contract container for stack, dependency policy, repo/process, secrets, toolchain, validation, and deploy posture rules."
+---
+
+{/* GENERATED from governance/contracts/architecture.json by governance/scripts/build-contract-docs.mjs - do not edit by hand. */}
+
+Architecture contract container for stack, dependency policy, repo/process, secrets, toolchain, validation, and deploy posture rules.
+
+## Sections
+
+- **Stack:** runtime topology, host, language/runtime boundaries
+- **Dependencies:** dependency policy, machine allowlist
+- **Repo and process:** repo rules, process rules, tooling
+
+## Stack
+
+### apps/web
+
+Static React workbench frontend aligned to the OpenHands page-pattern stack and themed to the kai-chattr token contract.
+
+- **Runtime:** Cloudflare Pages static build for clean kai-chattr; legacy chattr may use the same stack as the proving ground while preserving :8300 runtime seams.
+- **Items:** React 19, React Router v7, Vite, Tailwind v4, HeroUI, TanStack Query, Zustand, Monaco, xterm.js, lucide-react
+
+## Dependency Allowlist
+
+### Shared
+
+No dependencies listed.
+
+### Tooling
+
+- `ajv`
+- `dependency-cruiser`
+
+### Apps Devdocs
+
+- `@tailwindcss/postcss`
+- `@types/mdx`
+- `cross-env`
+- `fumadocs-core`
+- `fumadocs-mdx`
+- `fumadocs-ui`
+- `mermaid`
+- `next`
+- `next-themes`
+- `react`
+- `react-dom`
+- `remark-directive`
+- `shiki`
+- `@types/node`
+- `@types/react`
+- `@types/react-dom`
+- `typescript`
+- `wrangler`
+
+### Apps Web
+
+- `@heroui/react`
+- `@monaco-editor/react`
+- `@tailwindcss/vite`
+- `@tanstack/react-query`
+- `@vitejs/plugin-react`
+- `@xterm/addon-fit`
+- `@xterm/xterm`
+- `framer-motion`
+- `lucide-react`
+- `monaco-editor`
+- `react`
+- `react-dom`
+- `react-router`
+- `tailwindcss`
+- `typescript`
+- `vite`
+- `zustand`
+- `@types/node`
+- `@types/react`
+- `@types/react-dom`
+
+## Rules
+
+No rules drafted yet.
+
+## Enforced by
+
+`Pending Jon-ratified rules. Dependency allowlist data lives in this Architecture contract.`
+
+
+## Open items
+
+- No architecture rules are locked in this file yet.
+- HeroUI is included in the apps/web target stack because OpenHands uses @heroui/react across its frontend primitives.

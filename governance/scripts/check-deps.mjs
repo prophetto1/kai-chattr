@@ -1,14 +1,13 @@
-// Dependency-allowlist gate (npm). Deterministic JSON comparison — no regex, no AST.
-// Fails (exit 1) if any package.json declares a dependency not present in
-// governance/allowed-deps.json (under its workspace key, "shared", or "tooling").
-//
-// Mechanizes the "every dependency must be confirmed" rule: an unapproved dep
-// cannot pass save-hook / pre-commit / CI until it is added to the allowlist.
+// Dependency-allowlist gate (npm).
+// The allowlist data lives in governance/contracts/architecture.json under allowedDeps.
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const ROOT = process.cwd();
-const allow = JSON.parse(readFileSync(join(ROOT, 'governance/allowed-deps.json'), 'utf8'));
+const architecture = JSON.parse(
+  readFileSync(join(ROOT, 'governance/contracts/architecture.json'), 'utf8'),
+);
+const allow = architecture.allowedDeps ?? {};
 const always = new Set([...(allow.shared ?? []), ...(allow.tooling ?? [])]);
 
 function pkgDirs() {
@@ -35,14 +34,14 @@ for (const dir of pkgDirs()) {
   const allowedHere = new Set([...always, ...(allow[rel] ?? [])]);
   for (const dep of declared) {
     if (!allowedHere.has(dep)) {
-      console.error(`✗ ${rel}/package.json: "${dep}" is NOT in the allowlist. Confirm it with Jon and add it to governance/allowed-deps.json.`);
+      console.error(`FAIL ${rel}/package.json: "${dep}" is not in Architecture allowedDeps.`);
       violations++;
     }
   }
 }
 
 if (violations) {
-  console.error(`\nBLOCKED: ${violations} unapproved dependency(ies). See governance/allowed-deps.json.`);
+  console.error(`\nBLOCKED: ${violations} unapproved dependency(ies). See governance/contracts/architecture.json allowedDeps.`);
   process.exit(1);
 }
-console.log('✓ All declared npm dependencies are on the allowlist.');
+console.log('OK: All declared npm dependencies are in Architecture allowedDeps.');

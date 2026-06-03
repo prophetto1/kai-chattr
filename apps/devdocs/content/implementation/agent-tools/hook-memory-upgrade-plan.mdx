@@ -1,0 +1,270 @@
+---
+title: "Hook Memory Upgrade Plan"
+description: "Multiphase plan for improving the agent hook memory path without adopting Hindsight as the immediate backend."
+---
+
+**Status:** Draft implementation plan. This page records the recommended hook-memory upgrade path; it does not approve a backend cutover.
+
+**Goal:** Improve the current `E:/hooks` memory path one atomic capability at a time: normalize writes, classify memories, add deterministic tags and timestamps, reduce duplicates, improve recall quality, and keep Hindsight as a reference architecture for a later backend spike.
+
+**Architecture:** Keep the existing local memory-vector store and hook injector as the live path. Borrow Hindsight's retain contract and retrieval ideas, but do not adopt Hindsight as the first implementation step.
+
+**Primary sources:**
+
+| Surface | Current role |
+|---|---|
+| `E:/hooks/inject-protocol/inject-protocol.mjs` | UserPromptSubmit hook that injects protocol, memory recall, and skill suggestions. |
+| `E:/hooks/inject-protocol/recall.py` | Read-side memory ranking over FTS, recency, and confidence. |
+| `E:/hooks/scripts/normalize-memory-tags.py` | Manual maintenance script for memory tags. |
+| `E:/hooks/telemetry/log-event.py` | PostToolUse telemetry writer for `E:/hooks/hooks.db`. |
+| `E:/hooks/loop-safety/loop-guard.py` | PreToolUse loop breaker that consumes hook telemetry. |
+| `E:/memory/memory-sqlite.db` | Current memory store with `memories`, FTS, vector, and graph tables. |
+| `E:/kai-chattr/_references/hindsight` | Reference memory architecture, not the immediate runtime target. |
+
+## Recommendation
+
+Do not replace the current hook memory system with Hindsight in the first pass.
+
+Use Hindsight as the reference model for:
+
+- retain payload shape
+- memory bank scoping
+- idempotent document and content-hash behavior
+- tag filtering
+- future BM25, vector, graph, and temporal retrieval fusion
+
+Keep the first implementation local and surgical. The current live problem is write-time hygiene: workers should provide memory content, and the system should derive type, tags, timestamps, project scope, and duplicate behavior.
+
+## Current State
+
+The current system has three separate surfaces.
+
+| Surface | Current behavior | Gap |
+|---|---|---|
+| Prompt injection and recall | `inject-protocol` reads `E:/memory/memory-sqlite.db` and ranks memories with FTS, recency, and confidence. | Recall compensates for inconsistent write-time metadata. |
+| Manual memory hygiene | `normalize-memory-tags.py` repairs project tags after the fact. | Tags still depend on worker discipline unless a write-time path is added. |
+| Hook telemetry and loop safety | `hook-telemetry` writes `hook_events`; `loop-safety` reads that table. | This is operational telemetry, not memory normalization. |
+
+Recent inspection found:
+
+| Check | Result |
+|---|---|
+| Active memories | `315` |
+| Active rows missing `content_hash` | `0` |
+| Active rows missing `created_at` | `0` |
+| Active rows missing `memory_type` | `0` |
+| Active rows missing `tags` | `0` |
+| Active rows tagged only `untagged` | `12` |
+| Hook telemetry rows | `266` |
+| Telemetry status split | `257 ok`, `9 error` |
+
+## Phase P0: Baseline Fixtures
+
+**Atomic upgrade:** Add read-only fixtures that lock current behavior before changing memory paths.
+
+**Purpose:** Prevent a memory upgrade from silently breaking the injector, current DB access, or hook validation.
+
+**Expected files:**
+
+| Path | Action |
+|---|---|
+| `E:/hooks/scripts/test-memory-runtime.py` | Add a read-only smoke test for memory DB shape, current recall, and telemetry DB shape. |
+| `E:/hooks/scripts/validate-runtime-hooks.mjs` | Extend only if current validation does not cover the new test entry. |
+
+**Acceptance criteria:**
+
+- Runtime hook validation passes.
+- Injector self-test returns memory and scoring diagnostics.
+- Memory DB table checks run without touching vector virtual tables that require `vec0`.
+- Hook telemetry DB shape is visible.
+- No memory rows are modified.
+
+**Verification:**
+
+```powershell
+node E:/hooks/scripts/validate-runtime-hooks.mjs
+node E:/hooks/inject-protocol/inject-protocol.mjs --self-test
+python -m py_compile E:/hooks/inject-protocol/recall.py E:/hooks/scripts/normalize-memory-tags.py
+```
+
+## Phase P1: Retain Contract And Pure Normalizer
+
+**Atomic upgrade:** Add a pure normalizer that turns raw memory content into a canonical local retain payload.
+
+**Purpose:** Make memory shape deterministic before any database writes or hook gates depend on it.
+
+**Expected file:**
+
+| Path | Action |
+|---|---|
+| `E:/hooks/lib/memory_retain.py` | Add the canonical local retain payload builder. |
+
+**Payload contract:**
+
+| Field | Source |
+|---|---|
+| `content` | Worker-provided memory text after cleanup. |
+| `context` | Derived from current turn, project, cwd, and source tool when available. |
+| `timestamp` / `created_at_iso` | System-stamped. |
+| `memory_type` | System-classified. |
+| `tags` | System-derived from type, project, and topics. |
+| `metadata` | System metadata such as classifier source, confidence, cwd, and source tool. |
+| `document_id` | Deterministic document key when one exists. |
+| `content_fingerprint` | Hash of normalized content. |
+| `update_mode` | `replace` or `append`, defaulting to conservative replace/idempotent behavior. |
+
+**Rules:**
+
+- The worker supplies only memory content.
+- The system derives type, tags, timestamp, and project scope.
+- The normalizer is deterministic except for timestamp fields.
+- The first classifier is deterministic.
+- LLM classification, if added later, must be optional and auditable.
+
+**Acceptance criteria:**
+
+- Same content and context produce the same normalized payload except timestamp.
+- `global` rewrites to `all`.
+- Project tags derive from `E:/hooks/config.json`.
+- Low-quality or empty memory content is rejected before storage.
+- The manual tag normalizer can reuse the same tag logic.
+
+## Phase P2: Automatic Post-Write Normalizer
+
+**Atomic upgrade:** Add a hook-side normalizer that repairs successful `memory_store` writes immediately after they happen.
+
+**Purpose:** Make memory metadata systematic without changing the MCP-router memory backend first.
+
+**Why post-write:** A PreToolUse hook can deny or inject context, but it should not be treated as a mutating transformer for MCP tool input. The safe surgical path is to observe a successful `memory_store`, find the resulting memory row or returned hash, and update metadata through the same canonical normalizer.
+
+**Expected files:**
+
+| Path | Action |
+|---|---|
+| `E:/hooks/memory-normalizer/normalize-after-store.py` | Add PostToolUse normalizer for successful `memory_store` calls. |
+| `E:/hooks/config.json` | Register the hook or script settings after the normalizer is proven. |
+| `E:/hooks/config.schema.json` | Add settings schema if new config fields are introduced. |
+
+**Data touched:**
+
+| Store | Fields |
+|---|---|
+| `E:/memory/memory-sqlite.db` | `tags`, `memory_type`, `metadata`, `updated_at`, `updated_at_iso` |
+| `E:/hooks/hooks.db` | Normalizer audit row or status event |
+
+**Non-goals:**
+
+- Do not rewrite memory content in this phase.
+- Do not mutate vector rows.
+- Do not rebuild FTS rows unless content is changed in a later approved phase.
+
+**Acceptance criteria:**
+
+- A raw `memory_store(content=...)` becomes typed and tagged automatically.
+- The normalizer records whether it updated, skipped, or failed.
+- Failures remain fail-open but visible in telemetry.
+- Existing manual normalization still works.
+
+## Phase P3: Dedupe And Idempotency
+
+**Atomic upgrade:** Add deterministic duplicate handling for exact normalized content and document keys.
+
+**Purpose:** Stop the store from accumulating active near-identical memories when the same durable fact is saved repeatedly.
+
+**Expected files:**
+
+| Path | Action |
+|---|---|
+| `E:/hooks/lib/memory_retain.py` | Add normalized content fingerprint and document-id helpers. |
+| `E:/hooks/memory-normalizer/normalize-after-store.py` | Apply idempotency decisions after successful writes. |
+| `E:/hooks/scripts/memory-dedupe-report.py` | Add report/apply workflow for existing duplicates if needed. |
+
+**Policy:**
+
+- Exact normalized duplicates are handled first.
+- Semantic dedupe is deferred.
+- Same `document_id` uses `update_mode`.
+- No duplicate cleanup should run without a report mode.
+
+**Acceptance criteria:**
+
+- Re-saving identical content does not leave two active equivalent memories.
+- Same `document_id` behavior is deterministic.
+- Report mode shows the rows that would be superseded before applying.
+- No vector or FTS corruption occurs.
+
+## Phase P4: Recall Scoring And Rendering
+
+**Atomic upgrade:** Improve recall after write-side metadata is reliable.
+
+**Purpose:** Make injected memories more accurate, explainable, and less biased toward stale planning records.
+
+**Expected files:**
+
+| Path | Action |
+|---|---|
+| `E:/hooks/inject-protocol/recall.py` | Add typed scoring and richer output fields. |
+| `E:/hooks/inject-protocol/inject-protocol.mjs` | Render type, tags, date, and concise snippet. |
+| `E:/hooks/config.json` | Move type-specific scoring knobs into config. |
+| `E:/hooks/config.schema.json` | Validate new scoring knobs. |
+
+**Scoring direction:**
+
+| Type | Freshness behavior |
+|---|---|
+| `planning` | Shorter half-life. |
+| `decision` | Longer half-life. |
+| `reference` | Medium half-life. |
+| `learning` | Medium or long half-life. |
+| `mistake` | High relevance when tool/task terms match. |
+
+**Acceptance criteria:**
+
+- Recall output explains why a memory was selected.
+- Project-scoped memories outrank cross-project memories when both match.
+- Stale planning memories stop outranking current decisions.
+- `untagged` memories are dropped or heavily deweighted.
+- Injector self-test exposes scoring details.
+
+## Phase P5: Hindsight Compatibility Spike
+
+**Atomic upgrade:** Test Hindsight as an optional future backend using the local retain contract.
+
+**Purpose:** Validate backend compatibility without cutting over production memory recall.
+
+**Expected scope:**
+
+| Check | Purpose |
+|---|---|
+| Local retain adapter | Translate local retain payload to Hindsight retain input. |
+| Type mapping | Map local `decision`, `planning`, `reference`, `learning`, and `mistake` to Hindsight memory categories. |
+| Bank mapping | Map project/session/agent scope to Hindsight `bank_id`. |
+| Tag recall | Confirm tag-filter recall matches local project-scope expectations. |
+| Idempotency | Confirm `document_id` and repeated retain behavior. |
+| License review | Confirm source-package license before copying any code. |
+
+**Acceptance criteria:**
+
+- The local retain payload can be translated to Hindsight input.
+- Hindsight recall does not degrade exact project recall.
+- The spike remains optional.
+- No production hook is changed by the spike.
+
+## Locked Constraints
+
+- Fix write-time memory quality before tuning read-side recall.
+- Do not make Hindsight the immediate runtime backend.
+- Do not rely on worker discipline for `type`, `tags`, or timestamps.
+- Do not treat hook telemetry as memory truth.
+- Do not make PostToolUse telemetry authoritative for completion quality.
+- Keep every phase independently reversible.
+
+## Completion Criteria
+
+The hook memory path is ready for a backend decision only after:
+
+- memory writes are normalized automatically
+- duplicate behavior is deterministic
+- recall output is explainable
+- project scoping works without manual tag cleanup
+- the Hindsight adapter spike proves value without requiring a live cutover

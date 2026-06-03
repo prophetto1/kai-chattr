@@ -1,14 +1,8 @@
 #!/usr/bin/env python3
-"""Python dependency-allowlist gate — parity with check-deps.mjs (npm).
+"""Python dependency-allowlist gate.
 
-Fails (exit 1) if any apps/services/packages `*/pyproject.toml` declares a
-dependency not present in governance/allowed-deps.json under its workspace key,
-"shared", or "tooling". Uses the stdlib `tomllib` (Python 3.11+) — no Node TOML
-parsing. No-op (passes) until a pyproject.toml lands.
-
-Scope: PEP 621 `[project] dependencies` + `[project.optional-dependencies]` and
-PEP 735 `[dependency-groups]`. `[build-system].requires` (build-backend deps) is
-intentionally NOT scanned.
+The allowlist data lives in governance/contracts/architecture.json under
+allowedDeps. Scans apps/services/packages */pyproject.toml.
 """
 from __future__ import annotations
 
@@ -18,19 +12,18 @@ import sys
 import tomllib
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]  # governance/scripts -> repo root
-allow = json.loads((ROOT / "governance/allowed-deps.json").read_text("utf-8"))
+ROOT = Path(__file__).resolve().parents[2]
+architecture = json.loads(
+    (ROOT / "governance/contracts/architecture.json").read_text("utf-8")
+)
+allow = architecture.get("allowedDeps", {})
 
 
-# PEP 503 normalization so `pydantic_settings` / `Pydantic.Settings` all compare
-# equal to the allowlist's canonical `pydantic-settings`.
 def _norm(name: str) -> str:
     return re.sub(r"[-_.]+", "-", name).strip().lower()
 
 
 always = {_norm(x) for x in (*allow.get("shared", []), *allow.get("tooling", []))}
-
-# PEP 508 requirement -> distribution name (strip extras/version/markers).
 _NAME = re.compile(r"^[A-Za-z0-9._-]+")
 
 
@@ -66,8 +59,7 @@ for group in ("apps", "services", "packages"):
         for dep in sorted(dep_names(data)):
             if dep not in allowed:
                 print(
-                    f'FAIL {rel}/pyproject.toml: "{dep}" is NOT in the allowlist. '
-                    "Confirm it with Jon and add it to governance/allowed-deps.json.",
+                    f'FAIL {rel}/pyproject.toml: "{dep}" is not in Architecture allowedDeps.',
                     file=sys.stderr,
                 )
                 violations += 1
@@ -75,8 +67,8 @@ for group in ("apps", "services", "packages"):
 if violations:
     print(
         f"\nBLOCKED: {violations} unapproved Python dependency(ies). "
-        "See governance/allowed-deps.json.",
+        "See governance/contracts/architecture.json allowedDeps.",
         file=sys.stderr,
     )
     sys.exit(1)
-print("OK: All declared Python dependencies are on the allowlist.")
+print("OK: All declared Python dependencies are in Architecture allowedDeps.")

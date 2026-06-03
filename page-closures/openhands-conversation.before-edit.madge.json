@@ -1,0 +1,2048 @@
+﻿{
+  "../api/analytics-service/analytics-events.api.ts": [
+    "../api/open-hands-axios.ts",
+    "../types/settings.ts"
+  ],
+  "../api/auth-service/auth-service.api.ts": [
+    "../api/auth-service/auth.types.ts",
+    "../api/open-hands-axios.ts",
+    "../api/option-service/option.types.ts"
+  ],
+  "../api/auth-service/auth.types.ts": [],
+  "../api/conversation-service/conversation-service.api.ts": [
+    "../api/conversation-service/v1-conversation-service.types.ts",
+    "../api/open-hands-axios.ts",
+    "../api/open-hands.types.ts"
+  ],
+  "../api/conversation-service/v1-conversation-service.api.ts": [
+    "../api/conversation-service/v1-conversation-service.types.ts",
+    "../api/open-hands-axios.ts",
+    "../api/open-hands.types.ts",
+    "../types/settings.ts",
+    "../utils/types.ts",
+    "../utils/utils.ts",
+    "../utils/websocket-url.ts"
+  ],
+  "../api/conversation-service/v1-conversation-service.types.ts": [
+    "../api/open-hands.types.ts",
+    "../api/sandbox-service/sandbox-service.types.ts",
+    "../types/settings.ts",
+    "../types/v1/core/index.ts",
+    "../utils/types.ts"
+  ],
+  "../api/event-service/event-service.api.ts": [
+    "../api/event-service/event-service.types.ts",
+    "../api/open-hands-axios.ts",
+    "../types/v1/core/index.ts",
+    "../utils/utils.ts",
+    "../utils/websocket-url.ts"
+  ],
+  "../api/event-service/event-service.types.ts": [],
+  "../api/git-service/git-service.api.ts": [
+    "../api/conversation-service/conversation-service.api.ts",
+    "../api/open-hands-axios.ts",
+    "../api/open-hands.types.ts",
+    "../types/git.d.ts"
+  ],
+  "../api/git-service/v1-git-service.api.ts": [
+    "../api/open-hands.types.ts",
+    "../utils/git-status-mapper.ts",
+    "../utils/utils.ts",
+    "../utils/websocket-url.ts"
+  ],
+  "../api/open-hands-axios.ts": [],
+  "../api/open-hands.types.ts": [
+    "../types/conversation-status.ts",
+    "../types/runtime-status.ts",
+    "../types/settings.ts"
+  ],
+  "../api/option-service/option-service.api.ts": [
+    "../api/open-hands-axios.ts",
+    "../api/option-service/option.types.ts"
+  ],
+  "../api/option-service/option.types.ts": [
+    "../types/settings.ts"
+  ],
+  "../api/organization-service/organization-service.api.ts": [
+    "../api/open-hands-axios.ts",
+    "../types/org.ts",
+    "../types/settings.ts"
+  ],
+  "../api/pending-message-service/pending-message-service.api.ts": [
+    "../api/open-hands-axios.ts",
+    "../api/pending-message-service/pending-message-service.types.ts"
+  ],
+  "../api/pending-message-service/pending-message-service.types.ts": [
+    "../api/conversation-service/v1-conversation-service.types.ts"
+  ],
+  "../api/sandbox-service/sandbox-service.api.ts": [
+    "../api/open-hands-axios.ts",
+    "../api/sandbox-service/sandbox-service.types.ts"
+  ],
+  "../api/sandbox-service/sandbox-service.types.ts": [],
+  "../api/settings-service/profiles-service.api.ts": [
+    "../api/open-hands-axios.ts"
+  ],
+  "../api/settings-service/settings-service.api.ts": [
+    "../api/open-hands-axios.ts",
+    "../types/settings.ts"
+  ],
+  "../assets/chevron-left.tsx": [],
+  "../assets/chevron-right.tsx": [],
+  "../assets/notification.mp3": [],
+  "../components/features/browser/browser-snapshot.tsx": [
+    "../i18n/declaration.ts"
+  ],
+  "../components/features/browser/browser.tsx": [
+    "../components/features/browser/browser-snapshot.tsx",
+    "../components/features/browser/empty-browser-message.tsx",
+    "../hooks/use-conversation-id.ts",
+    "../stores/browser-store.ts"
+  ],
+  "../components/features/browser/empty-browser-message.tsx": [
+    "../i18n/declaration.ts"
+  ],
+  "../components/features/chat/archived-banner.tsx": [
+    "../i18n/declaration.ts"
+  ],
+  "../components/features/chat/btw-messages.tsx": [
+    "../components/features/chat/generic-event-message.tsx",
+    "../stores/btw-store.ts"
+  ],
+  "../components/features/chat/change-agent-button.tsx": [
+    "../components/features/chat/change-agent-context-menu.tsx",
+    "../hooks/query/use-active-conversation.ts",
+    "../hooks/query/use-sub-conversation-task-polling.ts",
+    "../hooks/use-agent-state.ts",
+    "../hooks/use-handle-plan-click.ts",
+    "../hooks/use-unified-websocket-status.ts",
+    "../i18n/declaration.ts",
+    "../stores/conversation-store.ts",
+    "../types/agent-state.tsx",
+    "../ui/typography.tsx",
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/change-agent-context-menu.tsx": [
+    "../components/features/context-menu/context-menu-icon-text-with-description.tsx",
+    "../components/features/context-menu/context-menu-list-item.tsx",
+    "../hooks/use-click-outside-element.ts",
+    "../i18n/declaration.ts",
+    "../ui/context-menu.tsx",
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/chat-action-tooltip.tsx": [
+    "../components/shared/buttons/styled-tooltip.tsx"
+  ],
+  "../components/features/chat/chat-add-file-button.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/chat-interface.tsx": [
+    "../components/features/chat/archived-banner.tsx",
+    "../components/features/chat/btw-messages.tsx",
+    "../components/features/chat/chat-messages-skeleton.tsx",
+    "../components/features/chat/chat-status-indicator.tsx",
+    "../components/features/chat/chat-suggestions.tsx",
+    "../components/features/chat/confirmation-mode-enabled.tsx",
+    "../components/features/chat/error-message-banner.tsx",
+    "../components/features/chat/interactive-chat-box.tsx",
+    "../components/features/chat/model-messages.tsx",
+    "../components/features/chat/typing-indicator.tsx",
+    "../components/shared/buttons/scroll-to-bottom-button.tsx",
+    "../components/shared/loading-spinner.tsx",
+    "../components/v1/chat/index.ts",
+    "../context/scroll-context.tsx",
+    "../contexts/conversation-websocket-context.tsx",
+    "../hooks/mutation/use-new-conversation-command.ts",
+    "../hooks/mutation/use-unified-upload-files.ts",
+    "../hooks/query/use-task-polling.ts",
+    "../hooks/use-agent-state.ts",
+    "../hooks/use-filtered-events.ts",
+    "../hooks/use-handle-build-plan-click.ts",
+    "../hooks/use-scroll-to-bottom.ts",
+    "../hooks/use-send-message.ts",
+    "../i18n/declaration.ts",
+    "../services/chat-service.ts",
+    "../stores/conversation-store.ts",
+    "../stores/error-message-store.ts",
+    "../stores/model-store.ts",
+    "../stores/optimistic-user-message-store.ts",
+    "../types/agent-state.tsx",
+    "../utils/convert-image-to-base-64.ts",
+    "../utils/custom-toast-handlers.tsx",
+    "../utils/file-validation.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/chat-message.tsx": [
+    "../components/features/markdown/markdown-renderer.tsx",
+    "../components/shared/buttons/copy-to-clipboard-button.tsx",
+    "../components/shared/buttons/styled-tooltip.tsx",
+    "../types/core/base.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/chat-messages-skeleton.tsx": [],
+  "../components/features/chat/chat-play-button.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/chat-send-button.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/chat-status-indicator.tsx": [],
+  "../components/features/chat/chat-stop-button.tsx": [],
+  "../components/features/chat/chat-suggestions.tsx": [
+    "../components/features/suggestions/suggestions.tsx",
+    "../i18n/declaration.ts",
+    "../stores/conversation-store.ts",
+    "../utils/suggestions/index.ts"
+  ],
+  "../components/features/chat/components/chat-input-actions.tsx": [
+    "../components/features/chat/change-agent-button.tsx",
+    "../components/features/chat/switch-profile-button.tsx",
+    "../components/features/controls/agent-status.tsx",
+    "../components/features/controls/tools.tsx",
+    "../hooks/mutation/use-unified-stop-conversation.ts",
+    "../hooks/mutation/use-v1-pause-conversation.ts",
+    "../hooks/mutation/use-v1-resume-conversation.ts",
+    "../hooks/use-conversation-id.ts"
+  ],
+  "../components/features/chat/components/chat-input-container.tsx": [
+    "../components/features/chat/components/chat-input-actions.tsx",
+    "../components/features/chat/components/chat-input-row.tsx",
+    "../components/features/chat/components/slash-command-menu.tsx",
+    "../components/features/chat/drag-over.tsx",
+    "../components/features/chat/uploaded-files.tsx",
+    "../hooks/chat/use-slash-command.ts",
+    "../stores/conversation-store.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/components/chat-input-field.tsx": [
+    "../i18n/declaration.ts",
+    "../stores/conversation-store.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/components/chat-input-grip.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/components/chat-input-row.tsx": [
+    "../components/features/chat/chat-add-file-button.tsx",
+    "../components/features/chat/chat-send-button.tsx",
+    "../components/features/chat/components/chat-input-field.tsx",
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/components/hidden-file-input.tsx": [],
+  "../components/features/chat/components/slash-command-menu.tsx": [
+    "../hooks/chat/use-slash-command.ts",
+    "../ui/typography.tsx",
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/confirmation-mode-enabled.tsx": [
+    "../hooks/query/use-settings.ts",
+    "../i18n/declaration.ts"
+  ],
+  "../components/features/chat/custom-chat-input.tsx": [
+    "../api/sandbox-service/sandbox-service.types.ts",
+    "../components/features/chat/components/chat-input-container.tsx",
+    "../components/features/chat/components/chat-input-grip.tsx",
+    "../components/features/chat/components/hidden-file-input.tsx",
+    "../hooks/chat/use-chat-input-events.ts",
+    "../hooks/chat/use-chat-input-logic.ts",
+    "../hooks/chat/use-chat-submission.ts",
+    "../hooks/chat/use-file-handling.ts",
+    "../hooks/chat/use-grip-resize.ts",
+    "../hooks/chat/use-slash-command.ts",
+    "../stores/conversation-store.ts"
+  ],
+  "../components/features/chat/drag-over.tsx": [
+    "../i18n/declaration.ts"
+  ],
+  "../components/features/chat/error-message-banner.tsx": [
+    "../i18n/declaration.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/error-message.tsx": [
+    "../components/features/markdown/markdown-renderer.tsx",
+    "../i18n/index.ts"
+  ],
+  "../components/features/chat/event-content-helpers/get-observation-result.ts": [
+    "../types/core/observations.ts"
+  ],
+  "../components/features/chat/event-content-helpers/should-render-event.ts": [
+    "../types/core/actions.ts",
+    "../types/core/base.ts",
+    "../types/core/guards.ts",
+    "../types/core/observations.ts"
+  ],
+  "../components/features/chat/generic-event-message.tsx": [
+    "../components/features/chat/event-content-helpers/get-observation-result.ts",
+    "../components/features/chat/success-indicator.tsx",
+    "../components/features/markdown/markdown-renderer.tsx"
+  ],
+  "../components/features/chat/git-control-bar-branch-button.tsx": [
+    "../components/features/chat/git-external-link-icon.tsx",
+    "../hooks/use-provider-host.ts",
+    "../i18n/declaration.ts",
+    "../types/settings.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/git-control-bar-pr-button.tsx": [
+    "../hooks/mutation/use-track-create-pr-button-clicked.ts",
+    "../hooks/use-user-providers.ts",
+    "../i18n/declaration.ts",
+    "../types/settings.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/git-control-bar-pull-button.tsx": [
+    "../hooks/query/use-active-conversation.ts",
+    "../hooks/use-user-providers.ts",
+    "../i18n/declaration.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/git-control-bar-push-button.tsx": [
+    "../hooks/use-user-providers.ts",
+    "../i18n/declaration.ts",
+    "../types/settings.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/git-control-bar-repo-button.tsx": [
+    "../components/features/chat/git-external-link-icon.tsx",
+    "../components/shared/git-provider-icon.tsx",
+    "../hooks/use-provider-host.ts",
+    "../i18n/declaration.ts",
+    "../types/settings.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/git-control-bar-tooltip-wrapper.tsx": [
+    "../components/shared/buttons/styled-tooltip.tsx"
+  ],
+  "../components/features/chat/git-control-bar.tsx": [
+    "../components/features/chat/git-control-bar-branch-button.tsx",
+    "../components/features/chat/git-control-bar-pr-button.tsx",
+    "../components/features/chat/git-control-bar-pull-button.tsx",
+    "../components/features/chat/git-control-bar-push-button.tsx",
+    "../components/features/chat/git-control-bar-repo-button.tsx",
+    "../components/features/chat/git-control-bar-tooltip-wrapper.tsx",
+    "../components/features/chat/open-repository-modal.tsx",
+    "../hooks/mutation/use-update-conversation-repository.ts",
+    "../hooks/query/use-active-conversation.ts",
+    "../hooks/query/use-task-polling.ts",
+    "../hooks/use-send-message.ts",
+    "../hooks/use-unified-websocket-status.ts",
+    "../i18n/declaration.ts",
+    "../stores/home-store.ts",
+    "../stores/optimistic-user-message-store.ts",
+    "../types/git.d.ts",
+    "../types/settings.ts",
+    "../utils/custom-toast-handlers.tsx"
+  ],
+  "../components/features/chat/git-external-link-icon.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/interactive-chat-box.tsx": [
+    "../components/features/chat/custom-chat-input.tsx",
+    "../components/features/chat/git-control-bar.tsx",
+    "../hooks/chat/use-btw-interceptor.ts",
+    "../hooks/chat/use-model-interceptor.ts",
+    "../hooks/query/use-active-conversation.ts",
+    "../hooks/query/use-sub-conversation-task-polling.ts",
+    "../hooks/use-agent-state.ts",
+    "../stores/conversation-store.ts",
+    "../types/agent-state.tsx",
+    "../utils/custom-toast-handlers.tsx",
+    "../utils/file-processing.ts",
+    "../utils/file-validation.ts",
+    "../utils/is-file-image.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/model-messages.tsx": [
+    "../api/settings-service/profiles-service.api.ts",
+    "../components/features/chat/generic-event-message.tsx",
+    "../components/features/chat/mono-component.tsx",
+    "../i18n/declaration.ts",
+    "../stores/model-store.ts",
+    "../ui/typography.tsx"
+  ],
+  "../components/features/chat/mono-component.tsx": [],
+  "../components/features/chat/open-repository-modal.tsx": [
+    "../components/features/home/git-branch-dropdown/git-branch-dropdown.tsx",
+    "../components/features/home/git-provider-dropdown/git-provider-dropdown.tsx",
+    "../components/features/home/git-repo-dropdown/git-repo-dropdown.tsx",
+    "../components/features/settings/brand-button.tsx",
+    "../components/shared/modals/confirmation-modals/base-modal.tsx",
+    "../components/shared/modals/modal-backdrop.tsx",
+    "../components/shared/modals/modal-body.tsx",
+    "../hooks/use-user-providers.ts",
+    "../i18n/declaration.ts",
+    "../types/git.d.ts",
+    "../types/settings.ts"
+  ],
+  "../components/features/chat/path-component.tsx": [],
+  "../components/features/chat/plan-preview.tsx": [
+    "../components/features/markdown/markdown-renderer.tsx",
+    "../components/features/markdown/plan-components.tsx",
+    "../context/scroll-context.tsx",
+    "../hooks/use-handle-build-plan-click.ts",
+    "../hooks/use-select-conversation-tab.ts",
+    "../i18n/declaration.ts",
+    "../ui/typography.tsx",
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/remove-file-button.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/success-indicator.tsx": [
+    "../components/features/chat/event-content-helpers/get-observation-result.ts"
+  ],
+  "../components/features/chat/switch-profile-button.tsx": [
+    "../components/features/chat/switch-profile-context-menu.tsx",
+    "../hooks/mutation/use-switch-llm-profile-and-log.ts",
+    "../hooks/query/use-active-conversation.ts",
+    "../hooks/query/use-llm-profiles.ts",
+    "../hooks/use-conversation-id.ts",
+    "../i18n/declaration.ts",
+    "../stores/model-store.ts",
+    "../ui/typography.tsx"
+  ],
+  "../components/features/chat/switch-profile-context-menu.tsx": [
+    "../api/settings-service/profiles-service.api.ts",
+    "../components/features/context-menu/context-menu-list-item.tsx",
+    "../components/features/controls/tools-context-menu-icon-text.tsx",
+    "../components/features/settings/settings-nav-header.tsx",
+    "../hooks/use-click-outside-element.ts",
+    "../i18n/declaration.ts",
+    "../ui/context-menu.tsx",
+    "../ui/divider.tsx",
+    "../utils/constants.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/task-tracking/task-item.tsx": [
+    "../i18n/declaration.ts",
+    "../ui/typography.tsx",
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/typing-indicator.tsx": [],
+  "../components/features/chat/uploaded-file.tsx": [
+    "../components/features/chat/remove-file-button.tsx",
+    "../utils/utils.ts"
+  ],
+  "../components/features/chat/uploaded-files.tsx": [
+    "../components/features/chat/uploaded-file.tsx",
+    "../components/features/chat/uploaded-image.tsx",
+    "../stores/conversation-store.ts"
+  ],
+  "../components/features/chat/uploaded-image.tsx": [
+    "../components/features/chat/remove-file-button.tsx"
+  ],
+  "../components/features/chat/utils/chat-input.utils.ts": [],
+  "../components/features/chat/waiting-for-runtime-message.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/context-menu/context-menu-icon-text-with-description.tsx": [
+    "../components/features/context-menu/context-menu-icon-text.tsx",
+    "../ui/typography.tsx",
+    "../utils/utils.ts"
+  ],
+  "../components/features/context-menu/context-menu-icon-text.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/context-menu/context-menu-list-item.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/controls/agent-loading.tsx": [],
+  "../components/features/controls/agent-status.tsx": [
+    "../components/features/chat/chat-play-button.tsx",
+    "../components/features/chat/chat-stop-button.tsx",
+    "../components/features/controls/agent-loading.tsx",
+    "../hooks/query/use-active-conversation.ts",
+    "../hooks/query/use-sub-conversation-task-polling.ts",
+    "../hooks/query/use-task-polling.ts",
+    "../hooks/use-agent-notification.ts",
+    "../hooks/use-agent-state.ts",
+    "../hooks/use-unified-websocket-status.ts",
+    "../stores/conversation-store.ts",
+    "../types/agent-state.tsx",
+    "../utils/status.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/controls/git-tools-submenu.tsx": [
+    "../components/features/context-menu/context-menu-list-item.tsx",
+    "../components/features/controls/tools-context-menu-icon-text.tsx",
+    "../hooks/mutation/use-track-create-pr-button-clicked.ts",
+    "../hooks/query/use-active-conversation.ts",
+    "../i18n/declaration.ts",
+    "../stores/conversation-store.ts",
+    "../types/settings.ts",
+    "../ui/context-menu.tsx",
+    "../utils/constants.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/controls/macros-submenu.tsx": [
+    "../components/features/context-menu/context-menu-list-item.tsx",
+    "../components/features/controls/tools-context-menu-icon-text.tsx",
+    "../i18n/declaration.ts",
+    "../stores/conversation-store.ts",
+    "../ui/context-menu.tsx",
+    "../utils/constants.ts",
+    "../utils/suggestions/repo-suggestions.ts"
+  ],
+  "../components/features/controls/server-status-context-menu-icon-text.tsx": [],
+  "../components/features/controls/server-status-context-menu.tsx": [
+    "../api/sandbox-service/sandbox-service.types.ts",
+    "../components/features/controls/server-status-context-menu-icon-text.tsx",
+    "../components/features/controls/server-status.tsx",
+    "../hooks/use-click-outside-element.ts",
+    "../i18n/declaration.ts",
+    "../ui/context-menu.tsx",
+    "../ui/divider.tsx",
+    "../utils/utils.ts"
+  ],
+  "../components/features/controls/server-status.tsx": [
+    "../api/sandbox-service/sandbox-service.types.ts",
+    "../hooks/query/use-task-polling.ts",
+    "../hooks/use-agent-state.ts",
+    "../stores/error-message-store.ts",
+    "../types/agent-state.tsx",
+    "../utils/utils.ts"
+  ],
+  "../components/features/controls/tools-context-menu-icon-text.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/controls/tools-context-menu.tsx": [
+    "../components/features/context-menu/context-menu-list-item.tsx",
+    "../components/features/controls/git-tools-submenu.tsx",
+    "../components/features/controls/macros-submenu.tsx",
+    "../components/features/controls/tools-context-menu-icon-text.tsx",
+    "../hooks/query/use-active-conversation.ts",
+    "../hooks/use-click-outside-element.ts",
+    "../hooks/use-user-providers.ts",
+    "../i18n/declaration.ts",
+    "../ui/context-menu.tsx",
+    "../ui/divider.tsx",
+    "../utils/constants.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/controls/tools.tsx": [
+    "../components/features/controls/tools-context-menu.tsx",
+    "../components/features/conversation-panel/hooks-modal.tsx",
+    "../components/features/conversation-panel/skills-modal.tsx",
+    "../components/features/conversation-panel/system-message-modal.tsx",
+    "../hooks/query/use-active-conversation.ts",
+    "../hooks/use-conversation-name-context-menu.ts",
+    "../i18n/declaration.ts"
+  ],
+  "../components/features/conversation-panel/budget-display.tsx": [
+    "../components/features/conversation-panel/budget-progress-bar.tsx",
+    "../components/features/conversation-panel/budget-usage-text.tsx",
+    "../i18n/declaration.ts"
+  ],
+  "../components/features/conversation-panel/budget-progress-bar.tsx": [],
+  "../components/features/conversation-panel/budget-usage-text.tsx": [
+    "../i18n/declaration.ts"
+  ],
+  "../components/features/conversation-panel/confirm-delete-modal.tsx": [
+    "../components/features/settings/brand-button.tsx",
+    "../components/shared/modals/confirmation-modals/base-modal.tsx",
+    "../components/shared/modals/modal-backdrop.tsx",
+    "../components/shared/modals/modal-body.tsx",
+    "../i18n/declaration.ts"
+  ],
+  "../components/features/conversation-panel/confirm-stop-modal.tsx": [
+    "../components/features/settings/brand-button.tsx",
+    "../components/shared/modals/confirmation-modals/base-modal.tsx",
+    "../components/shared/modals/modal-backdrop.tsx",
+    "../components/shared/modals/modal-body.tsx",
+    "../hooks/query/use-conversations-in-sandbox.ts",
+    "../i18n/declaration.ts"
+  ],
+  "../components/features/conversation-panel/ellipsis-button.tsx": [],
+  "../components/features/conversation-panel/hook-event-item.tsx": [
+    "../api/conversation-service/v1-conversation-service.types.ts",
+    "../components/features/conversation-panel/hook-matcher-content.tsx",
+    "../i18n/declaration.ts",
+    "../ui/typography.tsx"
+  ],
+  "../components/features/conversation-panel/hook-matcher-content.tsx": [
+    "../api/conversation-service/v1-conversation-service.types.ts",
+    "../i18n/declaration.ts",
+    "../ui/pre.tsx",
+    "../ui/typography.tsx"
+  ],
+  "../components/features/conversation-panel/hooks-empty-state.tsx": [
+    "../i18n/declaration.ts",
+    "../ui/typography.tsx"
+  ],
+  "../components/features/conversation-panel/hooks-loading-state.tsx": [],
+  "../components/features/conversation-panel/hooks-modal-header.tsx": [
+    "../components/features/settings/brand-button.tsx",
+    "../components/shared/modals/confirmation-modals/base-modal.tsx",
+    "../i18n/declaration.ts"
+  ],
+  "../components/features/conversation-panel/hooks-modal.tsx": [
+    "../components/features/conversation-panel/hook-event-item.tsx",
+    "../components/features/conversation-panel/hooks-empty-state.tsx",
+    "../components/features/conversation-panel/hooks-loading-state.tsx",
+    "../components/features/conversation-panel/hooks-modal-header.tsx",
+    "../components/shared/modals/modal-backdrop.tsx",
+    "../components/shared/modals/modal-body.tsx",
+    "../hooks/query/use-conversation-hooks.ts",
+    "../hooks/use-agent-state.ts",
+    "../i18n/declaration.ts",
+    "../types/agent-state.tsx",
+    "../ui/typography.tsx"
+  ],
+  "../components/features/conversation-panel/skill-content.tsx": [
+    "../i18n/declaration.ts",
+    "../ui/pre.tsx",
+    "../ui/typography.tsx"
+  ],
+  "../components/features/conversation-panel/skill-item.tsx": [
+    "../api/conversation-service/v1-conversation-service.types.ts",
+    "../components/features/conversation-panel/skill-content.tsx",
+    "../components/features/conversation-panel/skill-triggers.tsx",
+    "../ui/typography.tsx"
+  ],
+  "../components/features/conversation-panel/skill-triggers.tsx": [
+    "../i18n/declaration.ts",
+    "../ui/typography.tsx"
+  ],
+  "../components/features/conversation-panel/skills-empty-state.tsx": [
+    "../i18n/declaration.ts",
+    "../ui/typography.tsx"
+  ],
+  "../components/features/conversation-panel/skills-loading-state.tsx": [],
+  "../components/features/conversation-panel/skills-modal-header.tsx": [
+    "../components/features/settings/brand-button.tsx",
+    "../components/shared/modals/confirmation-modals/base-modal.tsx",
+    "../i18n/declaration.ts"
+  ],
+  "../components/features/conversation-panel/skills-modal.tsx": [
+    "../components/features/conversation-panel/skill-item.tsx",
+    "../components/features/conversation-panel/skills-empty-state.tsx",
+    "../components/features/conversation-panel/skills-loading-state.tsx",
+    "../components/features/conversation-panel/skills-modal-header.tsx",
+    "../components/shared/modals/modal-backdrop.tsx",
+    "../components/shared/modals/modal-body.tsx",
+    "../hooks/query/use-conversation-skills.ts",
+    "../hooks/use-agent-state.ts",
+    "../i18n/declaration.ts",
+    "../types/agent-state.tsx",
+    "../ui/typography.tsx"
+  ],
+  "../components/features/conversation-panel/system-message-modal.tsx": [
+    "../components/features/conversation-panel/system-message-modal/system-message-header.tsx",
+    "../components/features/conversation-panel/system-message-modal/tab-content.tsx",
+    "../components/features/conversation-panel/system-message-modal/tab-navigation.tsx",
+    "../components/shared/modals/modal-backdrop.tsx",
+    "../components/shared/modals/modal-body.tsx",
+    "../utils/system-message-adapter.ts"
+  ],
+  "../components/features/conversation-panel/system-message-modal/empty-tools-state.tsx": [
+    "../ui/typography.tsx"
+  ],
+  "../components/features/conversation-panel/system-message-modal/system-message-content.tsx": [
+    "../ui/typography.tsx"
+  ],
+  "../components/features/conversation-panel/system-message-modal/system-message-header.tsx": [
+    "../components/shared/modals/confirmation-modals/base-modal.tsx",
+    "../ui/typography.tsx",
+    "../utils/utils.ts"
+  ],
+  "../components/features/conversation-panel/system-message-modal/tab-button.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/conversation-panel/system-message-modal/tab-content.tsx": [
+    "../components/features/conversation-panel/system-message-modal/empty-tools-state.tsx",
+    "../components/features/conversation-panel/system-message-modal/system-message-content.tsx",
+    "../components/features/conversation-panel/system-message-modal/tools-list.tsx",
+    "../types/v1/core/index.ts"
+  ],
+  "../components/features/conversation-panel/system-message-modal/tab-navigation.tsx": [
+    "../components/features/conversation-panel/system-message-modal/tab-button.tsx"
+  ],
+  "../components/features/conversation-panel/system-message-modal/toggle-button.tsx": [
+    "../ui/typography.tsx"
+  ],
+  "../components/features/conversation-panel/system-message-modal/tool-item.tsx": [
+    "../components/features/conversation-panel/system-message-modal/toggle-button.tsx",
+    "../components/features/conversation-panel/system-message-modal/tool-parameters.tsx",
+    "../components/features/markdown/markdown-renderer.tsx",
+    "../types/v1/core/index.ts"
+  ],
+  "../components/features/conversation-panel/system-message-modal/tool-parameters.tsx": [
+    "../ui/typography.tsx",
+    "../utils/constants.ts"
+  ],
+  "../components/features/conversation-panel/system-message-modal/tools-list.tsx": [
+    "../components/features/conversation-panel/system-message-modal/tool-item.tsx",
+    "../types/v1/core/index.ts"
+  ],
+  "../components/features/conversation/archived-conversation-view.tsx": [
+    "../components/features/chat/archived-banner.tsx",
+    "../components/features/conversation/conversation-name-with-status.tsx",
+    "../components/shared/loading-spinner.tsx",
+    "../components/v1/chat/event-content-helpers/should-render-event.ts",
+    "../components/v1/chat/index.ts",
+    "../contexts/conversation-websocket-context.tsx",
+    "../hooks/use-filtered-events.ts",
+    "../i18n/declaration.ts",
+    "../types/v1/core/index.ts",
+    "../utils/handle-event-for-ui.ts"
+  ],
+  "../components/features/conversation/conversation-loading.tsx": [
+    "../i18n/declaration.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/conversation/conversation-main/chat-interface-wrapper.tsx": [
+    "../components/features/chat/chat-interface.tsx",
+    "../utils/utils.ts"
+  ],
+  "../components/features/conversation/conversation-main/conversation-main.tsx": [
+    "../components/features/conversation/conversation-main/chat-interface-wrapper.tsx",
+    "../components/features/conversation/conversation-tabs/conversation-tab-content/conversation-tab-content.tsx",
+    "../components/ui/resize-handle.tsx",
+    "../hooks/use-breakpoint.ts",
+    "../hooks/use-resizable-panels.ts",
+    "../stores/conversation-store.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/conversation/conversation-name-context-menu-icon-text.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/conversation/conversation-name-context-menu.tsx": [
+    "../components/features/context-menu/context-menu-list-item.tsx",
+    "../components/features/conversation/conversation-name-context-menu-icon-text.tsx",
+    "../hooks/query/use-active-conversation.ts",
+    "../hooks/query/use-config.ts",
+    "../hooks/use-breakpoint.ts",
+    "../hooks/use-click-outside-element.ts",
+    "../i18n/declaration.ts",
+    "../ui/context-menu.tsx",
+    "../ui/divider.tsx",
+    "../utils/constants.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/conversation/conversation-name-with-status.tsx": [
+    "../components/features/controls/server-status-context-menu.tsx",
+    "../components/features/conversation/conversation-name.tsx",
+    "../hooks/mutation/use-unified-start-conversation.ts",
+    "../hooks/mutation/use-unified-stop-conversation.ts",
+    "../hooks/query/use-active-conversation.ts",
+    "../hooks/query/use-task-polling.ts",
+    "../hooks/use-agent-state.ts",
+    "../hooks/use-user-providers.ts",
+    "../types/agent-state.tsx",
+    "../utils/utils.ts"
+  ],
+  "../components/features/conversation/conversation-name.tsx": [
+    "../components/features/conversation-panel/confirm-delete-modal.tsx",
+    "../components/features/conversation-panel/confirm-stop-modal.tsx",
+    "../components/features/conversation-panel/ellipsis-button.tsx",
+    "../components/features/conversation-panel/hooks-modal.tsx",
+    "../components/features/conversation-panel/skills-modal.tsx",
+    "../components/features/conversation-panel/system-message-modal.tsx",
+    "../components/features/conversation/conversation-name-context-menu.tsx",
+    "../components/features/conversation/metrics-modal/metrics-modal.tsx",
+    "../hooks/mutation/use-update-conversation.ts",
+    "../hooks/query/use-active-conversation.ts",
+    "../hooks/query/use-config.ts",
+    "../hooks/use-conversation-name-context-menu.ts",
+    "../i18n/declaration.ts",
+    "../ui/typography.tsx",
+    "../utils/agent-display-label.ts",
+    "../utils/custom-toast-handlers.tsx"
+  ],
+  "../components/features/conversation/conversation-tabs/conversation-tab-content/conversation-tab-content.tsx": [
+    "../components/features/conversation/conversation-loading.tsx",
+    "../components/features/conversation/conversation-tabs/conversation-tab-content/tab-container.tsx",
+    "../components/features/conversation/conversation-tabs/conversation-tab-content/tab-content-area.tsx",
+    "../components/features/conversation/conversation-tabs/conversation-tab-content/tab-wrapper.tsx",
+    "../components/features/conversation/conversation-tabs/conversation-tab-title.tsx",
+    "../components/features/terminal/terminal.tsx",
+    "../hooks/use-conversation-id.ts",
+    "../i18n/declaration.ts",
+    "../stores/conversation-store.ts",
+    "browser-tab.tsx",
+    "changes-tab.tsx",
+    "planner-tab.tsx",
+    "task-list-tab.tsx",
+    "vscode-tab.tsx"
+  ],
+  "../components/features/conversation/conversation-tabs/conversation-tab-content/tab-container.tsx": [],
+  "../components/features/conversation/conversation-tabs/conversation-tab-content/tab-content-area.tsx": [],
+  "../components/features/conversation/conversation-tabs/conversation-tab-content/tab-wrapper.tsx": [],
+  "../components/features/conversation/conversation-tabs/conversation-tab-nav.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/conversation/conversation-tabs/conversation-tab-title.tsx": [
+    "../hooks/query/use-unified-get-git-changes.ts",
+    "../hooks/use-agent-state.ts",
+    "../hooks/use-handle-build-plan-click.ts",
+    "../i18n/declaration.ts",
+    "../stores/conversation-store.ts",
+    "../types/agent-state.tsx",
+    "../ui/typography.tsx",
+    "../utils/utils.ts"
+  ],
+  "../components/features/conversation/conversation-tabs/conversation-tabs-context-menu.tsx": [
+    "../components/features/context-menu/context-menu-list-item.tsx",
+    "../hooks/use-click-outside-element.ts",
+    "../hooks/use-conversation-id.ts",
+    "../hooks/use-task-list.ts",
+    "../i18n/declaration.ts",
+    "../stores/conversation-store.ts",
+    "../ui/context-menu.tsx",
+    "../utils/conversation-local-storage.ts"
+  ],
+  "../components/features/conversation/conversation-tabs/conversation-tabs.tsx": [
+    "../components/features/chat/chat-action-tooltip.tsx",
+    "../components/features/conversation/conversation-tabs/conversation-tab-nav.tsx",
+    "../components/features/conversation/conversation-tabs/conversation-tabs-context-menu.tsx",
+    "../components/features/conversation/conversation-tabs/vscode-tooltip-content.tsx",
+    "../hooks/use-conversation-id.ts",
+    "../hooks/use-select-conversation-tab.ts",
+    "../hooks/use-task-list.ts",
+    "../i18n/declaration.ts",
+    "../stores/conversation-store.ts",
+    "../utils/conversation-local-storage.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/conversation/conversation-tabs/vscode-tooltip-content.tsx": [
+    "../hooks/query/use-unified-vscode-url.ts",
+    "../hooks/use-agent-state.ts",
+    "../i18n/declaration.ts",
+    "../types/agent-state.tsx"
+  ],
+  "../components/features/conversation/metrics-modal/context-window-section.tsx": [
+    "../i18n/declaration.ts"
+  ],
+  "../components/features/conversation/metrics-modal/cost-section.tsx": [
+    "../components/features/conversation-panel/budget-display.tsx",
+    "../i18n/declaration.ts"
+  ],
+  "../components/features/conversation/metrics-modal/empty-state.tsx": [
+    "../i18n/declaration.ts"
+  ],
+  "../components/features/conversation/metrics-modal/metric-row.tsx": [],
+  "../components/features/conversation/metrics-modal/metrics-modal.tsx": [
+    "../components/features/conversation/metrics-modal/context-window-section.tsx",
+    "../components/features/conversation/metrics-modal/cost-section.tsx",
+    "../components/features/conversation/metrics-modal/empty-state.tsx",
+    "../components/features/conversation/metrics-modal/usage-section.tsx",
+    "../components/shared/modals/confirmation-modals/base-modal.tsx",
+    "../components/shared/modals/modal-backdrop.tsx",
+    "../components/shared/modals/modal-body.tsx",
+    "../hooks/query/use-active-conversation.ts",
+    "../hooks/query/use-sandbox-metrics.ts",
+    "../i18n/declaration.ts",
+    "../stores/metrics-store.ts"
+  ],
+  "../components/features/conversation/metrics-modal/usage-section.tsx": [
+    "../components/features/conversation/metrics-modal/metric-row.tsx",
+    "../i18n/declaration.ts"
+  ],
+  "../components/features/diff-viewer/editor-container.tsx": [],
+  "../components/features/diff-viewer/empty-changes-message.tsx": [
+    "../i18n/declaration.ts"
+  ],
+  "../components/features/diff-viewer/file-diff-viewer.tsx": [
+    "../api/open-hands.types.ts",
+    "../components/features/diff-viewer/editor-container.tsx",
+    "../components/features/diff-viewer/loading-spinner.tsx",
+    "../components/features/markdown/markdown-renderer.tsx",
+    "../hooks/query/use-unified-git-diff.ts",
+    "../ui/typography.tsx",
+    "../utils/get-language-from-path.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/diff-viewer/loading-spinner.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/home/git-branch-dropdown/branch-dropdown-menu.tsx": [
+    "../components/features/home/shared/dropdown-item.tsx",
+    "../components/features/home/shared/index.ts",
+    "../types/git.d.ts"
+  ],
+  "../components/features/home/git-branch-dropdown/git-branch-dropdown.tsx": [
+    "../components/features/home/git-branch-dropdown/branch-dropdown-menu.tsx",
+    "../components/features/home/shared/clear-button.tsx",
+    "../components/features/home/shared/error-message.tsx",
+    "../components/features/home/shared/toggle-button.tsx",
+    "../hooks/query/use-branch-data.ts",
+    "../hooks/use-debounce.ts",
+    "../types/git.d.ts",
+    "../types/settings.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/home/git-provider-dropdown/git-provider-dropdown.tsx": [
+    "../components/features/home/shared/dropdown-item.tsx",
+    "../components/features/home/shared/empty-state.tsx",
+    "../components/features/home/shared/error-message.tsx",
+    "../components/features/home/shared/generic-dropdown-menu.tsx",
+    "../components/features/home/shared/loading-spinner.tsx",
+    "../components/features/home/shared/toggle-button.tsx",
+    "../components/shared/git-provider-icon.tsx",
+    "../types/settings.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/features/home/git-repo-dropdown/git-repo-dropdown.tsx": [
+    "../components/features/home/git-repo-dropdown/use-repository-data.tsx",
+    "../components/features/home/git-repo-dropdown/use-url-search.tsx",
+    "../components/features/home/shared/clear-button.tsx",
+    "../components/features/home/shared/dropdown-item.tsx",
+    "../components/features/home/shared/empty-state.tsx",
+    "../components/features/home/shared/error-message.tsx",
+    "../components/features/home/shared/generic-dropdown-menu.tsx",
+    "../components/features/home/shared/toggle-button.tsx",
+    "../hooks/query/use-config.ts",
+    "../hooks/use-debounce.ts",
+    "../i18n/declaration.ts",
+    "../stores/home-store.ts",
+    "../types/git.d.ts",
+    "../types/settings.ts",
+    "../ui/typography.tsx",
+    "../utils/utils.ts"
+  ],
+  "../components/features/home/git-repo-dropdown/use-repository-data.tsx": [
+    "../hooks/query/use-git-repositories.ts",
+    "../hooks/query/use-search-repositories.ts",
+    "../types/git.d.ts",
+    "../types/settings.ts"
+  ],
+  "../components/features/home/git-repo-dropdown/use-url-search.tsx": [
+    "../api/git-service/git-service.api.ts",
+    "../types/git.d.ts",
+    "../types/settings.ts"
+  ],
+  "../components/features/home/shared/clear-button.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/home/shared/dropdown-item.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/home/shared/empty-state.tsx": [],
+  "../components/features/home/shared/error-message.tsx": [],
+  "../components/features/home/shared/generic-dropdown-menu.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/home/shared/index.ts": [
+    "../components/features/home/shared/clear-button.tsx",
+    "../components/features/home/shared/empty-state.tsx",
+    "../components/features/home/shared/error-message.tsx",
+    "../components/features/home/shared/generic-dropdown-menu.tsx",
+    "../components/features/home/shared/loading-spinner.tsx",
+    "../components/features/home/shared/toggle-button.tsx"
+  ],
+  "../components/features/home/shared/loading-spinner.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/home/shared/toggle-button.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/images/image-carousel.tsx": [
+    "../assets/chevron-left.tsx",
+    "../assets/chevron-right.tsx",
+    "../components/features/images/image-preview.tsx",
+    "../utils/utils.ts"
+  ],
+  "../components/features/images/image-preview.tsx": [
+    "../components/features/images/thumbnail.tsx",
+    "../components/shared/buttons/remove-button.tsx"
+  ],
+  "../components/features/images/thumbnail.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/markdown/anchor.tsx": [],
+  "../components/features/markdown/code.tsx": [
+    "../components/shared/buttons/copyable-content-wrapper.tsx"
+  ],
+  "../components/features/markdown/headings.tsx": [],
+  "../components/features/markdown/list.tsx": [],
+  "../components/features/markdown/markdown-renderer.tsx": [
+    "../components/features/markdown/anchor.tsx",
+    "../components/features/markdown/code.tsx",
+    "../components/features/markdown/headings.tsx",
+    "../components/features/markdown/list.tsx",
+    "../components/features/markdown/paragraph.tsx",
+    "../components/features/markdown/table.tsx"
+  ],
+  "../components/features/markdown/paragraph.tsx": [],
+  "../components/features/markdown/plan-components.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/markdown/table.tsx": [],
+  "../components/features/settings/brand-button.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/features/settings/settings-nav-header.tsx": [
+    "../i18n/declaration.ts",
+    "../ui/typography.tsx",
+    "../utils/utils.ts"
+  ],
+  "../components/features/suggestions/suggestion-item.tsx": [
+    "../i18n/declaration.ts"
+  ],
+  "../components/features/suggestions/suggestions.tsx": [
+    "../components/features/suggestions/suggestion-item.tsx"
+  ],
+  "../components/features/terminal/terminal.tsx": [
+    "../components/features/chat/waiting-for-runtime-message.tsx",
+    "../hooks/use-agent-state.ts",
+    "../hooks/use-terminal.ts",
+    "../i18n/declaration.ts",
+    "../types/agent-state.tsx",
+    "../utils/utils.ts"
+  ],
+  "../components/features/tips/random-tip.tsx": [
+    "../i18n/declaration.ts",
+    "../utils/tips.ts"
+  ],
+  "../components/shared/action-tooltip.tsx": [
+    "../i18n/declaration.ts",
+    "../utils/utils.ts"
+  ],
+  "../components/shared/buttons/copy-to-clipboard-button.tsx": [
+    "../i18n/declaration.ts"
+  ],
+  "../components/shared/buttons/copyable-content-wrapper.tsx": [
+    "../components/shared/buttons/copy-to-clipboard-button.tsx"
+  ],
+  "../components/shared/buttons/modal-button.tsx": [],
+  "../components/shared/buttons/remove-button.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/shared/buttons/scroll-to-bottom-button.tsx": [],
+  "../components/shared/buttons/styled-tooltip.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/shared/buttons/v1-confirmation-buttons.tsx": [
+    "../components/shared/action-tooltip.tsx",
+    "../components/shared/risk-alert.tsx",
+    "../hooks/mutation/use-respond-to-confirmation.ts",
+    "../hooks/query/use-active-conversation.ts",
+    "../hooks/use-agent-state.ts",
+    "../i18n/declaration.ts",
+    "../stores/event-message-store.ts",
+    "../stores/use-event-store.ts",
+    "../types/agent-state.tsx",
+    "../types/v1/core/base/common.ts",
+    "../types/v1/type-guards.ts"
+  ],
+  "../components/shared/conversation-toast.tsx": [],
+  "../components/shared/git-provider-icon.tsx": [
+    "../types/settings.ts"
+  ],
+  "../components/shared/hook-execution-event-message.tsx": [
+    "../components/features/chat/generic-event-message.tsx",
+    "../types/v1/core/index.ts",
+    "../types/v1/type-guards.ts"
+  ],
+  "../components/shared/loading-spinner.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/shared/modals/confirmation-modals/base-modal.tsx": [
+    "../components/shared/buttons/modal-button.tsx",
+    "../components/shared/modals/modal-body.tsx"
+  ],
+  "../components/shared/modals/modal-backdrop.tsx": [],
+  "../components/shared/modals/modal-body.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/shared/risk-alert.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/ui/resize-handle.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../components/v1/chat/event-content-helpers/create-skill-ready-event.ts": [
+    "../components/v1/chat/event-content-helpers/get-skill-ready-content.ts",
+    "../types/v1/core/base/event.ts",
+    "../types/v1/core/index.ts"
+  ],
+  "../components/v1/chat/event-content-helpers/get-acp-tool-call-content.ts": [
+    "../components/v1/chat/event-content-helpers/shared.ts",
+    "../i18n/index.ts",
+    "../types/v1/core/events/acp-tool-call-event.ts"
+  ],
+  "../components/v1/chat/event-content-helpers/get-action-content.ts": [
+    "../components/v1/chat/event-content-helpers/shared.ts",
+    "../i18n/index.ts",
+    "../types/v1/core/base/action.ts",
+    "../types/v1/core/base/common.ts",
+    "../types/v1/core/index.ts"
+  ],
+  "../components/v1/chat/event-content-helpers/get-event-content.tsx": [
+    "../components/features/chat/mono-component.tsx",
+    "../components/features/chat/path-component.tsx",
+    "../components/v1/chat/event-content-helpers/create-skill-ready-event.ts",
+    "../components/v1/chat/event-content-helpers/get-acp-tool-call-content.ts",
+    "../components/v1/chat/event-content-helpers/get-action-content.ts",
+    "../components/v1/chat/event-content-helpers/get-observation-content.ts",
+    "../components/v1/chat/task-tracking/task-tracking-observation-content.tsx",
+    "../i18n/index.ts",
+    "../types/v1/core/base/observation.ts",
+    "../types/v1/core/index.ts",
+    "../types/v1/type-guards.ts"
+  ],
+  "../components/v1/chat/event-content-helpers/get-observation-content.ts": [
+    "../components/v1/chat/event-content-helpers/get-observation-result.ts",
+    "../components/v1/chat/event-content-helpers/shared.ts",
+    "../i18n/index.ts",
+    "../types/v1/core/base/observation.ts",
+    "../types/v1/core/index.ts"
+  ],
+  "../components/v1/chat/event-content-helpers/get-observation-result.ts": [
+    "../types/v1/core/events/acp-tool-call-event.ts",
+    "../types/v1/core/index.ts"
+  ],
+  "../components/v1/chat/event-content-helpers/get-skill-ready-content.ts": [
+    "../types/v1/core/base/common.ts"
+  ],
+  "../components/v1/chat/event-content-helpers/parse-message-from-event.ts": [
+    "../i18n/index.ts",
+    "../types/v1/core/index.ts"
+  ],
+  "../components/v1/chat/event-content-helpers/shared.ts": [
+    "../types/v1/core/index.ts"
+  ],
+  "../components/v1/chat/event-content-helpers/should-render-event.ts": [
+    "../types/core/index.ts",
+    "../types/v1/core/index.ts",
+    "../types/v1/type-guards.ts"
+  ],
+  "../components/v1/chat/event-message-components/critic-result-display.tsx": [
+    "../hooks/query/use-settings.ts",
+    "../i18n/declaration.ts",
+    "../types/v1/core/base/critic.ts"
+  ],
+  "../components/v1/chat/event-message-components/error-event-message.tsx": [
+    "../components/features/chat/error-message.tsx",
+    "../types/v1/core/index.ts",
+    "../types/v1/type-guards.ts"
+  ],
+  "../components/v1/chat/event-message-components/finish-event-message.tsx": [
+    "../components/features/chat/chat-message.tsx",
+    "../components/v1/chat/event-content-helpers/get-event-content.tsx",
+    "../components/v1/chat/event-message-components/critic-result-display.tsx",
+    "../types/v1/core/base/action.ts",
+    "../types/v1/core/index.ts"
+  ],
+  "../components/v1/chat/event-message-components/generic-event-message-wrapper.tsx": [
+    "../components/features/chat/event-content-helpers/get-observation-result.ts",
+    "../components/features/chat/generic-event-message.tsx",
+    "../components/shared/buttons/v1-confirmation-buttons.tsx",
+    "../components/v1/chat/event-content-helpers/create-skill-ready-event.ts",
+    "../components/v1/chat/event-content-helpers/get-event-content.tsx",
+    "../components/v1/chat/event-content-helpers/get-observation-result.ts",
+    "../components/v1/chat/event-message-components/skill-ready-content-list.tsx",
+    "../types/v1/core/index.ts",
+    "../types/v1/type-guards.ts"
+  ],
+  "../components/v1/chat/event-message-components/hook-execution-event-message.tsx": [
+    "../components/shared/hook-execution-event-message.tsx"
+  ],
+  "../components/v1/chat/event-message-components/index.ts": [
+    "../components/v1/chat/event-message-components/critic-result-display.tsx",
+    "../components/v1/chat/event-message-components/error-event-message.tsx",
+    "../components/v1/chat/event-message-components/finish-event-message.tsx",
+    "../components/v1/chat/event-message-components/generic-event-message-wrapper.tsx",
+    "../components/v1/chat/event-message-components/hook-execution-event-message.tsx",
+    "../components/v1/chat/event-message-components/observation-pair-event-message.tsx",
+    "../components/v1/chat/event-message-components/thought-event-message.tsx",
+    "../components/v1/chat/event-message-components/user-assistant-event-message.tsx"
+  ],
+  "../components/v1/chat/event-message-components/observation-pair-event-message.tsx": [
+    "../components/features/chat/chat-message.tsx",
+    "../types/v1/core/index.ts",
+    "../types/v1/type-guards.ts"
+  ],
+  "../components/v1/chat/event-message-components/skill-item-expanded.tsx": [
+    "../components/features/markdown/markdown-renderer.tsx",
+    "../i18n/declaration.ts",
+    "../ui/typography.tsx",
+    "../utils/constants.ts"
+  ],
+  "../components/v1/chat/event-message-components/skill-ready-content-list.tsx": [
+    "../components/v1/chat/event-content-helpers/create-skill-ready-event.ts",
+    "../components/v1/chat/event-message-components/skill-item-expanded.tsx",
+    "../i18n/declaration.ts",
+    "../ui/typography.tsx"
+  ],
+  "../components/v1/chat/event-message-components/thought-event-message.tsx": [
+    "../components/features/chat/chat-message.tsx",
+    "../types/v1/core/index.ts"
+  ],
+  "../components/v1/chat/event-message-components/user-assistant-event-message.tsx": [
+    "../components/features/chat/chat-message.tsx",
+    "../components/features/images/image-carousel.tsx",
+    "../components/shared/buttons/v1-confirmation-buttons.tsx",
+    "../components/v1/chat/event-content-helpers/parse-message-from-event.ts",
+    "../components/v1/chat/event-message-components/critic-result-display.tsx",
+    "../types/v1/core/index.ts"
+  ],
+  "../components/v1/chat/event-message.tsx": [
+    "../components/features/chat/chat-message.tsx",
+    "../components/features/chat/plan-preview.tsx",
+    "../components/v1/chat/event-content-helpers/create-skill-ready-event.ts",
+    "../components/v1/chat/event-message-components/index.ts",
+    "../components/v1/chat/hooks/use-plan-preview-events.ts",
+    "../hooks/query/use-config.ts",
+    "../hooks/use-agent-state.ts",
+    "../stores/conversation-store.ts",
+    "../types/agent-state.tsx",
+    "../types/v1/core/base/action.ts",
+    "../types/v1/core/index.ts",
+    "../types/v1/type-guards.ts"
+  ],
+  "../components/v1/chat/hooks/use-plan-preview-events.ts": [
+    "../types/v1/core/index.ts",
+    "../types/v1/type-guards.ts"
+  ],
+  "../components/v1/chat/index.ts": [
+    "../components/v1/chat/event-content-helpers/get-event-content.tsx",
+    "../components/v1/chat/event-content-helpers/should-render-event.ts",
+    "../components/v1/chat/event-message-components/index.ts",
+    "../components/v1/chat/event-message.tsx",
+    "../components/v1/chat/messages.tsx"
+  ],
+  "../components/v1/chat/messages.tsx": [
+    "../components/features/chat/chat-message.tsx",
+    "../components/features/chat/model-messages.tsx",
+    "../components/v1/chat/event-message.tsx",
+    "../components/v1/chat/hooks/use-plan-preview-events.ts",
+    "../stores/model-store.ts",
+    "../stores/optimistic-user-message-store.ts",
+    "../types/v1/core/index.ts"
+  ],
+  "../components/v1/chat/task-tracking/task-item.tsx": [
+    "../i18n/declaration.ts",
+    "../types/v1/core/base/common.ts",
+    "../ui/typography.tsx",
+    "../utils/utils.ts"
+  ],
+  "../components/v1/chat/task-tracking/task-list-section.tsx": [
+    "../components/v1/chat/task-tracking/task-item.tsx",
+    "../i18n/declaration.ts",
+    "../types/v1/core/base/common.ts",
+    "../ui/typography.tsx"
+  ],
+  "../components/v1/chat/task-tracking/task-tracking-observation-content.tsx": [
+    "../components/v1/chat/task-tracking/task-list-section.tsx",
+    "../types/v1/core/base/observation.ts",
+    "../types/v1/core/index.ts"
+  ],
+  "../context/conversation-subscriptions-provider.tsx": [
+    "../components/shared/conversation-toast.tsx",
+    "../types/agent-state.tsx",
+    "../types/core/guards.ts",
+    "../types/core/index.ts",
+    "../types/settings.ts"
+  ],
+  "../context/scroll-context.tsx": [
+    "../hooks/use-scroll-to-bottom.ts"
+  ],
+  "../context/use-selected-organization.ts": [
+    "../stores/selected-organization-store.ts"
+  ],
+  "../contexts/conversation-websocket-context.tsx": [
+    "../api/conversation-service/v1-conversation-service.types.ts",
+    "../api/event-service/event-service.api.ts",
+    "../api/pending-message-service/pending-message-service.api.ts",
+    "../components/v1/chat/event-content-helpers/should-render-event.ts",
+    "../hooks/mutation/conversation-mutation-utils.ts",
+    "../hooks/mutation/use-read-conversation-file.ts",
+    "../hooks/query/use-conversation-history.ts",
+    "../hooks/use-websocket.ts",
+    "../i18n/declaration.ts",
+    "../stores/browser-store.ts",
+    "../stores/command-store.ts",
+    "../stores/conversation-store.ts",
+    "../stores/error-message-store.ts",
+    "../stores/metrics-store.ts",
+    "../stores/model-store.ts",
+    "../stores/optimistic-user-message-store.ts",
+    "../stores/use-event-store.ts",
+    "../stores/v1-conversation-state-store.ts",
+    "../types/v1/core/events/conversation-state-event.ts",
+    "../types/v1/type-guards.ts",
+    "../utils/cache-utils.ts",
+    "../utils/conversation-local-storage.ts",
+    "../utils/error-handler.ts",
+    "../utils/websocket-url.ts"
+  ],
+  "../contexts/websocket-provider-wrapper.tsx": [
+    "../contexts/conversation-websocket-context.tsx",
+    "../hooks/query/use-active-conversation.ts",
+    "../hooks/query/use-sub-conversations.ts",
+    "../hooks/use-sandbox-recovery.ts",
+    "../utils/conversation-local-storage.ts"
+  ],
+  "../hooks/chat/use-btw-interceptor.ts": [
+    "../hooks/mutation/conversation-mutation-utils.ts",
+    "../stores/btw-store.ts",
+    "../utils/constants.ts"
+  ],
+  "../hooks/chat/use-chat-input-events.ts": [
+    "../components/features/chat/utils/chat-input.utils.ts",
+    "../utils/utils.ts"
+  ],
+  "../hooks/chat/use-chat-input-logic.ts": [
+    "../components/features/chat/utils/chat-input.utils.ts",
+    "../hooks/chat/use-draft-persistence.ts",
+    "../hooks/use-conversation-id.ts",
+    "../stores/conversation-store.ts"
+  ],
+  "../hooks/chat/use-chat-submission.ts": [
+    "../components/features/chat/utils/chat-input.utils.ts"
+  ],
+  "../hooks/chat/use-draft-persistence.ts": [
+    "../components/features/chat/utils/chat-input.utils.ts",
+    "../utils/conversation-local-storage.ts"
+  ],
+  "../hooks/chat/use-file-handling.ts": [],
+  "../hooks/chat/use-grip-resize.ts": [
+    "../hooks/use-auto-resize.ts",
+    "../stores/conversation-store.ts",
+    "../utils/constants.ts"
+  ],
+  "../hooks/chat/use-model-interceptor.ts": [
+    "../api/settings-service/profiles-service.api.ts",
+    "../components/v1/chat/index.ts",
+    "../hooks/mutation/use-switch-llm-profile-and-log.ts",
+    "../hooks/query/use-llm-profiles.ts",
+    "../i18n/declaration.ts",
+    "../stores/model-store.ts",
+    "../stores/use-event-store.ts",
+    "../utils/constants.ts",
+    "../utils/custom-toast-handlers.tsx"
+  ],
+  "../hooks/chat/use-slash-command.ts": [
+    "../api/conversation-service/v1-conversation-service.types.ts",
+    "../api/open-hands.types.ts",
+    "../hooks/query/use-conversation-skills.ts",
+    "../utils/constants.ts"
+  ],
+  "../hooks/mutation/conversation-mutation-utils.ts": [
+    "../api/conversation-service/v1-conversation-service.api.ts",
+    "../api/conversation-service/v1-conversation-service.types.ts",
+    "../api/sandbox-service/sandbox-service.api.ts",
+    "../api/sandbox-service/sandbox-service.types.ts"
+  ],
+  "../hooks/mutation/use-create-conversation.ts": [
+    "../api/conversation-service/v1-conversation-service.api.ts",
+    "../api/conversation-service/v1-conversation-service.types.ts",
+    "../types/settings.ts",
+    "../utils/types.ts"
+  ],
+  "../hooks/mutation/use-delete-conversation.ts": [
+    "../api/conversation-service/v1-conversation-service.api.ts",
+    "../utils/conversation-local-storage.ts"
+  ],
+  "../hooks/mutation/use-new-conversation-command.ts": [
+    "../api/conversation-service/v1-conversation-service.api.ts",
+    "../hooks/query/use-active-conversation.ts",
+    "../i18n/declaration.ts",
+    "../utils/custom-toast-handlers.tsx"
+  ],
+  "../hooks/mutation/use-read-conversation-file.ts": [
+    "../api/conversation-service/v1-conversation-service.api.ts"
+  ],
+  "../hooks/mutation/use-respond-to-confirmation.ts": [
+    "../api/event-service/event-service.api.ts",
+    "../api/event-service/event-service.types.ts"
+  ],
+  "../hooks/mutation/use-switch-llm-profile-and-log.ts": [
+    "../components/v1/chat/index.ts",
+    "../hooks/mutation/use-switch-llm-profile.ts",
+    "../i18n/declaration.ts",
+    "../stores/model-store.ts",
+    "../stores/use-event-store.ts",
+    "../utils/custom-toast-handlers.tsx",
+    "../utils/extract-error-message.ts"
+  ],
+  "../hooks/mutation/use-switch-llm-profile.ts": [
+    "../api/conversation-service/v1-conversation-service.api.ts"
+  ],
+  "../hooks/mutation/use-track-create-pr-button-clicked.ts": [
+    "../api/analytics-service/analytics-events.api.ts",
+    "../types/settings.ts"
+  ],
+  "../hooks/mutation/use-unified-start-conversation.ts": [
+    "../hooks/mutation/conversation-mutation-utils.ts",
+    "../stores/error-message-store.ts",
+    "../types/settings.ts"
+  ],
+  "../hooks/mutation/use-unified-stop-conversation.ts": [
+    "../hooks/mutation/conversation-mutation-utils.ts",
+    "../i18n/declaration.ts",
+    "../utils/custom-toast-handlers.tsx"
+  ],
+  "../hooks/mutation/use-unified-upload-files.ts": [
+    "../api/open-hands.types.ts",
+    "../hooks/mutation/use-v1-upload-files.ts",
+    "../hooks/query/use-active-conversation.ts"
+  ],
+  "../hooks/mutation/use-update-conversation-public-flag.ts": [
+    "../api/conversation-service/v1-conversation-service.api.ts",
+    "../i18n/declaration.ts",
+    "../utils/custom-toast-handlers.tsx"
+  ],
+  "../hooks/mutation/use-update-conversation-repository.ts": [
+    "../api/conversation-service/v1-conversation-service.api.ts",
+    "../i18n/declaration.ts",
+    "../types/settings.ts",
+    "../utils/custom-toast-handlers.tsx"
+  ],
+  "../hooks/mutation/use-update-conversation.ts": [
+    "../api/conversation-service/v1-conversation-service.api.ts"
+  ],
+  "../hooks/mutation/use-v1-pause-conversation.ts": [
+    "../hooks/mutation/conversation-mutation-utils.ts"
+  ],
+  "../hooks/mutation/use-v1-resume-conversation.ts": [
+    "../hooks/mutation/conversation-mutation-utils.ts"
+  ],
+  "../hooks/mutation/use-v1-upload-files.ts": [
+    "../api/conversation-service/v1-conversation-service.api.ts",
+    "../api/open-hands.types.ts"
+  ],
+  "../hooks/query/query-keys.ts": [
+    "../types/settings.ts"
+  ],
+  "../hooks/query/use-active-conversation.ts": [
+    "../api/conversation-service/conversation-service.api.ts",
+    "../hooks/query/use-user-conversation.ts",
+    "../hooks/use-conversation-id.ts"
+  ],
+  "../hooks/query/use-app-installations.ts": [
+    "../api/git-service/git-service.api.ts",
+    "../hooks/query/use-config.ts",
+    "../hooks/query/use-is-authed.ts",
+    "../hooks/use-user-providers.ts",
+    "../types/settings.ts",
+    "../utils/utils.ts"
+  ],
+  "../hooks/query/use-batch-app-conversations.ts": [
+    "../api/conversation-service/v1-conversation-service.api.ts"
+  ],
+  "../hooks/query/use-batch-sandboxes.ts": [
+    "../api/sandbox-service/sandbox-service.api.ts"
+  ],
+  "../hooks/query/use-branch-data.ts": [
+    "../hooks/query/use-repository-branches.ts",
+    "../hooks/query/use-search-branches.ts",
+    "../types/git.d.ts",
+    "../types/settings.ts"
+  ],
+  "../hooks/query/use-config.ts": [
+    "../api/option-service/option-service.api.ts",
+    "../hooks/query/query-keys.ts",
+    "../hooks/use-is-on-intermediate-page.ts"
+  ],
+  "../hooks/query/use-conversation-history.ts": [
+    "../api/event-service/event-service.api.ts",
+    "../hooks/query/use-user-conversation.ts"
+  ],
+  "../hooks/query/use-conversation-hooks.ts": [
+    "../api/conversation-service/v1-conversation-service.api.ts",
+    "../hooks/query/use-settings.ts",
+    "../hooks/use-agent-state.ts",
+    "../hooks/use-conversation-id.ts",
+    "../types/agent-state.tsx"
+  ],
+  "../hooks/query/use-conversation-skills.ts": [
+    "../api/conversation-service/v1-conversation-service.api.ts",
+    "../hooks/query/use-active-conversation.ts",
+    "../hooks/use-conversation-id.ts"
+  ],
+  "../hooks/query/use-conversations-in-sandbox.ts": [
+    "../api/conversation-service/v1-conversation-service.api.ts"
+  ],
+  "../hooks/query/use-git-repositories.ts": [
+    "../api/git-service/git-service.api.ts",
+    "../hooks/query/use-app-installations.ts",
+    "../hooks/query/use-config.ts",
+    "../hooks/use-user-providers.ts",
+    "../types/git.d.ts",
+    "../types/settings.ts",
+    "../utils/utils.ts"
+  ],
+  "../hooks/query/use-is-authed.ts": [
+    "../api/auth-service/auth-service.api.ts",
+    "../hooks/query/use-config.ts",
+    "../hooks/use-is-on-intermediate-page.ts"
+  ],
+  "../hooks/query/use-llm-profiles.ts": [
+    "../api/settings-service/profiles-service.api.ts",
+    "../hooks/query/use-is-authed.ts"
+  ],
+  "../hooks/query/use-repository-branches.ts": [
+    "../api/git-service/git-service.api.ts",
+    "../types/git.d.ts",
+    "../types/settings.ts"
+  ],
+  "../hooks/query/use-sandbox-metrics.ts": [
+    "../api/conversation-service/v1-conversation-service.api.ts",
+    "../api/conversation-service/v1-conversation-service.types.ts",
+    "../utils/conversation-metrics.ts"
+  ],
+  "../hooks/query/use-search-branches.ts": [
+    "../api/git-service/git-service.api.ts",
+    "../types/git.d.ts",
+    "../types/settings.ts"
+  ],
+  "../hooks/query/use-search-repositories.ts": [
+    "../api/git-service/git-service.api.ts",
+    "../types/git.d.ts",
+    "../types/settings.ts"
+  ],
+  "../hooks/query/use-settings.ts": [
+    "../api/organization-service/organization-service.api.ts",
+    "../api/settings-service/settings-service.api.ts",
+    "../context/use-selected-organization.ts",
+    "../hooks/query/query-keys.ts",
+    "../hooks/query/use-config.ts",
+    "../hooks/query/use-is-authed.ts",
+    "../hooks/use-is-on-intermediate-page.ts",
+    "../services/settings.ts",
+    "../types/settings.ts",
+    "../utils/mcp-config.ts",
+    "../utils/settings-value-pickers.ts"
+  ],
+  "../hooks/query/use-sub-conversation-task-polling.ts": [
+    "../api/conversation-service/v1-conversation-service.api.ts"
+  ],
+  "../hooks/query/use-sub-conversations.ts": [
+    "../api/conversation-service/v1-conversation-service.api.ts",
+    "../api/conversation-service/v1-conversation-service.types.ts"
+  ],
+  "../hooks/query/use-task-polling.ts": [
+    "../api/conversation-service/v1-conversation-service.api.ts",
+    "../hooks/use-conversation-id.ts"
+  ],
+  "../hooks/query/use-unified-get-git-changes.ts": [
+    "../api/git-service/v1-git-service.api.ts",
+    "../api/open-hands.types.ts",
+    "../hooks/query/use-active-conversation.ts",
+    "../hooks/query/use-settings.ts",
+    "../hooks/use-conversation-id.ts",
+    "../hooks/use-runtime-is-ready.ts",
+    "../utils/get-git-path.ts"
+  ],
+  "../hooks/query/use-unified-git-diff.ts": [
+    "../api/git-service/v1-git-service.api.ts",
+    "../api/open-hands.types.ts",
+    "../hooks/query/use-active-conversation.ts",
+    "../hooks/query/use-settings.ts",
+    "../hooks/use-conversation-id.ts",
+    "../utils/get-git-path.ts"
+  ],
+  "../hooks/query/use-unified-vscode-url.ts": [
+    "../hooks/query/use-batch-app-conversations.ts",
+    "../hooks/query/use-batch-sandboxes.ts",
+    "../hooks/use-conversation-id.ts",
+    "../hooks/use-runtime-is-ready.ts",
+    "../i18n/declaration.ts",
+    "../utils/vscode-url-helper.ts"
+  ],
+  "../hooks/query/use-user-conversation.ts": [
+    "../api/conversation-service/v1-conversation-service.api.ts",
+    "../api/conversation-service/v1-conversation-service.types.ts"
+  ],
+  "../hooks/use-agent-notification.ts": [
+    "../assets/notification.mp3",
+    "../hooks/query/use-settings.ts",
+    "../types/agent-state.tsx",
+    "../utils/browser-tab.ts",
+    "../utils/status.ts"
+  ],
+  "../hooks/use-agent-state.ts": [
+    "../api/sandbox-service/sandbox-service.types.ts",
+    "../hooks/query/use-active-conversation.ts",
+    "../stores/v1-conversation-state-store.ts",
+    "../types/agent-state.tsx",
+    "../types/v1/core/base/common.ts"
+  ],
+  "../hooks/use-auto-resize.ts": [
+    "../hooks/use-drag-resize.ts",
+    "../stores/conversation-store.ts",
+    "../utils/constants.ts",
+    "../utils/utils.ts"
+  ],
+  "../hooks/use-breakpoint.ts": [],
+  "../hooks/use-click-outside-element.ts": [],
+  "../hooks/use-conversation-id.ts": [],
+  "../hooks/use-conversation-name-context-menu.ts": [
+    "../api/sandbox-service/sandbox-service.types.ts",
+    "../hooks/mutation/use-delete-conversation.ts",
+    "../hooks/mutation/use-unified-stop-conversation.ts",
+    "../hooks/mutation/use-update-conversation-public-flag.ts",
+    "../hooks/query/use-active-conversation.ts",
+    "../hooks/use-download-conversation.ts",
+    "../i18n/declaration.ts",
+    "../stores/metrics-store.ts",
+    "../stores/use-event-store.ts",
+    "../utils/custom-toast-handlers.tsx",
+    "../utils/system-message-adapter.ts"
+  ],
+  "../hooks/use-debounce.ts": [],
+  "../hooks/use-download-conversation.ts": [
+    "../api/conversation-service/v1-conversation-service.api.ts",
+    "../i18n/declaration.ts",
+    "../utils/custom-toast-handlers.tsx",
+    "../utils/utils.ts"
+  ],
+  "../hooks/use-drag-resize.ts": [
+    "../utils/constants.ts",
+    "../utils/utils.ts"
+  ],
+  "../hooks/use-filtered-events.ts": [
+    "../components/features/chat/event-content-helpers/should-render-event.ts",
+    "../components/v1/chat/index.ts",
+    "../stores/use-event-store.ts",
+    "../types/core/guards.ts",
+    "../types/v1/type-guards.ts"
+  ],
+  "../hooks/use-handle-build-plan-click.ts": [
+    "../hooks/use-send-message.ts",
+    "../services/chat-service.ts",
+    "../stores/conversation-store.ts",
+    "../stores/optimistic-user-message-store.ts"
+  ],
+  "../hooks/use-handle-plan-click.ts": [
+    "../hooks/mutation/use-create-conversation.ts",
+    "../hooks/query/use-active-conversation.ts",
+    "../i18n/declaration.ts",
+    "../stores/conversation-store.ts",
+    "../utils/conversation-local-storage.ts",
+    "../utils/custom-toast-handlers.tsx"
+  ],
+  "../hooks/use-handle-runtime-active.ts": [
+    "../hooks/use-agent-state.ts",
+    "../types/agent-state.tsx"
+  ],
+  "../hooks/use-handle-ws-events.ts": [
+    "../hooks/use-send-message.ts",
+    "../services/agent-state-service.ts",
+    "../stores/use-event-store.ts",
+    "../types/agent-state.tsx",
+    "../utils/custom-toast-handlers.tsx"
+  ],
+  "../hooks/use-is-on-intermediate-page.ts": [],
+  "../hooks/use-provider-host.ts": [
+    "../hooks/query/use-config.ts",
+    "../hooks/query/use-settings.ts",
+    "../types/settings.ts"
+  ],
+  "../hooks/use-resizable-panels.ts": [],
+  "../hooks/use-runtime-is-ready.ts": [
+    "../hooks/query/use-active-conversation.ts",
+    "../hooks/use-agent-state.ts",
+    "../types/agent-state.tsx"
+  ],
+  "../hooks/use-sandbox-recovery.ts": [
+    "../api/conversation-service/v1-conversation-service.types.ts",
+    "../api/sandbox-service/sandbox-service.types.ts",
+    "../hooks/mutation/use-unified-start-conversation.ts",
+    "../hooks/use-user-providers.ts",
+    "../hooks/use-visibility-change.ts",
+    "../i18n/declaration.ts",
+    "../utils/custom-toast-handlers.tsx"
+  ],
+  "../hooks/use-scroll-to-bottom.ts": [],
+  "../hooks/use-select-conversation-tab.ts": [
+    "../hooks/use-conversation-id.ts",
+    "../stores/conversation-store.ts",
+    "../utils/conversation-local-storage.ts"
+  ],
+  "../hooks/use-send-message.ts": [
+    "../api/conversation-service/v1-conversation-service.types.ts",
+    "../contexts/conversation-websocket-context.tsx",
+    "../hooks/use-conversation-id.ts"
+  ],
+  "../hooks/use-task-list.ts": [
+    "../stores/use-event-store.ts",
+    "../types/core/guards.ts",
+    "../types/core/index.ts",
+    "../types/v1/core/base/observation.ts",
+    "../types/v1/core/events/observation-event.ts",
+    "../types/v1/core/index.ts",
+    "../types/v1/type-guards.ts"
+  ],
+  "../hooks/use-terminal.ts": [
+    "../stores/command-store.ts",
+    "../utils/parse-terminal-output.ts"
+  ],
+  "../hooks/use-unified-websocket-status.ts": [
+    "../contexts/conversation-websocket-context.tsx"
+  ],
+  "../hooks/use-user-providers.ts": [
+    "../hooks/query/use-settings.ts",
+    "../utils/convert-raw-providers-to-list.ts"
+  ],
+  "../hooks/use-visibility-change.ts": [],
+  "../hooks/use-websocket.ts": [],
+  "../i18n/declaration.ts": [],
+  "../i18n/index.ts": [],
+  "../query-client-config.ts": [
+    "../i18n/declaration.ts",
+    "../utils/custom-toast-handlers.tsx",
+    "../utils/retrieve-axios-error-message.ts"
+  ],
+  "../services/actions.ts": [
+    "../query-client-config.ts",
+    "../services/observations.ts",
+    "../stores/command-store.ts",
+    "../stores/metrics-store.ts",
+    "../stores/security-analyzer-store.ts",
+    "../stores/status-store.ts",
+    "../types/action-type.tsx",
+    "../types/message.tsx",
+    "../utils/error-handler.ts"
+  ],
+  "../services/agent-state-service.ts": [
+    "../types/action-type.tsx",
+    "../types/agent-state.tsx"
+  ],
+  "../services/chat-service.ts": [
+    "../types/action-type.tsx"
+  ],
+  "../services/observations.ts": [
+    "../stores/agent-store.ts",
+    "../stores/browser-store.ts",
+    "../stores/command-store.ts",
+    "../types/agent-state.tsx",
+    "../types/message.tsx",
+    "../types/observation-type.tsx"
+  ],
+  "../services/settings.ts": [
+    "../types/settings.ts"
+  ],
+  "../stores/agent-store.ts": [
+    "../types/agent-state.tsx"
+  ],
+  "../stores/browser-store.ts": [],
+  "../stores/btw-store.ts": [],
+  "../stores/command-store.ts": [],
+  "../stores/conversation-store.ts": [
+    "../utils/conversation-local-storage.ts"
+  ],
+  "../stores/error-message-store.ts": [],
+  "../stores/event-message-store.ts": [],
+  "../stores/home-store.ts": [
+    "../types/git.d.ts",
+    "../types/settings.ts"
+  ],
+  "../stores/metrics-store.ts": [],
+  "../stores/model-store.ts": [
+    "../api/settings-service/profiles-service.api.ts"
+  ],
+  "../stores/optimistic-user-message-store.ts": [],
+  "../stores/security-analyzer-store.ts": [],
+  "../stores/selected-organization-store.ts": [],
+  "../stores/status-store.ts": [
+    "../types/message.tsx"
+  ],
+  "../stores/use-event-store.ts": [
+    "../types/core/index.ts",
+    "../types/v1/core/index.ts",
+    "../types/v1/type-guards.ts",
+    "../utils/handle-event-for-ui.ts"
+  ],
+  "../stores/v1-conversation-state-store.ts": [
+    "../types/v1/core/base/common.ts"
+  ],
+  "../types/action-type.tsx": [],
+  "../types/agent-state.tsx": [],
+  "../types/conversation-status.ts": [],
+  "../types/core/actions.ts": [
+    "../stores/security-analyzer-store.ts",
+    "../types/core/base.ts"
+  ],
+  "../types/core/base.ts": [],
+  "../types/core/guards.ts": [
+    "../types/core/actions.ts",
+    "../types/core/index.ts",
+    "../types/core/observations.ts",
+    "../types/core/variances.ts"
+  ],
+  "../types/core/index.ts": [
+    "../types/core/actions.ts",
+    "../types/core/observations.ts",
+    "../types/core/variances.ts"
+  ],
+  "../types/core/observations.ts": [
+    "../types/agent-state.tsx",
+    "../types/core/base.ts"
+  ],
+  "../types/core/variances.ts": [],
+  "../types/git.d.ts": [
+    "../types/settings.ts"
+  ],
+  "../types/message.tsx": [],
+  "../types/observation-type.tsx": [],
+  "../types/org.ts": [],
+  "../types/runtime-status.ts": [],
+  "../types/settings.ts": [],
+  "../types/v1/core/base/action.ts": [
+    "../types/v1/core/base/base.ts",
+    "../types/v1/core/base/common.ts"
+  ],
+  "../types/v1/core/base/base.ts": [],
+  "../types/v1/core/base/common.ts": [],
+  "../types/v1/core/base/critic.ts": [],
+  "../types/v1/core/base/event.ts": [
+    "../types/v1/core/base/common.ts"
+  ],
+  "../types/v1/core/base/index.ts": [
+    "../types/v1/core/base/action.ts",
+    "../types/v1/core/base/base.ts",
+    "../types/v1/core/base/common.ts",
+    "../types/v1/core/base/critic.ts",
+    "../types/v1/core/base/event.ts",
+    "../types/v1/core/base/observation.ts"
+  ],
+  "../types/v1/core/base/observation.ts": [
+    "../types/v1/core/base/base.ts",
+    "../types/v1/core/base/common.ts"
+  ],
+  "../types/v1/core/events/acp-tool-call-event.ts": [
+    "../types/v1/core/base/common.ts",
+    "../types/v1/core/base/event.ts"
+  ],
+  "../types/v1/core/events/action-event.ts": [
+    "../types/v1/core/base/action.ts",
+    "../types/v1/core/base/common.ts",
+    "../types/v1/core/base/critic.ts",
+    "../types/v1/core/base/event.ts"
+  ],
+  "../types/v1/core/events/condensation-event.ts": [
+    "../types/v1/core/base/common.ts",
+    "../types/v1/core/base/event.ts"
+  ],
+  "../types/v1/core/events/conversation-state-event.ts": [
+    "../types/v1/core/base/common.ts",
+    "../types/v1/core/base/event.ts"
+  ],
+  "../types/v1/core/events/hook-execution-event.ts": [
+    "../types/v1/core/base/event.ts"
+  ],
+  "../types/v1/core/events/index.ts": [
+    "../types/v1/core/events/acp-tool-call-event.ts",
+    "../types/v1/core/events/action-event.ts",
+    "../types/v1/core/events/condensation-event.ts",
+    "../types/v1/core/events/conversation-state-event.ts",
+    "../types/v1/core/events/hook-execution-event.ts",
+    "../types/v1/core/events/message-event.ts",
+    "../types/v1/core/events/observation-event.ts",
+    "../types/v1/core/events/pause-event.ts",
+    "../types/v1/core/events/system-event.ts"
+  ],
+  "../types/v1/core/events/message-event.ts": [
+    "../types/v1/core/base/common.ts",
+    "../types/v1/core/base/critic.ts",
+    "../types/v1/core/base/event.ts"
+  ],
+  "../types/v1/core/events/observation-event.ts": [
+    "../types/v1/core/base/common.ts",
+    "../types/v1/core/base/event.ts",
+    "../types/v1/core/base/observation.ts"
+  ],
+  "../types/v1/core/events/pause-event.ts": [
+    "../types/v1/core/base/event.ts"
+  ],
+  "../types/v1/core/events/system-event.ts": [
+    "../types/v1/core/base/common.ts",
+    "../types/v1/core/base/event.ts"
+  ],
+  "../types/v1/core/index.ts": [
+    "../types/v1/core/base/index.ts",
+    "../types/v1/core/events/index.ts",
+    "../types/v1/core/openhands-event.ts"
+  ],
+  "../types/v1/core/openhands-event.ts": [
+    "../types/v1/core/events/index.ts"
+  ],
+  "../types/v1/type-guards.ts": [
+    "../types/core/index.ts",
+    "../types/v1/core/events/acp-tool-call-event.ts",
+    "../types/v1/core/events/action-event.ts",
+    "../types/v1/core/events/conversation-state-event.ts",
+    "../types/v1/core/events/hook-execution-event.ts",
+    "../types/v1/core/events/message-event.ts",
+    "../types/v1/core/events/observation-event.ts",
+    "../types/v1/core/events/system-event.ts",
+    "../types/v1/core/index.ts"
+  ],
+  "../ui/context-menu.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../ui/divider.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../ui/pre.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../ui/typography.tsx": [
+    "../utils/utils.ts"
+  ],
+  "../utils/agent-display-label.ts": [
+    "../api/open-hands.types.ts",
+    "../api/option-service/option.types.ts"
+  ],
+  "../utils/browser-tab.ts": [],
+  "../utils/cache-utils.ts": [
+    "../types/v1/core/events/action-event.ts",
+    "../utils/path-utils.ts"
+  ],
+  "../utils/constants.ts": [
+    "../hooks/chat/use-slash-command.ts"
+  ],
+  "../utils/conversation-local-storage.ts": [
+    "../stores/conversation-store.ts"
+  ],
+  "../utils/conversation-metrics.ts": [
+    "../api/conversation-service/v1-conversation-service.types.ts"
+  ],
+  "../utils/convert-image-to-base-64.ts": [],
+  "../utils/convert-raw-providers-to-list.ts": [
+    "../types/settings.ts"
+  ],
+  "../utils/custom-toast-handlers.tsx": [
+    "../i18n/index.ts",
+    "../utils/toast-duration.ts"
+  ],
+  "../utils/error-handler.ts": [
+    "../services/actions.ts",
+    "../utils/custom-toast-handlers.tsx"
+  ],
+  "../utils/extract-error-message.ts": [],
+  "../utils/feature-flags.ts": [],
+  "../utils/file-processing.ts": [],
+  "../utils/file-validation.ts": [],
+  "../utils/get-git-path.ts": [],
+  "../utils/get-language-from-path.ts": [],
+  "../utils/git-status-mapper.ts": [
+    "../api/open-hands.types.ts"
+  ],
+  "../utils/handle-event-for-ui.ts": [
+    "../types/v1/core/index.ts",
+    "../types/v1/type-guards.ts"
+  ],
+  "../utils/is-file-image.ts": [],
+  "../utils/mcp-config.ts": [
+    "../types/settings.ts"
+  ],
+  "../utils/parse-terminal-output.ts": [],
+  "../utils/path-utils.ts": [],
+  "../utils/retrieve-axios-error-message.ts": [
+    "../utils/type-guards.ts"
+  ],
+  "../utils/sanitize-query.ts": [],
+  "../utils/settings-value-pickers.ts": [],
+  "../utils/status.ts": [
+    "../api/conversation-service/v1-conversation-service.types.ts",
+    "../api/sandbox-service/sandbox-service.types.ts",
+    "../contexts/conversation-websocket-context.tsx",
+    "../i18n/declaration.ts",
+    "../types/agent-state.tsx",
+    "../types/conversation-status.ts",
+    "../types/runtime-status.ts",
+    "../types/v1/core/base/common.ts"
+  ],
+  "../utils/suggestions/index.ts": [
+    "../utils/suggestions/non-repo-suggestions.ts",
+    "../utils/suggestions/repo-suggestions.ts"
+  ],
+  "../utils/suggestions/non-repo-suggestions.ts": [
+    "../i18n/declaration.ts"
+  ],
+  "../utils/suggestions/repo-suggestions.ts": [],
+  "../utils/system-message-adapter.ts": [
+    "../stores/use-event-store.ts",
+    "../types/core/guards.ts",
+    "../types/v1/core/index.ts",
+    "../types/v1/type-guards.ts"
+  ],
+  "../utils/tips.ts": [
+    "../i18n/declaration.ts"
+  ],
+  "../utils/toast-duration.ts": [],
+  "../utils/type-guards.ts": [],
+  "../utils/types.ts": [
+    "../types/settings.ts"
+  ],
+  "../utils/utils.ts": [
+    "../i18n/declaration.ts",
+    "../types/agent-state.tsx",
+    "../types/conversation-status.ts",
+    "../types/git.d.ts",
+    "../types/settings.ts",
+    "../utils/constants.ts",
+    "../utils/sanitize-query.ts",
+    "../utils/types.ts"
+  ],
+  "../utils/vscode-url-helper.ts": [],
+  "../utils/websocket-url.ts": [],
+  "../wrapper/event-handler.tsx": [
+    "../hooks/use-handle-runtime-active.ts",
+    "../hooks/use-handle-ws-events.ts"
+  ],
+  "browser-tab.tsx": [
+    "../components/features/browser/browser.tsx"
+  ],
+  "changes-tab.tsx": [
+    "../components/features/diff-viewer/empty-changes-message.tsx",
+    "../components/features/diff-viewer/file-diff-viewer.tsx",
+    "../components/features/tips/random-tip.tsx",
+    "../hooks/query/use-unified-get-git-changes.ts",
+    "../hooks/use-agent-state.ts",
+    "../i18n/declaration.ts",
+    "../types/agent-state.tsx",
+    "../utils/retrieve-axios-error-message.ts"
+  ],
+  "conversation.tsx": [
+    "../components/features/conversation/archived-conversation-view.tsx",
+    "../components/features/conversation/conversation-main/conversation-main.tsx",
+    "../components/features/conversation/conversation-name-with-status.tsx",
+    "../components/features/conversation/conversation-tabs/conversation-tabs.tsx",
+    "../context/conversation-subscriptions-provider.tsx",
+    "../contexts/websocket-provider-wrapper.tsx",
+    "../hooks/query/use-active-conversation.ts",
+    "../hooks/query/use-is-authed.ts",
+    "../hooks/query/use-task-polling.ts",
+    "../hooks/use-conversation-id.ts",
+    "../i18n/declaration.ts",
+    "../stores/agent-store.ts",
+    "../stores/command-store.ts",
+    "../stores/conversation-store.ts",
+    "../stores/error-message-store.ts",
+    "../stores/use-event-store.ts",
+    "../stores/v1-conversation-state-store.ts",
+    "../types/agent-state.tsx",
+    "../utils/custom-toast-handlers.tsx",
+    "../wrapper/event-handler.tsx"
+  ],
+  "planner-tab.tsx": [
+    "../components/features/markdown/markdown-renderer.tsx",
+    "../components/features/markdown/plan-components.tsx",
+    "../hooks/use-agent-state.ts",
+    "../hooks/use-handle-plan-click.ts",
+    "../hooks/use-scroll-to-bottom.ts",
+    "../i18n/declaration.ts",
+    "../stores/conversation-store.ts",
+    "../utils/utils.ts"
+  ],
+  "task-list-tab.tsx": [
+    "../components/features/chat/task-tracking/task-item.tsx",
+    "../hooks/use-task-list.ts",
+    "../i18n/declaration.ts",
+    "../ui/typography.tsx",
+    "../utils/utils.ts"
+  ],
+  "vscode-tab.tsx": [
+    "../components/features/chat/waiting-for-runtime-message.tsx",
+    "../hooks/query/use-unified-vscode-url.ts",
+    "../hooks/use-agent-state.ts",
+    "../i18n/declaration.ts",
+    "../types/agent-state.tsx",
+    "../utils/feature-flags.ts"
+  ]
+}
