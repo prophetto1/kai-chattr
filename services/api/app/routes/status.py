@@ -13,6 +13,8 @@ def register_routes(main_module) -> None:
     global _registered
     if _registered:
         return
+    # Runtime port metadata is intentionally public; the browser uses it to
+    # verify the app/API/MCP topology without exposing the session token.
     router.add_api_route("/api/status", main_module.get_status, methods=["GET"])
     router.add_api_route("/api/runtime/ports", main_module.get_runtime_ports, methods=["GET"])
     router.add_api_route("/api/settings", main_module.get_settings, methods=["GET"])

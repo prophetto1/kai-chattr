@@ -8,16 +8,16 @@ their own name or auth material.
 
 Supports both transports:
   - streamable-http (Claude, Codex, Qwen): POST /mcp, GET /mcp, DELETE /mcp
-  - SSE (Gemini): GET /sse → event stream, POST /messages/ → tool calls
+  - SSE (Gemini): GET /sse â†’ event stream, POST /messages/ â†’ tool calls
 
 Usage (from wrapper.py):
     proxy = McpIdentityProxy(
-        upstream_base="http://127.0.0.1:8301",
+        upstream_base="http://127.0.0.1:8841",
         upstream_path="/mcp",
         agent_name="claude-prime",
         instance_token="abc123...",
     )
-    proxy.start()          # non-blocking — runs in a daemon thread
+    proxy.start()          # non-blocking â€” runs in a daemon thread
     proxy_url = proxy.url  # e.g. "http://127.0.0.1:54321"
     ...
     proxy.stop()
@@ -74,7 +74,7 @@ class McpIdentityProxy:
     """Local HTTP proxy that stamps agent identity on MCP tool calls.
 
     Args:
-        upstream_base: Base URL without path, e.g. "http://127.0.0.1:8301"
+        upstream_base: Base URL without path, e.g. "http://127.0.0.1:8841"
         upstream_path: Path prefix for the transport, e.g. "/mcp" or "/sse"
         agent_name: Current canonical name for this instance
         instance_token: Server-issued token (forwarded as Authorization: Bearer)
@@ -99,7 +99,7 @@ class McpIdentityProxy:
 
     @property
     def url(self) -> str:
-        """Base URL of the proxy (no path — clients add /mcp or /sse themselves)."""
+        """Base URL of the proxy (no path â€” clients add /mcp or /sse themselves)."""
         return f"http://127.0.0.1:{self.port}"
 
     @property
@@ -187,7 +187,7 @@ class McpIdentityProxy:
                 self.wfile.write(resp_body)
 
             def do_GET(self):
-                """Forward GET — handles both streamable-http and SSE streams."""
+                """Forward GET â€” handles both streamable-http and SSE streams."""
                 try:
                     req = Request(self._upstream_url(), method="GET")
                     # Forward all headers from client
@@ -250,7 +250,7 @@ class McpIdentityProxy:
             def _rewrite_sse_endpoint(self, line: bytes) -> bytes:
                 """Rewrite upstream endpoint URLs in SSE data lines.
 
-                FastMCP SSE sends: data: http://127.0.0.1:8302/messages/?session_id=xxx
+                FastMCP SSE sends: data: http://127.0.0.1:8842/messages/?session_id=xxx
                 We rewrite to:     data: http://127.0.0.1:{proxy_port}/messages/?session_id=xxx
                 so the client routes tool call POSTs through our proxy.
                 """
@@ -307,7 +307,7 @@ class McpIdentityProxy:
             self._server = _ThreadingHTTPServer(("127.0.0.1", self._port), Handler)
         except OSError as e:
             if self._port > 0:
-                # Fixed port in use — another wrapper instance owns the proxy
+                # Fixed port in use â€” another wrapper instance owns the proxy
                 log.info(f"Proxy port {self._port} in use, skipping (another instance owns it)")
                 print(f"  MCP proxy: port {self._port} in use (shared with another instance)")
                 self._server = None

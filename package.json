@@ -4,13 +4,22 @@
   "packageManager": "pnpm@10.16.1",
   "description": "Clean rebuild of chattr — local multi-agent coordination room (web + api), built to the v3 design standard.",
   "scripts": {
+    "dev": "node scripts/dev/start-kai-chattr.mjs",
     "web:dev": "pnpm --dir apps/web run dev",
     "web:build": "pnpm --dir apps/web run build",
     "web:preview": "pnpm --dir apps/web run preview",
+    "runtime:probe": "node scripts/probe-kai-chattr-runtime.mjs",
+    "test:runtime-contract": "node --test scripts/tests/kai-chattr-runtime-contract.test.mjs",
+    "test:port-drift-contract": "node --test scripts/tests/kai-chattr-port-drift-contract.test.mjs",
+    "test:no-api-session-contract": "node --test scripts/tests/kai-chattr-no-api-session-contract.test.mjs",
+    "test:no-supabase-contract": "node --test scripts/tests/kai-chattr-no-supabase-contract.test.mjs",
+    "test:workbench-browser": "playwright test tests/e2e/workbench-runtime.spec.ts",
+    "verify-local": "pnpm run check:contracts && pnpm run check:deps && pnpm run test:runtime-contract && pnpm run test:port-drift-contract && pnpm run test:no-api-session-contract && pnpm run test:no-supabase-contract && powershell -NoProfile -Command \"Set-Location services/api; uv run python -m compileall app -q; uv run pytest -q\" && pnpm --dir apps/web run build && pnpm run runtime:probe && pnpm run test:workbench-browser",
     "check:contracts": "node governance/scripts/check-contracts.mjs",
     "check:deps": "node governance/scripts/check-deps.mjs"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "ajv": "^8.17.1",
     "dependency-cruiser": "^17.4.3"
   }

@@ -40,7 +40,7 @@ def make_client(client=("127.0.0.1", 50000)):
     data_dir = Path(tmp.name)
     cfg = {
         "server": {
-            "port": 8300,
+            "port": 8840,
             "data_dir": str(data_dir),
             "remote_agent_token": "remote-test-token",
         },
@@ -53,7 +53,7 @@ def make_client(client=("127.0.0.1", 50000)):
         },
         "routing": {"default": "none", "max_agent_hops": 4},
         "images": {"upload_dir": str(data_dir / "uploads"), "max_size_mb": 10},
-        "mcp": {"http_port": 8301, "sse_port": 8302},
+        "mcp": {"http_port": 8841, "sse_port": 8842},
     }
     app_module.configure(cfg, session_token="settings-test-token")
     test_client = TestClient(app_module.app, client=client)

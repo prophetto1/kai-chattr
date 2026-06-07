@@ -18,11 +18,12 @@ import {
   IconCode,
   IconExternalLink,
   IconFileText,
-  IconGitBranch,
+  IconGitCompare,
   IconLayoutKanban,
   IconRefresh,
   IconTerminal2,
   IconWorld,
+  IconWorldSearch,
 } from '@tabler/icons-react'
 import type { PanelImperativeHandle } from 'react-resizable-panels'
 
@@ -110,6 +111,7 @@ import { BoardDock } from '@/components/workbench/BoardDock'
 import { DockWorkspace } from '@/components/workbench/DockWorkspace'
 import { WorkbenchCompactRail } from '@/components/workbench/WorkbenchCompactRail'
 import { WorkbenchSettingsDialog } from '@/components/workbench/WorkbenchSettingsDialog'
+import { useMonacoTheme } from '@/hooks/use-monaco-theme'
 import { Button } from '@/components/ui/button'
 import {
   ResizableHandle,
@@ -252,7 +254,7 @@ const dockTabs: Array<{
   icon: WorkbenchIcon
 }> = [
   { id: 'board', label: 'Board', icon: IconLayoutKanban },
-  { id: 'changes', label: 'Changes', icon: IconGitBranch },
+  { id: 'changes', label: 'Changes', icon: IconGitCompare },
   { id: 'browser', label: 'Browser', icon: IconWorld },
   { id: 'code', label: 'Code', icon: IconCode },
   { id: 'docs', label: 'Docs', icon: IconBook },
@@ -318,8 +320,6 @@ type WorkbenchChangeItem = {
   original: string
   modified: string
 }
-
-const changesBaselineLabel = 'session start -> working tree'
 
 const workbenchChangeItems: WorkbenchChangeItem[] = [
   {
@@ -563,9 +563,11 @@ function ChangeCounts({
 function WorkbenchChangesTree({
   selectedPath,
   onSelect,
+  showStats = true,
 }: {
   selectedPath: string
   onSelect: (path: string) => void
+  showStats?: boolean
 }) {
   const handleSelect = useCallback(
     (path: string) => {
@@ -582,12 +584,14 @@ function WorkbenchChangesTree({
       data-testid="changes-tree"
     >
       <div className="flex h-8 shrink-0 items-center gap-1.5 border-b border-border/25 px-2 text-[11px]">
-        <IconGitBranch className="size-3.5 shrink-0 text-muted-foreground" stroke={2.25} />
+        <IconGitCompare className="size-3.5 shrink-0 text-muted-foreground" />
         <span className="min-w-0 truncate font-medium text-foreground">All changes</span>
-        <ChangeCounts
-          additions={workbenchChangeTotals.additions}
-          deletions={workbenchChangeTotals.deletions}
-        />
+        {showStats ? (
+          <ChangeCounts
+            additions={workbenchChangeTotals.additions}
+            deletions={workbenchChangeTotals.deletions}
+          />
+        ) : null}
       </div>
 
       <div className="min-h-0 min-w-0 flex-1 overflow-auto">
@@ -598,6 +602,7 @@ function WorkbenchChangesTree({
           onSelect={handleSelect}
           selectedPath={selectedPath}
           showGuides={false}
+          showStats={showStats}
         >
           <FileTreeFolder
             additions={workbenchChangeTotals.additions}
@@ -680,7 +685,7 @@ function WorkbenchChangesTree({
                     >
                       <FileTreeFile
                         deletions={18}
-                        icon={<IconFileText className="size-3 text-muted-foreground" stroke={2.25} />}
+                        icon={<IconFileText className="size-3 text-muted-foreground" />}
                         name="closure-conformance-workflow.mdx"
                         path="apps/devdocs/content/implementation/frontend/closure-conformance-workflow.mdx"
                         status="deleted"
@@ -832,7 +837,6 @@ function SourceViewerPane({
   code,
   icon,
   onClose,
-  tree = 'repo',
 }: {
   selectedPath: string
   title: string
@@ -840,22 +844,27 @@ function SourceViewerPane({
   code: string
   icon: WorkbenchIcon
   onClose?: () => void
-  tree?: 'docs' | 'repo'
 }) {
+  const monacoTheme = useMonacoTheme()
+  const [treeSelected, setTreeSelected] = useState(selectedPath)
+
   return (
     <DockWorkspace
       title={title}
       path={selectedPath}
       icon={icon}
       onClose={onClose}
-      sidebar={tree === 'docs' ? (
-        <WorkbenchDocsTree selectedPath={selectedPath} />
-      ) : (
-        <WorkbenchRepositoryTree selectedPath={selectedPath} />
-      )}
+      sidebar={
+        <WorkbenchChangesTree
+          onSelect={setTreeSelected}
+          selectedPath={treeSelected}
+          showStats={false}
+        />
+      }
       main={
         <Editor
           defaultLanguage={language === 'tsx' ? 'typescript' : 'markdown'}
+          theme={monacoTheme}
           options={{
             fontSize: 12,
             lineDecorationsWidth: 12,
@@ -879,12 +888,13 @@ function ChangesViewerPane({ onClose }: { onClose?: () => void }) {
   const selectedChange =
     workbenchChangeItems.find((change) => change.path === selectedPath) ??
     workbenchChangeItems[0]
+  const monacoTheme = useMonacoTheme()
 
   return (
     <DockWorkspace
       title="Changes"
       path={selectedPath}
-      icon={IconGitBranch}
+      icon={IconGitCompare}
       onClose={onClose}
       showSidebarLabel={false}
       scrollSidebar={false}
@@ -905,9 +915,6 @@ function ChangesViewerPane({ onClose }: { onClose?: () => void }) {
           >
             <div className="min-w-0 flex-1">
               <div className="truncate font-medium text-foreground">{selectedChange.path}</div>
-              <div className="truncate text-[10px] text-muted-foreground">
-                {changesBaselineLabel}
-              </div>
             </div>
             <ChangeCounts
               additions={selectedChange.additions}
@@ -918,6 +925,7 @@ function ChangesViewerPane({ onClose }: { onClose?: () => void }) {
             <DiffEditor
               keepCurrentModifiedModel
               keepCurrentOriginalModel
+              theme={monacoTheme}
               language={selectedChange.language}
               modified={selectedChange.modified}
               modifiedModelPath={`file:///${selectedChange.path}`}
@@ -950,17 +958,17 @@ function BrowserPreviewPane() {
     >
       <WebPreviewNavigation className="h-9 shrink-0 gap-1 border-b border-border p-1.5">
         <WebPreviewNavigationButton tooltip="Back">
-          <IconArrowLeft className="size-4" stroke={2.25} />
+          <IconArrowLeft className="size-4" />
         </WebPreviewNavigationButton>
         <WebPreviewNavigationButton tooltip="Forward">
-          <IconArrowRight className="size-4" stroke={2.25} />
+          <IconArrowRight className="size-4" />
         </WebPreviewNavigationButton>
         <WebPreviewNavigationButton tooltip="Reload">
-          <IconRefresh className="size-4" stroke={2.25} />
+          <IconRefresh className="size-4" />
         </WebPreviewNavigationButton>
         <WebPreviewUrl className="h-7 text-xs" />
         <WebPreviewNavigationButton tooltip="Open externally">
-          <IconExternalLink className="size-4" stroke={2.25} />
+          <IconExternalLink className="size-4" />
         </WebPreviewNavigationButton>
       </WebPreviewNavigation>
       <WebPreviewBody className="bg-background" />
@@ -1102,37 +1110,6 @@ export default function WorkbenchPage() {
         onValueChange={handleDockTabChange}
         value={activeDockTab}
       >
-        <header className="flex h-9 shrink-0 items-center gap-2 px-3">
-          <Button asChild variant="ghost" size="sm" className="-ml-1 h-7 px-2 text-xs active:scale-95">
-            <a href="/home" aria-label="Exit workbench">
-              <IconArrowLeft className="size-3.5" stroke={2.25} />
-              <span>Exit</span>
-            </a>
-          </Button>
-          <div className="ml-auto flex items-center gap-1">
-            <TabsList
-              variant="line"
-              className="h-8 gap-1 rounded-none bg-transparent p-0"
-            >
-              {dockTabs.map((tab) => {
-                const DockIcon = tab.icon
-
-                return (
-                  <TabsTrigger
-                    aria-label={tab.label}
-                    className="h-8 flex-none px-2.5 text-[var(--wb-tab-icon)] data-[state=active]:text-[var(--wb-tab-icon-active)] after:hidden active:scale-95"
-                    key={tab.id}
-                    onClick={() => handleDockTabClick(tab.id)}
-                    title={tab.label}
-                    value={tab.id}
-                  >
-                    <DockIcon size={24} stroke={2} />
-                  </TabsTrigger>
-                )
-              })}
-            </TabsList>
-          </div>
-        </header>
         <WorkbenchSettingsDialog
           onOpenChange={setSettingsOpen}
           open={settingsOpen}
@@ -1155,7 +1132,41 @@ export default function WorkbenchPage() {
             onOpenSettings={() => setSettingsOpen(true)}
           />
 
-          <ResizablePanelGroup direction="horizontal" className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            <header className="flex h-9 shrink-0 items-center gap-2 px-3">
+              <Button asChild variant="ghost" size="sm" className="-ml-1 h-7 px-2 text-xs active:scale-95">
+                <a href="/home" aria-label="Exit workbench">
+                  <IconArrowLeft className="size-3.5" />
+                  <span>Exit</span>
+                </a>
+              </Button>
+              <div className="ml-auto flex items-center gap-1">
+                <TabsList
+                  variant="line"
+                  className="h-8 gap-1 rounded-none bg-transparent p-0"
+                >
+                  {dockTabs.map((tab) => {
+                    const DockIcon = tab.icon
+
+                    return (
+                      <TabsTrigger
+                        aria-label={tab.label}
+                        className="h-8 flex-none px-2.5 text-[var(--wb-tab-icon)] data-[state=active]:text-[var(--wb-tab-icon-active)] after:hidden active:scale-95"
+                        key={tab.id}
+                        onClick={() => handleDockTabClick(tab.id)}
+                        title={tab.label}
+                        value={tab.id}
+                      >
+                        <DockIcon className="size-[18px]" />
+                      </TabsTrigger>
+                    )
+                  })}
+                </TabsList>
+              </div>
+            </header>
+
+            <div className="flex min-h-0 flex-1 overflow-hidden">
+              <ResizablePanelGroup direction="horizontal" className="min-w-0 flex-1">
             <ResizablePanel id="chat" order={1} defaultSize="54%" minSize="32%">
               <div className="flex h-full flex-col bg-background">
                 <Conversation className="flex-1">
@@ -1207,7 +1218,7 @@ export default function WorkbenchPage() {
                             tooltip="Toggle web search"
                             variant={useWebSearch ? 'default' : 'ghost'}
                           >
-                            <IconWorld size={16} stroke={2.25} />
+                            <IconWorldSearch className="size-4" />
                             <span>Search</span>
                           </PromptInputButton>
                           <ModelSelector
@@ -1245,7 +1256,7 @@ export default function WorkbenchPage() {
                                             ))}
                                           </ModelSelectorLogoGroup>
                                           {selectedModel === model.id ? (
-                                            <IconCheck className="ml-auto size-4" stroke={2.25} />
+                                            <IconCheck className="ml-auto size-4" />
                                           ) : (
                                             <span className="ml-auto size-4" />
                                           )}
@@ -1320,7 +1331,6 @@ export default function WorkbenchPage() {
                     language="markdown"
                     onClose={closeRightDock}
                     selectedPath="apps/internal/content/projects/chattr/contracts/frontend.mdx"
-                    tree="docs"
                   />
                 </TabsContent>
 
@@ -1335,7 +1345,9 @@ export default function WorkbenchPage() {
                 </TabsContent>
               </div>
             </ResizablePanel>
-          </ResizablePanelGroup>
+              </ResizablePanelGroup>
+            </div>
+          </div>
         </div>
       </Tabs>
     </TooltipProvider>

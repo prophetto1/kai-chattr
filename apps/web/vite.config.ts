@@ -3,8 +3,11 @@ import react from '@vitejs/plugin-react'
 import path from 'node:path'
 import { defineConfig } from 'vite'
 
+// apps/web may proxy only to kai-chattr services/api, never to legacy chattr.
+const apiTarget = (process.env.KAI_CHATTR_API_URL ?? 'http://127.0.0.1:8840').replace(/\/$/, '')
+const wsTarget = apiTarget.replace(/^http/, 'ws')
+
 export default defineConfig({
-  base: '/',
   plugins: [
     react(),
     tailwindcss(),
@@ -15,7 +18,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../../services/api/static/workbench',
+    outDir: 'dist',
     emptyOutDir: true,
   },
   server: {
@@ -23,10 +26,17 @@ export default defineConfig({
     port: 8800,
     strictPort: true,
     proxy: {
-      '/api': 'http://127.0.0.1:8300',
-      '/uploads': 'http://127.0.0.1:8300',
+      '/api': {
+        target: apiTarget,
+        changeOrigin: true,
+      },
+      '/uploads': {
+        target: apiTarget,
+        changeOrigin: true,
+      },
       '/ws': {
-        target: 'ws://127.0.0.1:8300',
+        target: wsTarget,
+        changeOrigin: true,
         ws: true,
       },
     },

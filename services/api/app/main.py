@@ -9,10 +9,9 @@ import uuid
 import logging
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File
+from fastapi import WebSocket, WebSocketDisconnect, UploadFile, File
 from fastapi.requests import Request
 from fastapi.responses import FileResponse, JSONResponse, Response
-from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.stores.messages import MessageStore
 from app.stores.rules import RuleStore
@@ -31,6 +30,9 @@ from app.routes.launchers import router as launcher_control_router
 from app.stores.locked import LockedStore
 from app.observability import init_observability
 from app.context import runtime_context
+from app.factory import create_app, include_route_modules
+from app.runtime_contract import runtime_ports_payload
+from app.security import create_security_middleware
 
 log = logging.getLogger(__name__)
 
@@ -61,7 +63,7 @@ def _resolve_chattr_version() -> str:
         return "unknown"
 
 
-app = FastAPI(title="noname")
+app = create_app(title="noname")
 app.include_router(launcher_control_router)
 app.include_router(platform_router)
 
@@ -279,11 +281,6 @@ def _request_remote_agent_token(request: Request) -> str:
     )
 
 
-# --- Security middleware ---
-# Paths that don't require the session token (public assets).
-_PUBLIC_PREFIXES = ("/", "/static/")
-
-
 def _install_security_middleware(token: str, cfg: dict):
     """Add token validation and origin checking middleware to the app."""
     global _security_middleware_installed
@@ -298,86 +295,13 @@ def _install_security_middleware(token: str, cfg: dict):
         _sync_runtime_context()
         return
 
-    class SecurityMiddleware(BaseHTTPMiddleware):
-        async def dispatch(self, request: Request, call_next):
-            path = request.url.path
-            current_cfg = _self.config
-            port = current_cfg.get("server", {}).get("port", 8300)
-            allowed_origins = {
-                f"http://127.0.0.1:{port}",
-                f"http://localhost:{port}",
-            }
-
-            # Static assets, index page, the platform-admin page, and uploaded
-            # images are public. The HTML pages inject the token client-side via
-            # same-origin script. Uploads use random filenames and have
-            # path-traversal protection.
-            if (
-                path == "/"
-                or path == "/platform-admin"
-                or path == "/workbench"
-                or path.startswith(("/workbench/", "/static/", "/uploads/", "/api/roles"))
-            ):
-                return await call_next(request)
-
-            # Agent registration/heartbeat/polling:
-            # - loopback wrappers are allowed as before
-            # - remote registration requires an explicit shared token
-            # - remote heartbeat/deregister/poll require the server-issued bearer token
-            if path.startswith(("/api/register", "/api/deregister/", "/api/heartbeat/", "/api/poll/")):
-                client_ip = request.client.host if request.client else ""
-                if client_ip not in ("127.0.0.1", "::1", "localhost"):
-                    if path.startswith("/api/register"):
-                        configured_token = _remote_agent_token(current_cfg)
-                        supplied_token = _request_remote_agent_token(request)
-                        if not configured_token or supplied_token != configured_token:
-                            return JSONResponse(
-                                {"error": f"forbidden: remote agent registration is not enabled for source {client_ip}."},
-                                status_code=403,
-                            )
-                    elif not _resolve_authenticated_agent(request):
-                        return JSONResponse(
-                            {"error": f"forbidden: remote agent request requires a valid bearer token. Source {client_ip} is not allowed."},
-                            status_code=403,
-                        )
-                return await call_next(request)
-
-            # --- Origin check (blocks cross-origin / DNS-rebinding attacks) ---
-            origin = request.headers.get("origin")
-            if origin and origin not in allowed_origins:
-                return JSONResponse(
-                    {"error": "forbidden: origin not allowed"},
-                    status_code=403,
-                )
-
-            # Runtime endpoints enforce their own auth where present; skip
-            # middleware token checks for that prefix.
-            if path.startswith("/api/runtime/"):
-                return await call_next(request)
-
-            # --- Token check ---
-            # Allow registered agents to authenticate via Bearer token
-            # for /api/messages and /api/send (no browser session needed).
-            auth_header = request.headers.get("authorization", "")
-            if auth_header.lower().startswith("bearer ") and (
-                path in ("/api/messages", "/api/send")
-                or path.startswith(("/api/rules/", "/api/terminal/"))
-            ):
-                bearer = auth_header[7:].strip()
-                if _self.registry and _self.registry.resolve_token(bearer):
-                    return await call_next(request)
-
-            req_token = (
-                request.headers.get("x-session-token")
-                or request.query_params.get("token")
-            )
-            if req_token != _self.session_token:
-                return JSONResponse(
-                    {"error": "forbidden: invalid or missing session token"},
-                    status_code=403,
-                )
-
-            return await call_next(request)
+    SecurityMiddleware = create_security_middleware(
+        get_config=lambda: _self.config,
+        get_session_token=_session_token_provider,
+        resolve_authenticated_agent=_resolve_authenticated_agent,
+        remote_agent_token=_remote_agent_token,
+        request_remote_agent_token=_request_remote_agent_token,
+    )
 
     app.add_middleware(SecurityMiddleware)
     _security_middleware_installed = True
@@ -1151,7 +1075,7 @@ def _on_registry_change():
 async def websocket_endpoint(websocket: WebSocket):
     # --- Security: validate session token on WebSocket connect ---
     token = websocket.query_params.get("token", "")
-    if token != session_token:
+    if token != _session_token_provider():
         # Must accept before closing so the browser receives the close frame.
         # Code 4003 triggers an auto-reload in the client to pick up the new token.
         await websocket.accept()
@@ -1709,10 +1633,7 @@ async def get_status():
 
 
 def _runtime_display_host(request: Request) -> str:
-    host = request.url.hostname or "127.0.0.1"
-    if host in {"0.0.0.0", "::"}:
-        return "127.0.0.1"
-    return host
+    return runtime_ports_payload(config, request)["host"]
 
 
 def _runtime_url(scheme: str, host: str, port: int, path: str = "") -> str:
@@ -1721,42 +1642,7 @@ def _runtime_url(scheme: str, host: str, port: int, path: str = "") -> str:
 
 
 async def get_runtime_ports(request: Request):
-    def _port(section: str, key: str, fallback: int) -> int:
-        try:
-            return int(config.get(section, {}).get(key, fallback))
-        except (TypeError, ValueError):
-            return fallback
-
-    scheme = request.url.scheme or "http"
-    host = _runtime_display_host(request)
-    web_port = _port("server", "port", 8300)
-    http_port = _port("mcp", "http_port", 8301)
-    sse_port = _port("mcp", "sse_port", 8302)
-
-    return JSONResponse({
-        "mode": "local",
-        "host": host,
-        "ports": {
-            "web": {
-                "label": "Web UI",
-                "port": web_port,
-                "url": _runtime_url(scheme, host, web_port),
-                "state": "connected",
-            },
-            "mcp_http": {
-                "label": "MCP HTTP",
-                "port": http_port,
-                "url": _runtime_url(scheme, host, http_port, "/mcp"),
-                "state": "configured",
-            },
-            "mcp_sse": {
-                "label": "MCP SSE",
-                "port": sse_port,
-                "url": _runtime_url(scheme, host, sse_port, "/sse"),
-                "state": "configured",
-            },
-        },
-    })
+    return JSONResponse(runtime_ports_payload(config, request))
 
 
 async def get_settings():
@@ -3024,9 +2910,7 @@ def _include_main_route_modules() -> None:
         agent_routes,
         session_routes,
     )
-    for route_module in route_modules:
-        route_module.register_routes(current_module)
-        app.include_router(route_module.router)
+    include_route_modules(app, current_module, route_modules)
 
 
 _include_main_route_modules()

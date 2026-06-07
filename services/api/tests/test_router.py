@@ -91,7 +91,7 @@ class RoutingSettingsTests(unittest.TestCase):
             )
             cfg = {
                 "server": {
-                    "port": 8300,
+                    "port": 8840,
                     "data_dir": str(data_dir),
                     "remote_agent_token": "remote-test-token",
                 },
@@ -101,7 +101,7 @@ class RoutingSettingsTests(unittest.TestCase):
                 },
                 "routing": {"default": "none", "max_agent_hops": 4},
                 "images": {"upload_dir": str(data_dir / "uploads")},
-                "mcp": {"http_port": 8301, "sse_port": 8302},
+                "mcp": {"http_port": 8841, "sse_port": 8842},
             }
 
             app.configure(cfg, session_token="settings-test-token")

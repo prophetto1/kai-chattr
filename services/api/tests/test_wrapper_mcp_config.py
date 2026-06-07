@@ -1,6 +1,6 @@
 """Tests for wrapper.py MCP config writers.
 
-Focused on the shape of the JSON written to provider settings files — Gemini
+Focused on the shape of the JSON written to provider settings files â€” Gemini
 needs "httpUrl", CodeBuddy needs "url", legacy paths still work.
 """
 
@@ -28,36 +28,36 @@ class JsonMcpSettingsTests(unittest.TestCase):
         return json.loads(self.target.read_text("utf-8"))
 
     def test_default_http_uses_httpUrl_key(self):
-        # Backward compat: no http_key override → "httpUrl" (Gemini-style)
-        _write_json_mcp_settings(self.target, "http://127.0.0.1:8301/mcp",
+        # Backward compat: no http_key override â†’ "httpUrl" (Gemini-style)
+        _write_json_mcp_settings(self.target, "http://127.0.0.1:8841/mcp",
                                  transport="http")
         data = self._read()
         entry = data["mcpServers"]["chattr"]
         self.assertEqual(entry["type"], "http")
-        self.assertEqual(entry["httpUrl"], "http://127.0.0.1:8301/mcp")
+        self.assertEqual(entry["httpUrl"], "http://127.0.0.1:8841/mcp")
         self.assertNotIn("url", entry)
 
     def test_http_key_override_writes_url_key(self):
-        # CodeBuddy-style: http_key="url" → MCP-standard "url" key
-        _write_json_mcp_settings(self.target, "http://127.0.0.1:8301/mcp",
+        # CodeBuddy-style: http_key="url" â†’ MCP-standard "url" key
+        _write_json_mcp_settings(self.target, "http://127.0.0.1:8841/mcp",
                                  transport="http", http_key="url")
         data = self._read()
         entry = data["mcpServers"]["chattr"]
         self.assertEqual(entry["type"], "http")
-        self.assertEqual(entry["url"], "http://127.0.0.1:8301/mcp")
+        self.assertEqual(entry["url"], "http://127.0.0.1:8841/mcp")
         self.assertNotIn("httpUrl", entry)
 
     def test_sse_transport_always_uses_url(self):
         # SSE doesn't use httpUrl regardless of http_key setting
-        _write_json_mcp_settings(self.target, "http://127.0.0.1:8302/sse",
+        _write_json_mcp_settings(self.target, "http://127.0.0.1:8842/sse",
                                  transport="sse")
         data = self._read()
         entry = data["mcpServers"]["chattr"]
         self.assertEqual(entry["type"], "sse")
-        self.assertEqual(entry["url"], "http://127.0.0.1:8302/sse")
+        self.assertEqual(entry["url"], "http://127.0.0.1:8842/sse")
 
     def test_bearer_token_written_as_authorization_header(self):
-        _write_json_mcp_settings(self.target, "http://127.0.0.1:8301/mcp",
+        _write_json_mcp_settings(self.target, "http://127.0.0.1:8841/mcp",
                                  transport="http", token="secret-token-123",
                                  http_key="url")
         entry = self._read()["mcpServers"]["chattr"]
@@ -69,7 +69,7 @@ class JsonMcpSettingsTests(unittest.TestCase):
         self.target.write_text(json.dumps({
             "mcpServers": {"some-other-server": {"type": "http", "url": "http://elsewhere"}}
         }))
-        _write_json_mcp_settings(self.target, "http://127.0.0.1:8301/mcp",
+        _write_json_mcp_settings(self.target, "http://127.0.0.1:8841/mcp",
                                  transport="http", http_key="url")
         data = self._read()
         self.assertIn("some-other-server", data["mcpServers"])
@@ -81,7 +81,7 @@ class ExpanduserPathTests(unittest.TestCase):
 
     Unit-testing _build_provider_launch directly would require too much
     scaffolding (registry, token, etc.). Instead we verify Path behavior
-    matches our expectations — the wrapper code uses Path(...).expanduser()
+    matches our expectations â€” the wrapper code uses Path(...).expanduser()
     at a single well-defined spot.
     """
 
@@ -100,7 +100,7 @@ class ExpanduserPathTests(unittest.TestCase):
         self.assertEqual(str(expanded), raw)
 
     def test_relative_path_stays_relative_after_expanduser(self):
-        # Relative paths without ~ aren't made absolute by expanduser alone —
+        # Relative paths without ~ aren't made absolute by expanduser alone â€”
         # that's handled by the subsequent `base / target` join in wrapper.py.
         raw = ".qwen/settings.json"
         expanded = Path(raw).expanduser()

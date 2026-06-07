@@ -27,6 +27,16 @@ data/
 # MCP capture artifacts (machine-generated console/page dumps)
 .playwright-mcp/
 
+# Playwright test artifacts
+test-results/
+playwright-report/
+
+# Brainstorming visual-companion scratch (mockups regenerated per session)
+.superpowers/
+
+# Session scratch screenshots (regenerated per session, not project history)
+docs/images/scratch/
+
 # Python tooling caches & coverage
 .pytest_cache/
 .mypy_cache/

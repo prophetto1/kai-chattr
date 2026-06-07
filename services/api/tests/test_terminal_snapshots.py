@@ -21,7 +21,7 @@ class TerminalSnapshotApiTests(unittest.TestCase):
         cls.addClassCleanup(cls.tmp.cleanup)
         cfg = {
             "server": {
-                "port": 8300,
+                "port": 8840,
                 "data_dir": cls.tmp.name,
                 "remote_agent_token": "remote-test-token",
             },
@@ -35,7 +35,7 @@ class TerminalSnapshotApiTests(unittest.TestCase):
             },
             "routing": {"default": "none", "max_agent_hops": 4},
             "images": {"upload_dir": str(Path(cls.tmp.name) / "uploads"), "max_size_mb": 10},
-            "mcp": {"http_port": 8301, "sse_port": 8302},
+            "mcp": {"http_port": 8841, "sse_port": 8842},
         }
         app.configure(cfg, session_token="ui-test-token")
         cls.client = TestClient(app.app)

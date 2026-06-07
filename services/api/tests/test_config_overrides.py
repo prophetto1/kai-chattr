@@ -52,7 +52,7 @@ class ConfigOverrideTests(unittest.TestCase):
 
     def test_no_env_vars_uses_config_toml_values(self):
         config = config_loader.load_config(ROOT)
-        self.assertEqual(config["server"]["port"], 8300)
+        self.assertEqual(config["server"]["port"], 8840)
         self.assertEqual(config["server"]["data_dir"], "./data")
 
     def test_port_env_var_overrides_config(self):
@@ -90,12 +90,12 @@ class ConfigOverrideTests(unittest.TestCase):
         os.environ["CHATTR_PORT"] = ""
         config = config_loader.load_config(ROOT)
         # Empty value is ignored, default stays
-        self.assertEqual(config["server"]["port"], 8300)
+        self.assertEqual(config["server"]["port"], 8840)
 
     def test_invalid_int_env_var_warns_and_keeps_default(self):
         os.environ["CHATTR_PORT"] = "not-a-number"
         config = config_loader.load_config(ROOT)
-        self.assertEqual(config["server"]["port"], 8300)
+        self.assertEqual(config["server"]["port"], 8840)
 
     def test_all_overrides_applied_together(self):
         abs_data = str(Path("/tmp/proj-a/.chattr").resolve())

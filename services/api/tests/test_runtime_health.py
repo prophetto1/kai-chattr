@@ -30,9 +30,11 @@ class RuntimePortsTests(unittest.TestCase):
         body = resp.json()
         self.assertEqual(body["mode"], "local")
         self.assertIn("host", body)
-        self.assertEqual(body["ports"]["web"]["port"], 8300)
-        self.assertEqual(body["ports"]["mcp_http"]["port"], 8301)
-        self.assertEqual(body["ports"]["mcp_sse"]["port"], 8302)
+        self.assertEqual(body["ports"]["frontend"]["port"], 8800)
+        self.assertEqual(body["ports"]["api"]["port"], 8840)
+        self.assertEqual(body["ports"]["mcp_http"]["port"], 8841)
+        self.assertEqual(body["ports"]["mcp_sse"]["port"], 8842)
+        self.assertNotIn("web", body["ports"])
 
     def test_runtime_ports_requires_no_browser_session_token(self):
         resp = self.client.get("/api/runtime/ports")
@@ -45,6 +47,16 @@ class RuntimePortsTests(unittest.TestCase):
         )
         self.assertEqual(schema.status_code, 200)
         self.assertIn("/api/runtime/ports", schema.json()["paths"])
+
+    def test_api_does_not_serve_frontend_routes_or_static_assets(self):
+        headers = {"X-Session-Token": "ui-test-token"}
+        self.assertEqual(self.client.get("/workbench", headers=headers).status_code, 404)
+        self.assertEqual(self.client.get("/workbench/", headers=headers).status_code, 404)
+        self.assertEqual(self.client.get("/static/app.js", headers=headers).status_code, 404)
+
+    def test_browser_session_endpoint_is_not_exposed(self):
+        headers = {"X-Session-Token": "ui-test-token"}
+        self.assertEqual(self.client.get("/api/session", headers=headers).status_code, 404)
 
 
 if __name__ == "__main__":

@@ -5,10 +5,14 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 8800",
     "build": "vite build",
-    "preview": "vite preview --host 127.0.0.1 --port 8800"
+    "preview": "vite preview --host 127.0.0.1 --port 8800",
+    "test:workbench-browser": "playwright test ../../tests/e2e/workbench-runtime.spec.ts --config ../../playwright.config.ts"
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.199",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@monaco-editor/react": "^4.7.0",
     "@radix-ui/react-use-controllable-state": "^1.2.2",
     "@streamdown/cjk": "^1.0.3",

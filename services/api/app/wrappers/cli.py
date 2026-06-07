@@ -39,7 +39,7 @@ def _write_json_mcp_settings(config_file: Path, url: str, transport: str = "http
                               *, token: str = "", http_key: str = "httpUrl") -> Path:
     """Write/merge a settings-style JSON file with nested mcpServers config.
 
-    Preserves existing servers in the file — only updates the chattr entry.
+    Preserves existing servers in the file â€” only updates the chattr entry.
 
     Gemini CLI 0.32+ expects:
       - "httpUrl" key (not "url") for streamable-http transport
@@ -89,7 +89,7 @@ def _read_project_mcp_servers(project_dir: Path) -> dict:
         try:
             data = json.loads(mcp_file.read_text("utf-8"))
             servers = data.get("mcpServers", {})
-            # Remove chattr — we'll add our own authenticated version
+            # Remove chattr â€” we'll add our own authenticated version
             servers.pop(SERVER_NAME, None)
             return servers
         except Exception:
@@ -144,7 +144,7 @@ _BUILTIN_DEFAULTS: dict[str, dict] = {
     "codex": {
         "mcp_inject": "proxy_flag",
         "mcp_proxy_flag_template": '-c mcp_servers.{server}.url="{url}"',
-        # mcp_merge_project disabled — Codex reads .mcp.json natively,
+        # mcp_merge_project disabled â€” Codex reads .mcp.json natively,
         # and duplicate detection is name-based only (e.g. unityMCP vs unity-mcp)
     },
     "kimi": {
@@ -190,9 +190,9 @@ def _get_server_url(mcp_cfg: dict, transport: str) -> str:
         if override:
             return override.rstrip("/")
     if transport == "sse":
-        port = mcp_cfg.get("sse_port", 8302)
+        port = mcp_cfg.get("sse_port", 8842)
         return f"http://127.0.0.1:{port}/sse"
-    port = mcp_cfg.get("http_port", 8301)
+    port = mcp_cfg.get("http_port", 8841)
     return f"http://127.0.0.1:{port}/mcp"
 
 
@@ -362,7 +362,7 @@ def _ensure_gemini_folder_trusted(project_dir: Path) -> None:
 
         folder_key = str(project_dir)
         if data.get(folder_key) == "TRUST_FOLDER":
-            return  # already trusted — nothing to do
+            return  # already trusted â€” nothing to do
 
         data[folder_key] = "TRUST_FOLDER"
         trusted_file.parent.mkdir(parents=True, exist_ok=True)
@@ -541,11 +541,11 @@ def _post_terminal_snapshot(server_port: int, agent_name: str, token: str, text:
 
 
 def _queue_watcher(get_identity_fn, inject_fn, *, is_multi_instance: bool = False, trigger_flag=None,
-                   server_port: int = 8300, agent_name: str = "", get_token_fn=None,
+                   server_port: int = 8840, agent_name: str = "", get_token_fn=None,
                    refresh_interval: int = 10):
     """Poll queue file and inject an MCP read task when triggered."""
     first_mention = True
-    last_rules_epoch = 0  # 0 = unknown/cold start — will inject on first trigger
+    last_rules_epoch = 0  # 0 = unknown/cold start â€” will inject on first trigger
     trigger_count = 0
     use_remote_poll = bool(
         os.environ.get("CHATTR_SERVER_URL", "").strip()
@@ -581,7 +581,7 @@ def _queue_watcher(get_identity_fn, inject_fn, *, is_multi_instance: bool = Fals
                         channel = data["channel"]
 
                 if has_trigger:
-                    # Signal activity BEFORE injecting — covers the thinking phase
+                    # Signal activity BEFORE injecting â€” covers the thinking phase
                     if trigger_flag is not None:
                         trigger_flag[0] = True
                     time.sleep(0.5)
@@ -613,7 +613,7 @@ def _queue_watcher(get_identity_fn, inject_fn, *, is_multi_instance: bool = Fals
 
                     # Use current identity (may have changed via rename)
                     current_name, _ = get_identity_fn()
-                    # Append role if set — check both current name and base name
+                    # Append role if set â€” check both current name and base name
                     role = _fetch_role(server_port, current_name)
                     if not role and current_name != agent_name:
                         role = _fetch_role(server_port, agent_name)
@@ -642,7 +642,7 @@ def _queue_watcher(get_identity_fn, inject_fn, *, is_multi_instance: bool = Fals
                     if first_mention and is_multi_instance:
                         prompt += _IDENTITY_HINT
                         first_mention = False
-                    # Flatten to single line — multi-line text triggers paste
+                    # Flatten to single line â€” multi-line text triggers paste
                     # detection in CLIs (Claude Code shows "[Pasted text +N]")
                     # which can break injection of long session prompts
                     inject_fn(prompt.replace("\n", " "))
@@ -684,11 +684,11 @@ def main():
     parser.add_argument("--mcp-sse-port",  default=None, help="Override mcp.sse_port (int)")
     parser.add_argument("--upload-dir",    default=None, help="Override images.upload_dir (path)")
     parser.add_argument("--server-url", default=None,
-                        help="Remote chattr web/API base URL, e.g. http://192.168.0.84:8300")
+                        help="Remote chattr web/API base URL, e.g. http://192.168.0.84:8840")
     parser.add_argument("--mcp-url", default=None,
-                        help="Remote chattr MCP HTTP URL, e.g. http://192.168.0.84:8301/mcp")
+                        help="Remote chattr MCP HTTP URL, e.g. http://192.168.0.84:8841/mcp")
     parser.add_argument("--mcp-sse-url", default=None,
-                        help="Remote chattr MCP SSE URL, e.g. http://192.168.0.84:8302/sse")
+                        help="Remote chattr MCP SSE URL, e.g. http://192.168.0.84:8842/sse")
     parser.add_argument("--remote-agent-token", default=None,
                         help="Shared token required by a server that allows remote wrapper registration")
     args, extra = parser.parse_known_args()
@@ -716,7 +716,7 @@ def main():
     command = agent_cfg.get("command", agent)
     data_dir = ROOT / config.get("server", {}).get("data_dir", "./data")
     data_dir.mkdir(parents=True, exist_ok=True)
-    server_port = config.get("server", {}).get("port", 8300)
+    server_port = config.get("server", {}).get("port", 8840)
     mcp_cfg = config.get("mcp", {})
 
     try:
@@ -761,10 +761,10 @@ def main():
         if endpoint_override:
             upstream_base, proxy_path = _split_endpoint(endpoint_override, "/sse" if transport == "sse" else "/mcp")
         elif transport == "sse":
-            upstream_base = f"http://127.0.0.1:{mcp_cfg.get('sse_port', 8302)}"
+            upstream_base = f"http://127.0.0.1:{mcp_cfg.get('sse_port', 8842)}"
             proxy_path = "/sse"
         else:
-            upstream_base = f"http://127.0.0.1:{mcp_cfg.get('http_port', 8301)}"
+            upstream_base = f"http://127.0.0.1:{mcp_cfg.get('http_port', 8841)}"
             proxy_path = "/mcp"
 
         proxy = McpIdentityProxy(
@@ -851,7 +851,7 @@ def main():
     project_dir = (ROOT / cwd).resolve()
 
     # Gemini: ensure the project directory is trusted so MCPs are allowed.
-    # Gemini blocks ALL MCPs for untrusted folders — even system-settings ones.
+    # Gemini blocks ALL MCPs for untrusted folders â€” even system-settings ones.
     if agent == "gemini" or inject_cfg.get("mcp_inject") == "env":
         _ensure_gemini_folder_trusted(project_dir)
 

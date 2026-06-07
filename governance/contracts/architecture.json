@@ -50,7 +50,7 @@
   },
   "allowedDeps": {
     "shared": [],
-    "tooling": ["ajv", "dependency-cruiser"],
+    "tooling": ["@playwright/test", "ajv", "dependency-cruiser"],
     "services/api": [
       "fastapi",
       "uvicorn",
@@ -67,6 +67,9 @@
       "pytest"
     ],
     "apps/web": [
+      "@dnd-kit/core",
+      "@dnd-kit/sortable",
+      "@dnd-kit/utilities",
       "@ai-sdk/react",
       "@monaco-editor/react",
       "@radix-ui/react-use-controllable-state",

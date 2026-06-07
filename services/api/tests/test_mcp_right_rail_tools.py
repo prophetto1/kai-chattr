@@ -218,11 +218,11 @@ def test_right_rail_capabilities_endpoint_is_mcp_backed(tmp_path):
     app_module = importlib.reload(app_module)
     app_module.configure(
         {
-            "server": {"port": 8300, "data_dir": str(tmp_path)},
+            "server": {"port": 8840, "data_dir": str(tmp_path)},
             "agents": {},
             "routing": {"default": "none", "max_agent_hops": 4},
             "images": {"upload_dir": str(tmp_path / "uploads"), "max_size_mb": 10},
-            "mcp": {"http_port": 8301, "sse_port": 8302},
+            "mcp": {"http_port": 8841, "sse_port": 8842},
         },
         session_token="right-rail-test-token",
     )
@@ -239,6 +239,40 @@ def test_right_rail_capabilities_endpoint_is_mcp_backed(tmp_path):
     assert all(tab["tools"] for tab in tabs)
 
 
+def test_browser_session_endpoint_is_not_exposed_and_right_rail_stays_protected(tmp_path):
+    from app import main as app_module
+    from fastapi.testclient import TestClient
+
+    app_module = importlib.reload(app_module)
+    app_module.configure(
+        {
+            "server": {"port": 8840, "data_dir": str(tmp_path)},
+            "agents": {},
+            "routing": {"default": "none", "max_agent_hops": 4},
+            "images": {"upload_dir": str(tmp_path / "uploads"), "max_size_mb": 10},
+            "mcp": {"http_port": 8841, "sse_port": 8842},
+        },
+        session_token="right-rail-test-token",
+    )
+    client = TestClient(app_module.app)
+
+    session_res = client.get(
+        "/api/session",
+        headers={"X-Session-Token": "right-rail-test-token"},
+    )
+    assert session_res.status_code == 404
+
+    forbidden_res = client.get("/api/right-rail/capabilities")
+    assert forbidden_res.status_code == 403
+    assert forbidden_res.json()["error"] == "forbidden: invalid or missing session token"
+
+    authed_res = client.get(
+        "/api/right-rail/capabilities",
+        headers={"X-Session-Token": "right-rail-test-token"},
+    )
+    assert authed_res.status_code == 200
+
+
 def test_locked_http_api_supports_ui_lifecycle(tmp_path):
     from app import main as app_module
     from fastapi.testclient import TestClient
@@ -246,11 +280,11 @@ def test_locked_http_api_supports_ui_lifecycle(tmp_path):
     app_module = importlib.reload(app_module)
     app_module.configure(
         {
-            "server": {"port": 8300, "data_dir": str(tmp_path)},
+            "server": {"port": 8840, "data_dir": str(tmp_path)},
             "agents": {},
             "routing": {"default": "none", "max_agent_hops": 4},
             "images": {"upload_dir": str(tmp_path / "uploads"), "max_size_mb": 10},
-            "mcp": {"http_port": 8301, "sse_port": 8302},
+            "mcp": {"http_port": 8841, "sse_port": 8842},
         },
         session_token="right-rail-test-token",
     )
@@ -297,11 +331,11 @@ def test_rules_http_api_supports_ui_lifecycle(tmp_path):
     app_module = importlib.reload(app_module)
     app_module.configure(
         {
-            "server": {"port": 8300, "data_dir": str(tmp_path)},
+            "server": {"port": 8840, "data_dir": str(tmp_path)},
             "agents": {},
             "routing": {"default": "none", "max_agent_hops": 4},
             "images": {"upload_dir": str(tmp_path / "uploads"), "max_size_mb": 10},
-            "mcp": {"http_port": 8301, "sse_port": 8302},
+            "mcp": {"http_port": 8841, "sse_port": 8842},
         },
         session_token="right-rail-test-token",
     )
@@ -361,11 +395,11 @@ def test_pins_http_api_supports_ui_lifecycle(tmp_path):
     app_module = importlib.reload(app_module)
     app_module.configure(
         {
-            "server": {"port": 8300, "data_dir": str(tmp_path)},
+            "server": {"port": 8840, "data_dir": str(tmp_path)},
             "agents": {},
             "routing": {"default": "none", "max_agent_hops": 4},
             "images": {"upload_dir": str(tmp_path / "uploads"), "max_size_mb": 10},
-            "mcp": {"http_port": 8301, "sse_port": 8302},
+            "mcp": {"http_port": 8841, "sse_port": 8842},
         },
         session_token="right-rail-test-token",
     )

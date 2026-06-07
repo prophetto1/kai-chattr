@@ -1,4 +1,4 @@
-"""API agent wrapper — bridges the chat room to an OpenAI-compatible endpoint.
+"""API agent wrapper â€” bridges the chat room to an OpenAI-compatible endpoint.
 
 Usage:
     python wrapper_api.py qwen
@@ -73,7 +73,7 @@ def main():
 
     agent = args.agent
     agent_cfg = config["agents"][agent]
-    server_port = config.get("server", {}).get("port", 8300)
+    server_port = config.get("server", {}).get("port", 8840)
     data_dir = ROOT / config.get("server", {}).get("data_dir", "./data")
     data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -138,7 +138,7 @@ def main():
         with _lock:
             return _state["working"]
 
-    # Heartbeat thread — same pattern as wrapper.py
+    # Heartbeat thread â€” same pattern as wrapper.py
     def _heartbeat():
         while True:
             try:
@@ -272,7 +272,7 @@ def main():
             messages.append({"role": role, "content": f"{sender}: {text}"})
         return messages
 
-    # Handle a trigger — read context, call model, respond
+    # Handle a trigger â€” read context, call model, respond
     def handle_trigger(channel="general"):
         my_name = get_name()
         set_working(True)
@@ -303,7 +303,7 @@ def main():
         finally:
             set_working(False)
 
-    # Queue watcher — polls queue file for @mentions
+    # Queue watcher â€” polls queue file for @mentions
     queue_file = data_dir / f"{name}_queue.jsonl"
     if queue_file.exists():
         queue_file.write_text("", "utf-8")

@@ -52,9 +52,9 @@ export function DockWorkspace({
       )}
     >
       <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border/35 bg-muted/20 px-2">
-        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-sm px-1.5 text-xs text-muted-foreground">
-          <Icon className="size-3.5 shrink-0" stroke={2.25} />
-          <div className="min-w-0 truncate text-xs font-medium leading-none text-foreground">
+        <div className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted-foreground">
+          <Icon className="size-3.5 shrink-0" />
+          <div className="min-w-0 truncate text-xs font-medium leading-tight text-foreground">
             {title}
           </div>
         </div>
@@ -68,7 +68,7 @@ export function DockWorkspace({
             type="button"
             variant="ghost"
           >
-            <IconX className="size-3.5" stroke={2.25} />
+            <IconX className="size-3.5" />
           </Button>
         ) : null}
       </header>

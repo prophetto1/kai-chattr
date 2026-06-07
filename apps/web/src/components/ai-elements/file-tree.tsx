@@ -28,6 +28,7 @@ interface FileTreeContextType {
   onSelect?: (path: string) => void;
   density: "default" | "compact";
   showGuides: boolean;
+  showStats: boolean;
 }
 
 type FileTreeStatus = "added" | "modified" | "deleted";
@@ -41,6 +42,7 @@ const FileTreeContext = createContext<FileTreeContextType>({
   expandedPaths: new Set(),
   density: "default",
   showGuides: true,
+  showStats: true,
   togglePath: noop,
 });
 
@@ -52,6 +54,7 @@ export type FileTreeProps = Omit<HTMLAttributes<HTMLDivElement>, "onSelect"> & {
   onExpandedChange?: (expanded: Set<string>) => void;
   density?: "default" | "compact";
   showGuides?: boolean;
+  showStats?: boolean;
 };
 
 export const FileTree = ({
@@ -62,6 +65,7 @@ export const FileTree = ({
   onExpandedChange,
   density = "default",
   showGuides = true,
+  showStats = true,
   className,
   children,
   ...props
@@ -84,15 +88,15 @@ export const FileTree = ({
   );
 
   const contextValue = useMemo(
-    () => ({ density, expandedPaths, onSelect, selectedPath, showGuides, togglePath }),
-    [density, expandedPaths, onSelect, selectedPath, showGuides, togglePath]
+    () => ({ density, expandedPaths, onSelect, selectedPath, showGuides, showStats, togglePath }),
+    [density, expandedPaths, onSelect, selectedPath, showGuides, showStats, togglePath]
   );
 
   return (
     <FileTreeContext.Provider value={contextValue}>
       <div
         className={cn(
-          "h-full w-full min-w-0 overflow-hidden rounded-none border-0 bg-transparent font-sans leading-none text-muted-foreground",
+          "h-full w-full min-w-0 overflow-hidden rounded-none border-0 bg-transparent font-sans leading-tight text-muted-foreground",
           density === "compact" ? "text-[11px]" : "text-[12px]",
           className
         )}
@@ -140,6 +144,12 @@ function FileTreeStats({
   deletions?: number;
   status?: FileTreeStatus;
 }) {
+  const { showStats } = useContext(FileTreeContext);
+
+  if (!showStats) {
+    return null;
+  }
+
   if (!status && additions === undefined && deletions === undefined) {
     return null;
   }
@@ -282,7 +292,7 @@ export const FileTreeFolder = ({
             <div
               className={cn(
                 "min-w-0",
-                density === "compact" ? "ml-[9px] pl-1.5" : "ml-[13px] pl-1",
+                density === "compact" ? "ml-[4px] pl-1" : "ml-[13px] pl-1",
                 showGuides && "border-l border-border/35"
               )}
             >

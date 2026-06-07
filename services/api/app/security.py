@@ -1,2 +1,94 @@
-"""Security middleware helpers will be split from app.main in the route extraction task."""
+"""Security middleware helpers."""
 
+from __future__ import annotations
+
+from collections.abc import Callable
+from typing import Any
+
+from fastapi import Request
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+
+
+def create_security_middleware(
+    *,
+    get_config: Callable[[], dict[str, Any]],
+    get_session_token: Callable[[], str],
+    resolve_authenticated_agent: Callable[[Request], dict[str, Any] | None],
+    remote_agent_token: Callable[[dict[str, Any]], str],
+    request_remote_agent_token: Callable[[Request], str],
+):
+    class SecurityMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request: Request, call_next):
+            path = request.url.path
+            current_cfg = get_config()
+            port = _configured_port(current_cfg, "server", "port", 8840)
+            frontend_cfg = current_cfg.get("frontend", {})
+            frontend_host = frontend_cfg.get("dev_host", "127.0.0.1")
+            frontend_port = _configured_port(current_cfg, "frontend", "dev_port", 8800)
+            allowed_origins = {
+                f"http://127.0.0.1:{port}",
+                f"http://localhost:{port}",
+                f"http://127.0.0.1:{frontend_port}",
+                f"http://localhost:{frontend_port}",
+            }
+            if frontend_host not in ("127.0.0.1", "localhost"):
+                allowed_origins.add(f"http://{frontend_host}:{frontend_port}")
+
+            # Uploads use random filenames and have path-traversal protection.
+            # Frontend HTML and static assets are owned by apps/web, not this API.
+            if path == "/" or path.startswith(("/uploads/", "/api/roles")):
+                return await call_next(request)
+
+            if path.startswith(("/api/register", "/api/deregister/", "/api/heartbeat/", "/api/poll/")):
+                client_ip = request.client.host if request.client else ""
+                if client_ip not in ("127.0.0.1", "::1", "localhost"):
+                    if path.startswith("/api/register"):
+                        configured_token = remote_agent_token(current_cfg)
+                        supplied_token = request_remote_agent_token(request)
+                        if not configured_token or supplied_token != configured_token:
+                            return _forbidden(
+                                f"remote agent registration is not enabled for source {client_ip}."
+                            )
+                    elif not resolve_authenticated_agent(request):
+                        return _forbidden(
+                            f"remote agent request requires a valid bearer token. Source {client_ip} is not allowed."
+                        )
+                return await call_next(request)
+
+            origin = request.headers.get("origin")
+            if origin and origin not in allowed_origins:
+                return JSONResponse({"error": "forbidden: origin not allowed"}, status_code=403)
+
+            if path.startswith("/api/runtime/"):
+                return await call_next(request)
+
+            auth_header = request.headers.get("authorization", "")
+            if auth_header.lower().startswith("bearer ") and (
+                path in ("/api/messages", "/api/send")
+                or path.startswith(("/api/rules/", "/api/terminal/"))
+            ):
+                if resolve_authenticated_agent(request):
+                    return await call_next(request)
+
+            req_token = request.headers.get("x-session-token") or request.query_params.get("token")
+            if req_token != get_session_token():
+                return JSONResponse(
+                    {"error": "forbidden: invalid or missing session token"},
+                    status_code=403,
+                )
+
+            return await call_next(request)
+
+    return SecurityMiddleware
+
+
+def _configured_port(config: dict[str, Any], section: str, key: str, fallback: int) -> int:
+    try:
+        return int(config.get(section, {}).get(key, fallback))
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _forbidden(reason: str):
+    return JSONResponse({"error": f"forbidden: {reason}"}, status_code=403)

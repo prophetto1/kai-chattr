@@ -1,8 +1,8 @@
-"""MCP server for agent chat tools — runs alongside the web server.
+"""MCP server for agent chat tools â€” runs alongside the web server.
 
 Serves two transports for compatibility:
-  - streamable-http on port 8301 (Claude Code, Codex, Qwen)
-  - SSE on port 8302 (Gemini)
+  - streamable-http on port 8841 (Claude Code, Codex, Qwen)
+  - SSE on port 8842 (Gemini)
 """
 
 import json
@@ -19,17 +19,17 @@ from app.mcp.tools import ToolDefinition, ToolRegistry
 
 log = logging.getLogger(__name__)
 
-# Shared state — set by run.py before starting
+# Shared state â€” set by run.py before starting
 store = None
 rules = None
 summaries = None
-jobs = None  # set by run.py — JobStore instance
-locked = None  # set by run.py — LockedStore instance
-room_settings = None  # set by run.py — dict with "channels" list etc.
-registry = None       # set by run.py — RuntimeRegistry instance
-config = None         # set by run.py — full config.toml dict
-router = None         # set by run.py — Router instance
-agents = None         # set by run.py — AgentManager instance
+jobs = None  # set by run.py â€” JobStore instance
+locked = None  # set by run.py â€” LockedStore instance
+room_settings = None  # set by run.py â€” dict with "channels" list etc.
+registry = None       # set by run.py â€” RuntimeRegistry instance
+config = None         # set by run.py â€” full config.toml dict
+router = None         # set by run.py â€” Router instance
+agents = None         # set by run.py â€” AgentManager instance
 def bind_runtime_context(context) -> None:
     """Bind MCP tool globals to the current backend runtime context."""
     global store, rules, summaries, jobs, locked, room_settings
@@ -52,10 +52,10 @@ _activity: dict[str, bool] = {}   # True = screen changed on last poll
 _activity_ts: dict[str, float] = {}  # timestamp of last active=True heartbeat
 ACTIVITY_TIMEOUT = 8  # auto-expire activity after 8s without a fresh active=True
 _presence_lock = threading.Lock()   # guards both _presence and _activity
-_renamed_from: set[str] = set()    # old names from renames — suppress leave messages
-_cursors: dict[str, dict[str, int]] = {}  # agent_name → {channel_name → last_id}
+_renamed_from: set[str] = set()    # old names from renames â€” suppress leave messages
+_cursors: dict[str, dict[str, int]] = {}  # agent_name â†’ {channel_name â†’ last_id}
 _cursors_lock = threading.Lock()
-_empty_read_count: dict[str, int] = {}  # sender → consecutive empty reads
+_empty_read_count: dict[str, int] = {}  # sender â†’ consecutive empty reads
 # Last channel (or job_id) each agent explicitly read from. chat_send
 # falls back to this when the caller omits the channel/job_id, so agents
 # mentioned in #X don't accidentally reply in #general just because
@@ -65,56 +65,56 @@ _last_read_job_id: dict[str, int] = {}
 _last_read_lock = threading.Lock()
 PRESENCE_TIMEOUT = 10  # ~2 missed heartbeats (5s interval) = offline
 
-# Roles — per-instance, persisted to roles.json
-_roles: dict[str, str] = {}  # agent_name → role string
+# Roles â€” per-instance, persisted to roles.json
+_roles: dict[str, str] = {}  # agent_name â†’ role string
 _ROLES_FILE: Path | None = None
 
-# Cursor persistence — set by run.py to enable saving cursors across restarts
+# Cursor persistence â€” set by run.py to enable saving cursors across restarts
 _CURSORS_FILE: Path | None = None
 
 _MCP_INSTRUCTIONS = (
-    "chattr — a shared chat channel for coordinating development between AI agents and humans. "
+    "chattr â€” a shared chat channel for coordinating development between AI agents and humans. "
     "Use chat_send to post messages. Use chat_read to check recent messages. "
     "Use chat_join when you start a session to announce your presence. "
     "Use chat_rules, chat_jobs, chat_pins, and chat_locked to read and update the right-rail workbench. "
-    "Always use your own name as the sender — never impersonate other agents or humans.\n\n"
-    "CRITICAL — Sender Identity Rules:\n"
+    "Always use your own name as the sender â€” never impersonate other agents or humans.\n\n"
+    "CRITICAL â€” Sender Identity Rules:\n"
     "Your BASE agent identity (used for chat_claim and chat_read) is:\n"
-    "  - All Anthropic products (Claude Code, claude-cli, etc.) → base: \"claude\"\n"
-    "  - All OpenAI products (Codex CLI, codex, chatgpt-cli, etc.) → base: \"codex\"\n"
-    "  - All Google products (Gemini CLI, gemini-cli, aistudio, etc.) → base: \"gemini\"\n"
-    "  - All Alibaba/Qwen products (Qwen Code, qwen-cli, etc.) → base: \"qwen\"\n"
-    "  - All Kilo products (Kilo CLI, kilocode, etc.) → base: \"kilo\"\n"
+    "  - All Anthropic products (Claude Code, claude-cli, etc.) â†’ base: \"claude\"\n"
+    "  - All OpenAI products (Codex CLI, codex, chatgpt-cli, etc.) â†’ base: \"codex\"\n"
+    "  - All Google products (Gemini CLI, gemini-cli, aistudio, etc.) â†’ base: \"gemini\"\n"
+    "  - All Alibaba/Qwen products (Qwen Code, qwen-cli, etc.) â†’ base: \"qwen\"\n"
+    "  - All Kilo products (Kilo CLI, kilocode, etc.) â†’ base: \"kilo\"\n"
     "  - Humans use their own name (e.g. \"user\")\n"
-    "Do NOT use your CLI tool name (e.g. \"gemini-cli\", \"claude-code\") — use the base name above.\n"
-    "IMPORTANT: When multiple instances run, the server renames slot 1 (e.g. \"claude\" → \"claude-1\"). "
+    "Do NOT use your CLI tool name (e.g. \"gemini-cli\", \"claude-code\") â€” use the base name above.\n"
+    "IMPORTANT: When multiple instances run, the server renames slot 1 (e.g. \"claude\" â†’ \"claude-1\"). "
     "If chat_send rejects your sender, call chat_claim(sender='your_base_name') and use the confirmed_name "
     "as your sender for ALL subsequent tool calls. The confirmed_name overrides the base name.\n\n"
-    "CRITICAL — Identity:\n"
+    "CRITICAL â€” Identity:\n"
     "Always use your base agent name (claude/codex/gemini/qwen/kilo) as sender. "
-    "Do NOT call chat_claim on fresh sessions — it is only for "
+    "Do NOT call chat_claim on fresh sessions â€” it is only for "
     "recovering a previous identity after /resume.\n\n"
-    "CRITICAL — Always Respond In Chat:\n"
+    "CRITICAL â€” Always Respond In Chat:\n"
     "When you are addressed in a chat message (@yourname or @all agents), you MUST respond using chat_send "
     "in the same channel. NEVER respond only in your terminal/console output. The human and other agents "
-    "cannot see your terminal — only chat messages are visible to everyone. If you need to do work first, "
+    "cannot see your terminal â€” only chat messages are visible to everyone. If you need to do work first, "
     "do the work, then post your response/results in chat using chat_send.\n\n"
-    "CRITICAL — Token-Aware Reading:\n"
+    "CRITICAL â€” Token-Aware Reading:\n"
     "Each chat_read call costs tokens. Default: one read per relevant channel per turn. "
     "A second read is fine if you can name the reason (checked a different channel, did work and expect a reply, "
-    "recovering from an error). After an empty read ('No new messages'), do NOT read the same channel again — "
+    "recovering from an error). After an empty read ('No new messages'), do NOT read the same channel again â€” "
     "stop and wait for your next prompt. Never use chat_read as a sleep/wait loop.\n\n"
     "Rules are the shared working style for your agents. They are short imperative instructions that all agents should follow. "
-    "At session start, call chat_rules(action='list') to read active rules — treat them as authoritative guidance. "
+    "At session start, call chat_rules(action='list') to read active rules â€” treat them as authoritative guidance. "
     "When you notice a repeated correction, a cross-agent convention, or a preference that should persist, "
     "propose it as a rule via chat_rules(action='propose'). Keep rules short and imperative (max 160 chars). "
     "Don't propose trivial or session-specific things. chat_decision is an alias for chat_rules (backward compat).\n\n"
     "Messages belong to channels (default: 'general'). Use the 'channel' parameter in chat_send and "
     "chat_read to target a specific channel. Omit channel or pass empty string to read from all channels.\n\n"
-    "If you are addressed in chat, respond in chat — use chat_send to reply in the same channel. "
+    "If you are addressed in chat, respond in chat â€” use chat_send to reply in the same channel. "
     "Do not take the answer back to your terminal session. "
     "If the latest message in a channel is addressed to you (or all agents), treat it as your active task "
-    "and execute it directly. Reading a channel with no task addressed to you is just catching up — no action needed.\n\n"
+    "and execute it directly. Reading a channel with no task addressed to you is just catching up â€” no action needed.\n\n"
     "Multi-instance support:\n"
     "When multiple instances of the same agent run simultaneously, each gets a unique identity.\n"
     "The server assigns names like claude-1, claude-2 automatically.\n"
@@ -127,14 +127,14 @@ _MCP_INSTRUCTIONS = (
     "- You are explicitly asked via /summary\n"
     "- The channel has had 20+ messages since the last summary\n"
     "Do NOT update the summary mid-conversation, after trivial exchanges, or when another agent just updated it. "
-    "Do NOT summarize just because a task was discussed or abandoned — wait for the 20-message threshold or a human request. "
-    "Keep summaries factual and concise (under 150 words) — focus on decisions made, tasks completed, and open questions.\n\n"
-    "Jobs are bounded work conversations — like Slack threads with status tracking. "
+    "Do NOT summarize just because a task was discussed or abandoned â€” wait for the 20-message threshold or a human request. "
+    "Keep summaries factual and concise (under 150 words) â€” focus on decisions made, tasks completed, and open questions.\n\n"
+    "Jobs are bounded work conversations â€” like Slack threads with status tracking. "
     "When you are triggered with job_id=N, use chat_read(job_id=N) to read the job conversation. "
     "That read returns a header entry first, including the job title and body, followed by the thread messages. "
     "Then use chat_send(job_id=N, message='...') to reply within it. "
-    "Job conversations are separate from the main timeline — your response should go to the job, not the channel.\n\n"
-    "CRITICAL — Jobs:\n"
+    "Job conversations are separate from the main timeline â€” your response should go to the job, not the channel.\n\n"
+    "CRITICAL â€” Jobs:\n"
     "Use chat_jobs for direct read/write access to job records when the user or current job context requires it. "
     "Use chat_propose_job when you need a human-reviewed proposal card before a new job exists. "
     "When creating work without explicit direct-create instruction, agents must only propose jobs using chat_propose_job when the request is a clearly 'scoped task'. "
@@ -261,7 +261,7 @@ def chat_send(
     if registry and registry.is_pending(sender):
         return "Error: identity not confirmed. Call chat_claim(sender=your_base_name) to get your identity."
     # Block base family names when multi-instance is active
-    # (but allow if sender is a registered+active instance — e.g. slot-1 'claude' that already claimed)
+    # (but allow if sender is a registered+active instance â€” e.g. slot-1 'claude' that already claimed)
     if registry and sender in registry.get_bases() and registry.family_instance_count(sender) >= 2:
         inst = registry.get_instance(sender)
         if not inst or inst.get("state") != "active":
@@ -386,7 +386,7 @@ def chat_propose_job(
 ) -> str:
     """Propose a job for human approval. Posts a proposal card in the timeline.
     The human can Accept (creates the job) or Dismiss. Agents must NOT create jobs
-    directly — always propose and let the human decide.
+    directly â€” always propose and let the human decide.
 
     Args:
         title: Short job title (max 80 chars)
@@ -649,7 +649,7 @@ def chat_read(
     ch = channel if channel else None
     # Remember the channel this agent just read so chat_send without an
     # explicit channel defaults here instead of falling back to "general".
-    # Only record when a specific channel was requested — broad reads
+    # Only record when a specific channel was requested â€” broad reads
     # (no channel) shouldn't overwrite a useful last-read.
     if sender and ch:
         with _last_read_lock:
@@ -678,9 +678,9 @@ def chat_read(
         _empty_read_count[sender] = _empty_read_count.get(sender, 0) + 1
         n = _empty_read_count[sender]
         if n == 1:
-            serialized = "No new messages. Do not poll — wait for your next prompt."
+            serialized = "No new messages. Do not poll â€” wait for your next prompt."
         elif n == 2:
-            serialized = ("No new messages. You have read with no results twice — "
+            serialized = ("No new messages. You have read with no results twice â€” "
                           "stop polling and wait for a trigger.")
         else:
             serialized = ("No new messages. STOP. Repeated empty reads waste tokens. "
@@ -730,7 +730,7 @@ def chat_join(name: str, channel: str = "general", ctx: Context | None = None) -
     if registry and registry.is_pending(name):
         return "Error: identity not confirmed. Call chat_claim(sender=your_base_name) to get your identity."
     # Block base family names when multi-instance is active
-    # (but allow if name is a registered+active instance — e.g. slot-1 'claude' that already claimed)
+    # (but allow if name is a registered+active instance â€” e.g. slot-1 'claude' that already claimed)
     if registry and name in registry.get_bases() and registry.family_instance_count(name) >= 2:
         inst = registry.get_instance(name)
         if not inst or inst.get("state") != "active":
@@ -751,7 +751,7 @@ def chat_who() -> str:
 
 
 def _touch_presence(name: str):
-    """Update presence timestamp — called on any MCP tool use."""
+    """Update presence timestamp â€” called on any MCP tool use."""
     with _presence_lock:
         _presence[name] = time.time()
 
@@ -808,7 +808,7 @@ def chat_rules(
     rule_id: int = 0,
     ctx: Context | None = None,
 ) -> str:
-    """Manage shared rules — the working style for your agents.
+    """Manage shared rules â€” the working style for your agents.
 
     Actions:
       - list: Return active rules in the legacy human-readable format.
@@ -1240,7 +1240,7 @@ def chat_locked(
 def chat_set_hat(sender: str, svg: str, target: str = "", ctx: Context | None = None) -> str:
     """Set your avatar hat. Pass an SVG string (viewBox "0 0 32 16", max 5KB).
     The hat will appear above your avatar in chat. To remove, users can drag it to the trash.
-    Color context for design — chat bg is dark (#0f0f17), avatar colors: claude=#da7756 (coral), codex=#10a37f (green), gemini=#4285f4 (blue), qwen=#8b5cf6 (violet).
+    Color context for design â€” chat bg is dark (#0f0f17), avatar colors: claude=#da7756 (coral), codex=#10a37f (green), gemini=#4285f4 (blue), qwen=#8b5cf6 (violet).
     Optional: pass target to set a hat on another agent (e.g. target="qwen")."""
     sender, err = _resolve_tool_identity(sender, ctx, field_name="sender", required=True)
     if err:
@@ -1308,7 +1308,7 @@ def chat_summary(
     if action == "read":
         entry = summaries.get(channel)
         if not entry:
-            return json.dumps({"channel": channel, "text": None, "message": f"No summary for #{channel} yet — one hasn't been written."})
+            return json.dumps({"channel": channel, "text": None, "message": f"No summary for #{channel} yet â€” one hasn't been written."})
         return json.dumps(entry, ensure_ascii=False)
 
     if action == "write":
@@ -1522,19 +1522,19 @@ def _create_server(port: int) -> FastMCP:
     return server
 
 
-mcp_http = _create_server(8301)  # streamable-http for Claude/Codex/Qwen
-mcp_sse = _create_server(8302)   # SSE for Gemini
+mcp_http = _create_server(8841)  # streamable-http for Claude/Codex/Qwen
+mcp_sse = _create_server(8842)   # SSE for Gemini
 
-# Keep backward compat — run.py references mcp_bridge.store
+# Keep backward compat â€” run.py references mcp_bridge.store
 # (store is set by run.py before starting)
 
 
 def run_http_server():
-    """Block — run streamable-http MCP in a background thread."""
+    """Block â€” run streamable-http MCP in a background thread."""
     mcp_http.run(transport="streamable-http")
 
 
 def run_sse_server():
-    """Block — run SSE MCP in a background thread."""
+    """Block â€” run SSE MCP in a background thread."""
     mcp_sse.run(transport="sse")
 

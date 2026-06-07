@@ -21,6 +21,12 @@ from pathlib import Path
 from typing import Any
 
 from app import main as app
+from app.runtime_contract import (
+    DEFAULT_API_PORT,
+    DEFAULT_FRONTEND_PORT,
+    DEFAULT_MCP_HTTP_PORT,
+    DEFAULT_MCP_SSE_PORT,
+)
 
 
 def chattr_test_configure(
@@ -36,20 +42,21 @@ def chattr_test_configure(
     data_dir_str = str(data_dir)
     cfg: dict[str, Any] = {
         "server": {
-            "port": 8300,
+            "port": DEFAULT_API_PORT,
             "data_dir": data_dir_str,
             "remote_agent_token": "remote-test-token",
         },
+        "frontend": {"dev_host": "127.0.0.1", "dev_port": DEFAULT_FRONTEND_PORT},
         "agents": {},
         "routing": {"default": "none", "max_agent_hops": 4},
         "images": {
             "upload_dir": str(Path(data_dir_str) / "uploads"),
             "max_size_mb": 10,
         },
-        "mcp": {"http_port": 8301, "sse_port": 8302},
+        "mcp": {"http_port": DEFAULT_MCP_HTTP_PORT, "sse_port": DEFAULT_MCP_SSE_PORT},
     }
     if extra_cfg:
-        # Shallow merge — callers can override or extend top-level cfg keys.
+        # Shallow merge â€” callers can override or extend top-level cfg keys.
         cfg.update(extra_cfg)
 
     if app.app.middleware_stack is None:
@@ -63,6 +70,7 @@ def chattr_test_configure(
         data_dir_path = Path(data_dir_str)
         data_dir_path.mkdir(parents=True, exist_ok=True)
         app.config = cfg
+        app.session_token = session_token
         app._session_token_holder[0] = session_token
         app.runtime_event_stream = JsonlEventStream(
             data_dir_path / "runtime_events.jsonl",

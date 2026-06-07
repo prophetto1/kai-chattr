@@ -100,7 +100,7 @@ export function WorkbenchSettingsDialog({
         <div className="flex h-full min-h-0 flex-col overflow-hidden">
           <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border/80 bg-muted/30 px-2">
             <div className="flex min-w-0 items-center gap-2 rounded-sm px-1.5 text-xs text-muted-foreground">
-              <IconSettings2 className="size-3.5" stroke={2.25} />
+              <IconSettings2 className="size-3.5" />
               <DialogTitle className="truncate text-xs font-medium text-foreground">
                 Settings
               </DialogTitle>
@@ -114,7 +114,7 @@ export function WorkbenchSettingsDialog({
                 type="button"
                 variant="ghost"
               >
-                <IconX className="size-3.5" stroke={2.25} />
+                <IconX className="size-3.5" />
               </Button>
             </div>
           </header>
