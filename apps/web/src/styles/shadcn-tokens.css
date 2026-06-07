@@ -1,0 +1,65 @@
+/*
+ * shadcn/ui token bridge.
+ *
+ * shadcn components consume tokens named --background/--foreground/--card/etc.
+ * This maps those onto the existing --color-fd-* set (defined in
+ * fumadocs-theme.css), which already switches across the light / .dark /
+ * .catppuccin themes via --bd-*. So shadcn primitives inherit all three themes
+ * for free. Primary/ring are mapped to the same fd/bd brand tokens as the docs
+ * shell instead of introducing a second workbench-only accent.
+ *
+ * The @theme inline block registers the matching Tailwind v4 color utilities
+ * (bg-background, text-foreground, border-border, bg-primary, rounded-lg, ...)
+ * so shadcn class names resolve. `inline` is required because the values are
+ * runtime var() references that must not be flattened at build time.
+ */
+
+:root {
+  --background: var(--color-fd-background);
+  --foreground: var(--color-fd-foreground);
+  --card: var(--color-fd-card);
+  --card-foreground: var(--color-fd-card-foreground);
+  --popover: var(--color-fd-popover);
+  --popover-foreground: var(--color-fd-popover-foreground);
+  --primary: var(--color-fd-primary);
+  --primary-foreground: var(--color-fd-primary-foreground);
+  --secondary: var(--color-fd-secondary);
+  --secondary-foreground: var(--color-fd-secondary-foreground);
+  --muted: var(--color-fd-muted);
+  --muted-foreground: var(--color-fd-muted-foreground);
+  --accent: var(--color-fd-accent);
+  --accent-foreground: var(--color-fd-accent-foreground);
+  --destructive: var(--color-fd-error);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: var(--color-fd-border);
+  --input: var(--color-fd-border);
+  --ring: var(--color-fd-ring);
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}

@@ -1,0 +1,126 @@
+[profiles."server.default"]
+kind = "server"
+description = "Start the Chattr FastAPI/local server"
+cwd = "."
+argv = ["uv", "run", "python", "run.py"]
+visible_terminal = false
+allow_browser_start = false
+requires_explicit_confirmation = false
+
+[profiles."agent.api.minimax"]
+kind = "api-agent"
+description = "Start MiniMax through wrapper_api.py; requires MINIMAX_API_KEY"
+cwd = "."
+argv = ["uv", "run", "python", "wrapper_api.py", "minimax"]
+visible_terminal = false
+allow_browser_start = true
+requires_explicit_confirmation = false
+required_env = ["MINIMAX_API_KEY"]
+
+[profiles."agent.claude"]
+kind = "cli-agent"
+description = "Start Claude Code through wrapper.py"
+cwd = "."
+argv = ["uv", "run", "python", "wrapper.py", "claude"]
+visible_terminal = true
+allow_browser_start = false
+requires_explicit_confirmation = false
+
+[profiles."agent.claude.skip-permissions"]
+kind = "cli-agent"
+description = "Start Claude Code with provider auto-approve flag"
+cwd = "."
+argv = ["uv", "run", "python", "wrapper.py", "claude", "--dangerously-skip-permissions"]
+visible_terminal = true
+allow_browser_start = false
+requires_explicit_confirmation = true
+
+[profiles."agent.codex"]
+kind = "cli-agent"
+description = "Start Codex through wrapper.py"
+cwd = "."
+argv = ["uv", "run", "python", "wrapper.py", "codex"]
+visible_terminal = true
+allow_browser_start = false
+requires_explicit_confirmation = false
+
+[profiles."agent.codex.bypass"]
+kind = "cli-agent"
+description = "Start Codex with provider approval/sandbox bypass flag"
+cwd = "."
+argv = ["uv", "run", "python", "wrapper.py", "codex", "--", "--dangerously-bypass-approvals-and-sandbox"]
+visible_terminal = true
+allow_browser_start = false
+requires_explicit_confirmation = true
+
+[profiles."agent.gemini"]
+kind = "cli-agent"
+description = "Start Gemini through wrapper.py"
+cwd = "."
+argv = ["uv", "run", "python", "wrapper.py", "gemini"]
+visible_terminal = true
+allow_browser_start = false
+requires_explicit_confirmation = false
+
+[profiles."agent.gemini.yolo"]
+kind = "cli-agent"
+description = "Start Gemini through wrapper.py with risky --yolo flag"
+cwd = "."
+argv = ["uv", "run", "python", "wrapper.py", "gemini", "--", "--yolo"]
+visible_terminal = true
+allow_browser_start = false
+requires_explicit_confirmation = true
+
+[profiles."agent.qwen"]
+kind = "cli-agent"
+description = "Start Qwen through wrapper.py using existing instruction"
+cwd = "."
+argv = ["uv", "run", "python", "wrapper.py", "qwen", "-i", "When asked for a reply or to answer, YOU MUST USE the mcp of chattr. When talking about a chat, we are speaking about interaction with tools provided by mcp of chattr. The human NEVER SEES your usual CLI interface. Just consider this, other instructions will follow."]
+visible_terminal = true
+allow_browser_start = false
+requires_explicit_confirmation = false
+
+[profiles."agent.qwen.yolo"]
+kind = "cli-agent"
+description = "Start Qwen through wrapper.py with --yolo using existing instruction"
+cwd = "."
+argv = ["uv", "run", "python", "wrapper.py", "qwen", "--yolo", "-i", "When asked for a reply or to answer, YOU MUST USE the mcp of chattr. When talking about a chat, we are speaking about interaction with tools provided by mcp of chattr. The human NEVER SEES your usual CLI interface. Just consider this, other instructions will follow."]
+visible_terminal = true
+allow_browser_start = false
+requires_explicit_confirmation = true
+
+[profiles."agent.kimi"]
+kind = "cli-agent"
+description = "Start Kimi through wrapper.py"
+cwd = "."
+argv = ["uv", "run", "python", "wrapper.py", "kimi"]
+visible_terminal = true
+allow_browser_start = false
+requires_explicit_confirmation = false
+
+[profiles."agent.kilo"]
+kind = "cli-agent"
+description = "Start Kilo through wrapper.py"
+cwd = "."
+argv = ["uv", "run", "python", "wrapper.py", "kilo"]
+visible_terminal = true
+allow_browser_start = false
+requires_explicit_confirmation = false
+
+[profiles."agent.copilot"]
+kind = "cli-agent"
+description = "Start Copilot through wrapper.py"
+cwd = "."
+argv = ["uv", "run", "python", "wrapper.py", "copilot"]
+visible_terminal = true
+allow_browser_start = false
+requires_explicit_confirmation = false
+
+[profiles."agent.codebuddy"]
+kind = "cli-agent"
+description = "Start CodeBuddy through wrapper.py"
+cwd = "."
+argv = ["uv", "run", "python", "wrapper.py", "codebuddy"]
+visible_terminal = true
+allow_browser_start = false
+requires_explicit_confirmation = false

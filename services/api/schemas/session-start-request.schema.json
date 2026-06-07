@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chattr.local/schemas/session-start-request.schema.json",
+  "title": "POST /api/sessions/start body",
+  "description": "Runtime launch of a session. Handler: app.start_session. If `cast` is empty object or omitted, server fills via registry.get_active_names() and _auto_cast (requires at least one online agent, may assign one agent to multiple roles). If `draft_message_id` is set, `template_id` is derived from message metadata and template is registered temporarily in SessionStore. Goal is stored truncated to 500 chars. cast keys MUST be template role strings; each value MUST be the canonical chat `sender` string for that participant (exact string equality when SessionEngine matches the next message’s sender to the cast entry).",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "template_id": {
+      "type": "string",
+      "description": "Id of a loaded template (library or custom). Ignored as primary source when `draft_message_id` is present (draft supplies inline template)."
+    },
+    "draft_message_id": {
+      "type": "integer",
+      "description": "Chat message id whose metadata contains validated `template` draft. Coerces via int() on server from JSON number."
+    },
+    "channel": {
+      "type": "string",
+      "description": "Channel id. Default on server if missing: \"general\". Only one active session per channel (active|waiting|paused)."
+    },
+    "cast": {
+      "type": "object",
+      "description": "Map role id (from template.roles) → canonical chat sender / participant id (exact string used as message `sender` when it is that role’s turn). Empty object triggers server auto-cast from get_active_names(). JSON Schema cannot verify keys against a template without coupling to a specific template instance.",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "goal": {
+      "type": "string",
+      "description": "Optional session goal; stripped and truncated to 500 characters in SessionStore.create."
+    },
+    "started_by": {
+      "type": "string",
+      "description": "Recorded on session as started_by. Passed to _auto_cast but that helper does not use it today."
+    }
+  },
+  "examples": [
+    {
+      "template_id": "planning",
+      "channel": "general",
+      "cast": {
+        "planner": "claude-wrapper-1",
+        "challenger": "claude-wrapper-1",
+        "synthesiser": "human-user"
+      },
+      "goal": "Plan the Q2 rollout",
+      "started_by": "human-user"
+    }
+  ]
+}

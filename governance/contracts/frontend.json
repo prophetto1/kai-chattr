@@ -1,18 +1,29 @@
 {
-  "$comment": "SOURCE OF TRUTH for the Frontend contract container. Rules stay empty until a migrated slice needs one and Jon ratifies it.",
+  "$comment": "SOURCE OF TRUTH for the Frontend contract container. Jon ratified the apps/web component foundation rule on 2026-06-05.",
   "id": "frontend",
   "title": "Frontend",
-  "status": "planned",
+  "status": "locked",
   "summary": "Frontend contract container for UI, routing, layout, components, accessibility, and design system rules.",
   "covers": ["ui", "routing", "layout", "components", "accessibility", "design system"],
   "sections": [
     { "name": "Frontend", "covers": ["UI", "routing", "layout", "components", "accessibility"] },
     { "name": "Design system", "covers": ["tokens", "typography", "spacing", "motion", "icons"] }
   ],
-  "rules": [],
-  "enforcedBy": "Pending Jon-ratified rules.",
-  "enforcement": [],
+  "rules": [
+    {
+      "key": "apps-web-component-foundation",
+      "locked": true,
+      "text": "apps/web must use real shadcn/ui source components for UI primitives and real Vercel AI Elements / AI SDK React source components for AI, chat, prompt, terminal, file-tree, code, model, and workbench surfaces. Local components may compose those approved source components, but must not replace them with bespoke approximations, placeholder primitives, or handrolled components named as if they were shadcn or Vercel AI Elements. Legacy E:/chattr/static is behavior reference only, not the visual/component/design target."
+    }
+  ],
+  "enforcedBy": "AGENTS.md, apps/web/AGENTS.md, dependency allowlist checks, and human/code review until component-origin checks are automated.",
+  "enforcement": [
+    "pnpm check:contracts",
+    "pnpm check:deps",
+    "pnpm web:build",
+    "Review apps/web component imports: UI primitives must originate from shadcn/ui source components; AI/workbench surfaces must originate from Vercel AI Elements / AI SDK React source components."
+  ],
   "openItems": [
-    "No frontend rules are locked in this file yet."
+    "Automate component-origin checks for apps/web once the first approved source-component inventory lands."
   ]
 }

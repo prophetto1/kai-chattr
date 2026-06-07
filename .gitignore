@@ -2,6 +2,7 @@ node_modules
 dist
 out
 .next
+services/api/static/
 .source
 *.tsbuildinfo
 .wrangler
@@ -22,3 +23,20 @@ _references/
 # Runtime-owned SQLite + data dirs (services/api owns its DB; never committed)
 data/
 *.sqlite3
+
+# MCP capture artifacts (machine-generated console/page dumps)
+.playwright-mcp/
+
+# Python tooling caches & coverage
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Monorepo / editor
+.turbo/
+
+# Operator-local service config — holds local overrides/secrets (*.local does not match *.toml; keep the .example tracked)
+*.local.toml

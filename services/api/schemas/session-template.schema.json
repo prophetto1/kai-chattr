@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chattr.local/schemas/session-template.schema.json",
+  "title": "Chattr session template",
+  "description": "Design-time document for SessionStore / SessionEngine. Normative server validation: session_store.validate_session_template() (app.py uses this for drafts). This schema matches that function's rules; some rules (participants ⊆ roles) are described here and MUST be enforced by tooling or the Python validator — pure JSON Schema cannot relate phase.participants[] to root.roles[] without implementation-specific extensions.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["name", "roles", "phases"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable library key (e.g. planning). Loaded from filename stem if omitted in file. Required for custom_templates persistence.",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name. Python rejects falsy/missing (empty string fails); whitespace-only strings are currently accepted by validate_session_template — avoid them in authored templates.",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable summary; not validated by validate_session_template. Present on shipped templates."
+    },
+    "is_custom": {
+      "type": "boolean",
+      "description": "Set when saved via /api/sessions/save-draft or draft start path. Ignored by validation."
+    },
+    "user_required": {
+      "type": "boolean",
+      "description": "Shipped templates may include this; engine does not read it — documentation / UI hint only unless you wire it."
+    },
+    "roles": {
+      "type": "array",
+      "description": "Abstract role ids (1–6). Used as keys in runtime `cast`. Each cast value MUST be the canonical chat message `sender` string that will post when it is that role’s turn (registered agent instance name or human username), matching SessionEngine’s sender == expected_agent check (see session_engine._get_expected_agent / cast). Order of entries in this array is not significant for the engine; duplicates are allowed by Python but should be avoided in new templates.",
+      "minItems": 1,
+      "maxItems": 6,
+      "items": {
+        "type": "string",
+        "title": "Role id",
+        "description": "Referenced by phase.participants[]. Must match exactly (string equality) entries in roles[]."
+      }
+    },
+    "phases": {
+      "type": "array",
+      "description": "Sequential stages. Engine runs phases in array order (index 0 first). Within a phase, participants[] defines strict turn order.",
+      "minItems": 1,
+      "maxItems": 6,
+      "contains": {
+        "type": "object",
+        "required": ["is_output"],
+        "properties": {
+          "is_output": { "const": true }
+        },
+        "additionalProperties": true
+      },
+      "minContains": 1,
+      "maxContains": 1,
+      "items": {
+        "$ref": "#/$defs/phase"
+      }
+    }
+  },
+  "$defs": {
+    "phase": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "One phase. Unknown keys (e.g. turn_order) are allowed by Python and ignored by validate_session_template.",
+      "required": ["name", "participants"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Phase label. Python uses truthiness: missing or empty string fails.",
+          "minLength": 1
+        },
+        "participants": {
+          "type": "array",
+          "description": "Ordered list of role ids for this phase (1–4 entries). Order = turn order. Each element MUST be one of the strings in root.roles (not expressible as standard JSON Schema).",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Injected into agent/human instruction for this phase. If omitted, engine treats as empty string. Python only enforces max length when value is a str; keep JSON string.",
+          "maxLength": 200
+        },
+        "is_output": {
+          "type": "boolean",
+          "description": "Exactly one phase in the template must be true. When the final phase completes, if this phase is the last phase and is_output is true, session_store stores output_message_id from the completing chat message.",
+          "default": false
+        },
+        "turn_order": {
+          "type": "string",
+          "description": "Shipped templates use \"sequential\"; engine ignores — turn order is solely participants[] order."
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "id": "example-minimal",
+      "name": "Minimal valid template",
+      "roles": ["author", "reviewer"],
+      "phases": [
+        {
+          "name": "Draft",
+          "participants": ["author"],
+          "prompt": "Produce the first draft.",
+          "is_output": false
+        },
+        {
+          "name": "Polish",
+          "participants": ["reviewer"],
+          "prompt": "Critique and recommend edits.",
+          "is_output": true
+        }
+      ]
+    }
+  ]
+}

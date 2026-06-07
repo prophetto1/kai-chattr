@@ -1,9 +1,0 @@
-{
-  "title": "Frontend",
-  "defaultOpen": true,
-  "pages": [
-    "openhands-page-files",
-    "closure-conformance-workflow",
-    "chat-history-stashing"
-  ]
-}

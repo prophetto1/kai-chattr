@@ -1,7 +1,15 @@
 {
   "name": "kai-chattr",
   "private": true,
+  "packageManager": "pnpm@10.16.1",
   "description": "Clean rebuild of chattr — local multi-agent coordination room (web + api), built to the v3 design standard.",
+  "scripts": {
+    "web:dev": "pnpm --dir apps/web run dev",
+    "web:build": "pnpm --dir apps/web run build",
+    "web:preview": "pnpm --dir apps/web run preview",
+    "check:contracts": "node governance/scripts/check-contracts.mjs",
+    "check:deps": "node governance/scripts/check-deps.mjs"
+  },
   "devDependencies": {
     "ajv": "^8.17.1",
     "dependency-cruiser": "^17.4.3"

@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chattr.local/schemas/session-draft-message-metadata.schema.json",
+  "title": "Chat message.metadata for msg.type === \"session_draft\"",
+  "description": "Produced by app._handle_new_message when a known agent posts a fenced ```session block (regex _SESSION_DRAFT_RE). Design kickoff from POST /api/sessions/request-draft: users see a normal system chat line (“Requested session draft…”), while a separate msg_type session_request row carries the routed prompt — that row is not broadcast and is deleted after _handle_new_message (app.py). Import path for visual builder: load Message from store/WS; if type is session_draft and metadata.valid === true, metadata.template is the template object (same shape as session-template.schema.json). UI also sets dataset.draftTemplate and dataset.draftMsgId (static/sessions.js). Block format in chat: ```session\\n{json}\\n``` — JSON must parse to an object validated by validate_session_template.",
+  "type": "object",
+  "required": ["draft_id", "revision", "proposed_by", "valid", "errors"],
+  "properties": {
+    "draft_id": {
+      "type": "string",
+      "description": "Lineage id: either 8-char hex from user text [xxxxxxxx] or first 8 chars of a new uuid (app._resolve_draft_lineage / str(uuid.uuid4())[:8])."
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Starts at 1; increments when agent posts a revised block referencing prior draft_id."
+    },
+    "proposed_by": {
+      "type": "string",
+      "description": "Message `sender` when the draft was posted. Draft detection requires sender ∈ known_agents, where known_agents = registry.get_all_names() ∪ keys(config['agents']) (config.toml base agent ids). Usually a registered wrapper instance name; can also be a config base key if that sender string appears in chat."
+    },
+    "valid": {
+      "type": "boolean",
+      "description": "True iff JSON parsed and validate_session_template returned no errors."
+    },
+    "errors": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Human-readable errors from validate_session_template; empty when valid. For invalid JSON, single element 'Invalid JSON in session block' and template may be omitted."
+    },
+    "template": {
+      "description": "Full session template object when JSON parsed (valid or invalid structurally). Omitted only when JSON decode fails. Must satisfy session-template.schema.json when valid === true.",
+      "type": "object"
+    }
+  },
+  "additionalProperties": true,
+  "allOf": [
+    {
+      "if": { "properties": { "valid": { "const": true } } },
+      "then": { "required": ["template"] }
+    }
+  ],
+  "examples": [
+    {
+      "draft_id": "a1b2c3d4",
+      "revision": 1,
+      "proposed_by": "claude-slot-1",
+      "valid": true,
+      "errors": [],
+      "template": {
+        "id": "draft-a1b2c3d4",
+        "name": "Example",
+        "roles": ["a"],
+        "phases": [
+          { "name": "Only", "participants": ["a"], "prompt": "Go.", "is_output": true }
+        ]
+      }
+    }
+  ]
+}

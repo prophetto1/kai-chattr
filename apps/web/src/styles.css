@@ -1,0 +1,146 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@import "./styles/design-tokens.css";
+@import "./styles/fumadocs-theme.css";
+@import "./styles/shadcn-tokens.css";
+
+@custom-variant dark (&:is(.dark *));
+
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100dvh;
+  background: var(--color-fd-background);
+  color: var(--color-fd-foreground);
+  font-family: var(--bd-font-ui);
+  font-size: var(--bd-fs-body);
+  line-height: 1.43;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+.jwc-workbench-shell {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+:root {
+  --sidebar: hsl(0 0% 98%);
+  --sidebar-foreground: hsl(240 5.3% 26.1%);
+  --sidebar-primary: hsl(240 5.9% 10%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(240 4.8% 95.9%);
+  --sidebar-accent-foreground: hsl(240 5.9% 10%);
+  --sidebar-border: hsl(220 13% 91%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+
+  /* Workbench dock-tab icon (theme-swappable) */
+  --wb-tab-icon: oklch(0.30 0 0);
+  --wb-tab-icon-active: var(--primary);
+}
+
+.dark {
+  --sidebar: hsl(240 5.9% 10%);
+  --sidebar-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-primary: hsl(224.3 76.3% 48%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(240 3.7% 15.9%);
+  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-border: hsl(240 3.7% 15.9%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+
+  --wb-tab-icon: oklch(0.985 0 0);
+  --wb-tab-icon-active: var(--primary);
+}
+
+@theme inline {
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+ * kai-chattr workbench theme - own design tokens (override the inherited docs
+ * bridge). Layered surfaces + crisp text + refined accent, anchored to the
+ * docs/images IDE references. One contract: light here, dark in .dark.
+ * ────────────────────────────────────────────────────────────────────────── */
+:root {
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0.21 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+  --secondary: oklch(0.965 0 0);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.965 0 0);
+  --muted-foreground: oklch(0.45 0 0);
+  --accent: oklch(0.95 0 0);
+  --accent-foreground: var(--foreground);
+  --border: oklch(0 0 0 / 10%);
+  --input: oklch(0 0 0 / 12%);
+  --primary: oklch(0.55 0.18 258);
+  --primary-foreground: oklch(0.99 0 0);
+  --ring: oklch(0.55 0.18 258 / 45%);
+  --color-fd-background: var(--background);
+  --color-fd-foreground: var(--foreground);
+  --wb-tab-icon: oklch(0.30 0 0);
+  --wb-tab-icon-active: var(--primary);
+}
+
+.dark {
+  /* layered surfaces: bg(editor) < card/dock < popover < accent(hover) */
+  --background: oklch(0.185 0.004 270);
+  --foreground: oklch(0.95 0 0);
+  --card: oklch(0.215 0.004 270);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.235 0.004 270);
+  --popover-foreground: var(--foreground);
+  --secondary: oklch(0.235 0.004 270);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.235 0.004 270);
+  --muted-foreground: oklch(0.68 0.008 270);
+  --accent: oklch(0.275 0.005 270);
+  --accent-foreground: var(--foreground);
+  --border: oklch(1 0 0 / 11%);
+  --input: oklch(1 0 0 / 14%);
+  --primary: oklch(0.62 0.17 258);
+  --primary-foreground: oklch(0.98 0 0);
+  --ring: oklch(0.62 0.17 258 / 55%);
+  --color-fd-background: var(--background);
+  --color-fd-foreground: var(--foreground);
+  --sidebar: oklch(0.205 0.004 270);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-accent: oklch(0.275 0.005 270);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: oklch(1 0 0 / 9%);
+  --sidebar-ring: var(--ring);
+  --wb-tab-icon: oklch(0.97 0 0);
+  --wb-tab-icon-active: var(--primary);
+}

@@ -15,9 +15,16 @@ jobs:
       deployments: write
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy apps/web/public to Cloudflare Pages (kai-chattr)
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir apps/web build
+      - name: Deploy apps/web/dist to Cloudflare Pages (kai-chattr)
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy apps/web/public --project-name=kai-chattr --branch=${{ github.ref_name }}
+          command: pages deploy apps/web/dist --project-name=kai-chattr --branch=${{ github.ref_name }}

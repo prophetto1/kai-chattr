@@ -16,6 +16,20 @@ This is a **clean migration** from the legacy `chattr` repo (reference/source on
 target). Build to the **chattr design standard — v3** and the contracts in `governance/`. Do not
 port the legacy `static/` UI as-is.
 
+## Frontend component rule
+
+`apps/web` must use real source components from the approved component foundation:
+
+- UI primitives come from shadcn/ui source components.
+- AI, chat, prompt, terminal, file-tree, code, and workbench surfaces come from Vercel AI Elements
+  / AI SDK React source components.
+- Local components may compose those approved source components.
+- Local components must not replace them with bespoke approximations, placeholder primitives, or
+  handrolled components named as if they were shadcn or Vercel AI Elements.
+
+Legacy `E:/chattr/static` is behavior reference only. It is not the visual, component, or design
+system target.
+
 ## Secrets
 
 SOPS only. Never write plaintext secrets to any file (a `.gitignore` is not protection). Docs
@@ -24,7 +38,7 @@ reference SOPS pointers + commands, never raw values.
 ## Governance
 
 Every file must conform to `governance/` contracts. The dependency allowlist
-(`governance/allowed-deps.json`) grows **one migrated slice at a time** — confirm a dep, add it,
+(`governance/contracts/architecture.json`) grows **one migrated slice at a time** — confirm a dep, add it,
 then move the code. Nothing is enforced until Jon confirms it (decide → encode → render).
 
 ## Deploy

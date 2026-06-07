@@ -1,4 +1,4 @@
-# Local-dev SOPS policy for kai-chattr.
+# Local-dev SOPS policy for blockdata-web.
 #
 # Private age keys never belong in this repo. Only the PUBLIC recipients live here.
 # The matching private key stays on the operator's machine (SOPS age key file).

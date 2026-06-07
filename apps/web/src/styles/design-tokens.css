@@ -1,0 +1,199 @@
+/*
+ * JWC Global docs tokens for Fumadocs.
+ * Typography and primary blue are borrowed from Blockdata devdocs.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* Blockdata docs fonts: Inter UI, Plus Jakarta Sans prose, JetBrains Mono code */
+  --bd-font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --bd-font-prose: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --bd-font-display: var(--bd-font-prose);
+  --bd-font-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas,
+    monospace;
+  --kai-font-display: var(--bd-font-prose);
+  --kai-font-sans: var(--bd-font-ui);
+  --kai-font-mono: var(--bd-font-mono);
+  --kai-font-serif: 'Instrument Serif', 'Times New Roman', serif;
+  --font-display: var(--bd-font-display);
+  --font-sans: var(--bd-font-ui);
+  --font-nav: var(--bd-font-ui);
+  --font-mono: var(--bd-font-mono);
+  --app-font-sans: var(--bd-font-ui);
+  --bd-font-serif: var(--kai-font-serif);
+
+  /* KAI content accents retained for existing home content. */
+  --kai-brand-k: #f06138;
+  --kai-brand-a: #2e6bff;
+  --kai-brand-i: #a87cf7;
+  --kai-brand-i-strong: #8a5cd9;
+  --kai-ink: #14141a;
+  --kai-ink-2: #3a3a40;
+  --kai-ink-3: #6a6a72;
+  --kai-paper: #f6f4ef;
+  --kai-paper-border: #d8d3c8;
+  --layer-k: var(--kai-brand-k);
+  --layer-a: var(--kai-brand-a);
+  --layer-i: var(--kai-brand-i);
+  --layer-k-bg: rgba(240, 97, 56, 0.16);
+  --layer-a-bg: rgba(46, 107, 255, 0.16);
+  --layer-i-bg: rgba(168, 124, 247, 0.18);
+  --brand: #2e6bff;
+  --brand-2: #1d55e8;
+  --brand-bg: rgba(46, 107, 255, 0.14);
+  --brand-text: #2e6bff;
+  --bd-brand: var(--brand);
+  --bd-heading: #1c1917;
+  --bd-radius: 0.625rem;
+
+  /* KAI A8 typography roles */
+  --type-a8-display-size: 56px;
+  --type-a8-display-lh: 1.07;
+  --type-a8-display-tracking: -0.03em;
+  --type-a8-title-size: 28px;
+  --type-a8-title-lh: 1.21;
+  --type-a8-title-tracking: -0.01em;
+  --type-a8-body-size: 16px;
+  --type-a8-body-lh: 1.55;
+  --type-a8-mono-size: 13px;
+  --type-a8-mono-lh: 1.69;
+  --type-a8-eyebrow-size: 11px;
+  --type-a8-eyebrow-lh: 1.18;
+  --type-a8-eyebrow-tracking: 0.16em;
+
+  /* Workbench prose scale (web/src/tailwind.css) */
+  --workbench-prose-font-size: 1rem;
+  --workbench-prose-line-height: 1.6;
+  --workbench-prose-block-gap: 0.8rem;
+  --workbench-prose-heading-letter-spacing: -0.02em;
+  --workbench-prose-h1-size: clamp(1.8rem, 2.6vw, 2.35rem);
+  --workbench-prose-h2-size: clamp(1.3rem, 2vw, 1.6rem);
+  --workbench-prose-h3-size: clamp(1.1rem, 1.6vw, 1.25rem);
+  --workbench-prose-h4-size: 1.05rem;
+  --workbench-prose-h2-top: 1.55rem;
+  --workbench-prose-h3-top: 1.2rem;
+  --workbench-prose-h4-top: 1rem;
+  --workbench-prose-heading-bottom: 0.5rem;
+  --workbench-prose-code-inline-padding: 0.02rem 0.18rem;
+
+  /*
+   * Docs article scale — one step tighter than workbench MD preview so content
+   * reads closer to sidebar density (13–14px UI) without shrinking chrome.
+   */
+  --bd-docs-page-title-size: clamp(1.25rem, 1.5vw, 1.375rem);
+  --bd-docs-page-title-weight: 600;
+  --bd-docs-description-size: 0.875rem;
+  --bd-docs-prose-font-size: 0.9375rem;
+  --bd-docs-prose-line-height: 1.55;
+  --bd-docs-prose-block-gap: 0.65rem;
+  --bd-docs-prose-heading-letter-spacing: -0.015em;
+  --bd-docs-prose-h1-size: clamp(1.15rem, 1.5vw, 1.25rem);
+  --bd-docs-prose-h2-size: clamp(1.05rem, 1.35vw, 1.125rem);
+  --bd-docs-prose-h3-size: 1rem;
+  --bd-docs-prose-h4-size: 0.9375rem;
+  --bd-docs-prose-h2-top: 1.25rem;
+  --bd-docs-prose-h3-top: 0.95rem;
+  --bd-docs-prose-h4-top: 0.75rem;
+  --bd-docs-prose-heading-bottom: 0.4rem;
+  --bd-docs-code-block-size: 0.8125rem;
+  --bd-docs-table-size: 0.8125rem;
+
+  /* UI chrome */
+  --bd-fs-body: 14px;
+  --bd-fs-label: 12px;
+  --bd-fs-sidebar: 14px;
+
+  /* Light (default for Fumadocs until .dark) */
+  --bd-text: #1c1917;
+  --bd-text-muted: rgba(28, 25, 23, 0.48);
+  --bd-border: rgba(28, 25, 23, 0.1);
+  --bd-card: #ffffff;
+  --bd-background: #faf9f7;
+  --bd-muted: #f0eeed;
+  --bd-on-brand: #ffffff;
+  --bd-fd-background: #f7f4ef;
+  --bd-fd-muted: #f3f0ec;
+  --bd-fd-popover: #fefdfa;
+  --bd-fd-card: #fbf9f5;
+  --bd-fd-secondary: rgba(28, 25, 23, 0.04);
+  --bd-fd-accent: rgba(28, 25, 23, 0.035);
+  --bd-fd-ring: rgba(29, 85, 232, 0.28);
+  --bd-fd-sidebar-muted: var(--bd-fd-muted);
+  --bd-fd-sidebar-secondary: var(--bd-fd-secondary);
+  --bd-code-text: var(--bd-text);
+  --bd-code-border: color-mix(in oklab, var(--bd-border) 78%, var(--bd-brand) 22%);
+  --bd-inline-code-bg: color-mix(in oklab, #f5ebe6 72%, #faf9f7 28%);
+  --bd-pre-bg: color-mix(in oklab, #ffffff 88%, #faf9f7 12%);
+
+  --shiki-light-bg: var(--bd-pre-bg);
+  --shiki-dark-bg: var(--bd-pre-bg);
+}
+/* ── Dark Themes ── */
+
+.dark,
+.catppuccin {
+  color-scheme: dark;
+}
+
+/* Default Dark (Dusk) */
+.dark {
+  --bd-brand: #2e6bff;
+  --brand: var(--bd-brand);
+  --brand-2: #6f97ff;
+  --brand-bg: rgba(46, 107, 255, 0.16);
+  --brand-text: #8fb0ff;
+  --bd-heading: rgb(238, 238, 238);
+  --bd-text: rgb(238, 238, 238);
+  --bd-text-muted: rgba(255, 255, 255, 0.447);
+  --bd-border: rgba(255, 255, 255, 0.1);
+  --bd-card: rgb(25, 25, 25);
+  --bd-background: #0e0e0e;
+  --bd-muted: rgb(29, 29, 29);
+  --bd-fd-background: var(--bd-background);
+  --bd-fd-muted: var(--bd-card);
+  --bd-fd-popover: var(--bd-card);
+  --bd-fd-card: var(--bd-card);
+  --bd-fd-secondary: var(--bd-muted);
+  --bd-fd-accent: rgba(255, 255, 255, 0.05);
+  --bd-fd-ring: rgba(46, 107, 255, 0.35);
+  --bd-fd-sidebar-muted: rgb(17, 17, 17);
+  --bd-fd-sidebar-secondary: var(--bd-card);
+  --bd-code-text: var(--bd-text);
+  --bd-code-border: rgba(255, 255, 255, 0.1);
+  --bd-inline-code-bg: color-mix(in oklab, rgba(148, 163, 184, 0.14) 88%, #0e0e0e 12%);
+  --bd-pre-bg: color-mix(in oklab, rgb(25, 25, 25) 88%, #0e0e0e 12%);
+  --shiki-light-bg: var(--bd-pre-bg);
+  --shiki-dark-bg: var(--bd-pre-bg);
+}
+
+/* Catppuccin Mocha */
+.catppuccin {
+  --bd-brand: #cba6f7;
+  --brand: var(--bd-brand);
+  --brand-2: #f5c2e7;
+  --brand-bg: rgba(203, 166, 247, 0.15);
+  --brand-text: #cba6f7;
+  --bd-heading: #f5e0dc;
+  --bd-text: #cdd6f4;
+  --bd-text-muted: #a6adc8;
+  --bd-border: #45475a;
+  --bd-card: #181825;
+  --bd-background: #1e1e2e;
+  --bd-muted: #313244;
+  --bd-fd-background: var(--bd-background);
+  --bd-fd-muted: var(--bd-muted);
+  --bd-fd-popover: #11111b;
+  --bd-fd-card: var(--bd-card);
+  --bd-fd-secondary: #313244;
+  --bd-fd-accent: #45475a;
+  --bd-fd-ring: #cba6f7;
+  --bd-fd-sidebar-muted: #181825;
+  --bd-fd-sidebar-secondary: #1e1e2e;
+  --bd-code-text: #f5e0dc;
+  --bd-code-border: #585b70;
+  --bd-inline-code-bg: rgba(203, 166, 247, 0.15);
+  --bd-pre-bg: #11111b;
+  --shiki-light-bg: var(--bd-pre-bg);
+  --shiki-dark-bg: var(--bd-pre-bg);
+}

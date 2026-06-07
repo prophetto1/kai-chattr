@@ -1,0 +1,99 @@
+/*
+ * JWC platform tokens for the docs (--color-fd-*). These @theme entries keep the
+ * fd-* Tailwind utilities emitting after fumadocs-ui's CSS preset was removed.
+ * Source values: design-tokens.css (--bd-*).
+ */
+
+@theme {
+  --color-fd-background: var(--bd-fd-background);
+  --color-fd-foreground: var(--bd-text);
+  --color-fd-muted: var(--bd-fd-muted);
+  --color-fd-muted-foreground: var(--bd-text-muted);
+  --color-fd-popover: var(--bd-fd-popover);
+  --color-fd-popover-foreground: var(--bd-text);
+  --color-fd-card: var(--bd-fd-card);
+  --color-fd-card-foreground: var(--bd-text);
+  --color-fd-border: var(--bd-border);
+  --color-fd-primary: var(--bd-brand);
+  --color-fd-primary-foreground: var(--bd-on-brand);
+  --color-fd-secondary: var(--bd-fd-secondary);
+  --color-fd-secondary-foreground: var(--bd-text);
+  --color-fd-accent: var(--bd-fd-accent);
+  --color-fd-accent-foreground: var(--bd-text);
+  --color-fd-ring: var(--bd-fd-ring);
+
+  /* Semantic colors for callouts (reserved content form). */
+  --color-fd-info: oklch(0.62 0.19 256);
+  --color-fd-warning: oklch(0.75 0.16 75);
+  --color-fd-error: oklch(0.63 0.24 25);
+  --color-fd-success: oklch(0.65 0.18 150);
+  --color-fd-idea: oklch(0.62 0.21 300);
+
+  --font-sans: var(--bd-font-ui);
+}
+
+/*
+ * Base defaults previously provided by the fumadocs-ui preset: default border
+ * color (Tailwind v4's `border` utility otherwise defaults to currentColor) and
+ * body background/foreground.
+ */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-fd-border);
+  }
+
+  body {
+    background-color: var(--color-fd-background);
+    color: var(--color-fd-foreground);
+  }
+}
+
+/*
+ * Docs shell width (rail + content). The JWC shell centers at this max-width and
+ * splits a 250px rail + the remaining content track.
+ */
+:root {
+  --fd-layout-width: 1550px;
+  --bd-docs-sidebar-width: 250px;
+  --jwc-docs-top-nav-height: 56px;
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --fd-layout-width: min(1550px, calc(100% - 200px));
+  }
+}
+
+.dark,
+.catppuccin {
+  --color-fd-background: var(--bd-fd-background);
+  --color-fd-foreground: var(--bd-text);
+  --color-fd-muted: var(--bd-fd-muted);
+  --color-fd-muted-foreground: var(--bd-text-muted);
+  --color-fd-popover: var(--bd-fd-popover);
+  --color-fd-popover-foreground: var(--bd-text);
+  --color-fd-card: var(--bd-fd-card);
+  --color-fd-card-foreground: var(--bd-text);
+  --color-fd-border: var(--bd-border);
+  --color-fd-primary: var(--bd-brand);
+  --color-fd-primary-foreground: var(--bd-on-brand);
+  --color-fd-secondary: var(--bd-fd-secondary);
+  --color-fd-secondary-foreground: var(--bd-text);
+  --color-fd-accent: var(--bd-fd-accent);
+  --color-fd-accent-foreground: var(--bd-text);
+  --color-fd-ring: var(--bd-fd-ring);
+
+  --font-sans: var(--bd-font-ui);
+}
+
+/* Sidebar uses slightly different muted tokens in the dark themes. */
+.dark .jwc-docs-sidebar,
+.catppuccin .jwc-docs-sidebar {
+  --sidebar: var(--bd-fd-sidebar-secondary);
+  --sidebar-foreground: var(--bd-text);
+  --sidebar-accent: var(--bd-fd-accent);
+  --sidebar-accent-foreground: var(--bd-text);
+  --sidebar-border: var(--bd-border);
+}

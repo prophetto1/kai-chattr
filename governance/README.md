@@ -17,9 +17,14 @@ Machine-enforced governance for kai-chattr.
 - Jon flips `locked:true`.
 - Do not pre-fill a taxonomy.
 
-## Browser view
+Current locked frontend rule:
 
-- Generated docs live under `apps/devdocs/content/contracts/`.
-- Do not hand-edit generated contract MDX.
-- Regenerate with `node governance/scripts/build-contract-docs.mjs`.
+- `contracts/frontend.json` locks the `apps/web` component foundation: shadcn/ui source components
+  for UI primitives and Vercel AI Elements / AI SDK React source components for AI/workbench
+  surfaces. Handrolled replacement primitives are not acceptable.
+
+## Validation
+
 - Validate with `node governance/scripts/check-contracts.mjs`.
+- Validate npm dependency declarations with `node governance/scripts/check-deps.mjs`.
+- The local devdocs app has been removed; contract source lives in `governance/contracts/`.

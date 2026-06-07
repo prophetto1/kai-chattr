@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Generates the Fumadocs contract view from governance source files.
- * Do not hand-edit apps/devdocs/content/contracts/*.mdx.
+ * Do not hand-edit the generated <output-dir>/*.mdx (output dir is the first CLI arg).
  */
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, unlinkSync } from 'node:fs'
 import { join, dirname } from 'node:path'
@@ -11,7 +11,11 @@ const here = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(here, '..', '..')
 const GOV = join(ROOT, 'governance')
 const CDIR = join(GOV, 'contracts')
-const OUT = join(ROOT, 'apps', 'devdocs', 'content', 'contracts')
+const OUT = process.argv[2]
+if (!OUT) {
+  console.error('Usage: node build-contract-docs.mjs <output-dir>  (e.g. ./content/contracts)')
+  process.exit(1)
+}
 
 mkdirSync(OUT, { recursive: true })
 for (const f of readdirSync(OUT)) {
