@@ -6,7 +6,7 @@ from collections.abc import Callable
 from typing import Any
 
 from fastapi import Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
 
@@ -34,11 +34,23 @@ def create_security_middleware(
             }
             if frontend_host not in ("127.0.0.1", "localhost"):
                 allowed_origins.add(f"http://{frontend_host}:{frontend_port}")
+            for origin in current_cfg.get("security", {}).get("allowed_origins", []):
+                if isinstance(origin, str) and origin.strip():
+                    allowed_origins.add(origin.strip().rstrip("/"))
+
+            origin = request.headers.get("origin")
+            cors_origin = origin if origin in allowed_origins else None
+
+            if origin and not cors_origin:
+                return JSONResponse({"error": "forbidden: origin not allowed"}, status_code=403)
+
+            if request.method == "OPTIONS" and cors_origin:
+                return _cors_preflight(cors_origin)
 
             # Uploads use random filenames and have path-traversal protection.
             # Frontend HTML and static assets are owned by apps/web, not this API.
-            if path == "/" or path.startswith(("/uploads/", "/api/roles")):
-                return await call_next(request)
+            if path == "/healthz" or path == "/" or path.startswith(("/uploads/", "/api/roles")):
+                return await _with_cors(call_next, request, cors_origin)
 
             if path.startswith(("/api/register", "/api/deregister/", "/api/heartbeat/", "/api/poll/")):
                 client_ip = request.client.host if request.client else ""
@@ -54,14 +66,10 @@ def create_security_middleware(
                         return _forbidden(
                             f"remote agent request requires a valid bearer token. Source {client_ip} is not allowed."
                         )
-                return await call_next(request)
-
-            origin = request.headers.get("origin")
-            if origin and origin not in allowed_origins:
-                return JSONResponse({"error": "forbidden: origin not allowed"}, status_code=403)
+                return await _with_cors(call_next, request, cors_origin)
 
             if path.startswith("/api/runtime/"):
-                return await call_next(request)
+                return await _with_cors(call_next, request, cors_origin)
 
             auth_header = request.headers.get("authorization", "")
             if auth_header.lower().startswith("bearer ") and (
@@ -69,7 +77,7 @@ def create_security_middleware(
                 or path.startswith(("/api/rules/", "/api/terminal/"))
             ):
                 if resolve_authenticated_agent(request):
-                    return await call_next(request)
+                    return await _with_cors(call_next, request, cors_origin)
 
             req_token = request.headers.get("x-session-token") or request.query_params.get("token")
             if req_token != get_session_token():
@@ -78,7 +86,7 @@ def create_security_middleware(
                     status_code=403,
                 )
 
-            return await call_next(request)
+            return await _with_cors(call_next, request, cors_origin)
 
     return SecurityMiddleware
 
@@ -92,3 +100,30 @@ def _configured_port(config: dict[str, Any], section: str, key: str, fallback: i
 
 def _forbidden(reason: str):
     return JSONResponse({"error": f"forbidden: {reason}"}, status_code=403)
+
+
+async def _with_cors(call_next, request: Request, origin: str | None):
+    response = await call_next(request)
+    _add_cors_headers(response, origin)
+    return response
+
+
+def _cors_preflight(origin: str) -> Response:
+    response = Response(status_code=204)
+    _add_cors_headers(response, origin)
+    response.headers["Access-Control-Allow-Methods"] = (
+        "GET,POST,PATCH,DELETE,OPTIONS"
+    )
+    response.headers["Access-Control-Allow-Headers"] = (
+        "authorization,content-type,x-agent-token,x-chattr-remote-token,"
+        "x-agent-remote-token,x-session-token"
+    )
+    response.headers["Access-Control-Max-Age"] = "600"
+    return response
+
+
+def _add_cors_headers(response: Response, origin: str | None) -> None:
+    if not origin:
+        return
+    response.headers["Access-Control-Allow-Origin"] = origin
+    response.headers["Vary"] = "Origin"

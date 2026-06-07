@@ -3,6 +3,11 @@ port = 8840
 host = "127.0.0.1"
 data_dir = "./data"
 
+[database]
+# File mode keeps local startup dependency-free until SOPS injects
+# KAI_CHATTR_DATABASE_URL for Postgres-backed API persistence.
+mode = "file"
+
 [frontend]
 dev_host = "127.0.0.1"
 dev_port = 8800

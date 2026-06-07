@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 
 from app.stores.messages import MessageStore
 from app.stores.rules import RuleStore
+from app.stores.factory import create_rule_store
 from app.stores.summaries import SummaryStore
 from app.stores.jobs import JobStore
 from app.stores.schedules import ScheduleStore, parse_schedule_spec
@@ -354,7 +355,7 @@ def configure(cfg: dict, session_token: str = ""):
     legacy_decisions = Path(data_dir) / "decisions.json"
     if not rules_path.exists() and legacy_decisions.exists():
         legacy_decisions.rename(rules_path)
-    rules = RuleStore(str(rules_path))
+    rules = create_rule_store(cfg, str(rules_path))
     rules.on_change(_on_rule_change)
 
     summaries = SummaryStore(str(Path(data_dir) / "summaries.json"))
@@ -1630,6 +1631,15 @@ async def get_status():
     status = agents.get_status()
     status["paused"] = any(router.is_paused(ch) for ch in room_settings.get("channels", ["general"]))
     return status
+
+
+async def healthz():
+    database_mode = config.get("database", {}).get("mode", "file") if config else "unconfigured"
+    return JSONResponse({
+        "ok": True,
+        "service": "kai-chattr-api",
+        "database_mode": database_mode,
+    })
 
 
 def _runtime_display_host(request: Request) -> str:

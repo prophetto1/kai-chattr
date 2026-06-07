@@ -8,6 +8,7 @@ override values from config.toml. This lets dotfiles/launcher layers run
 isolated instances per project without editing the repo's config file.
 
   CHATTR_DATA_DIR        → server.data_dir
+  CHATTR_HOST            → server.host
   CHATTR_PORT            → server.port           (int)
   CHATTR_MCP_HTTP_PORT   → mcp.http_port         (int)
   CHATTR_MCP_SSE_PORT    → mcp.sse_port          (int)
@@ -112,6 +113,40 @@ def _apply_env_overrides(config: dict) -> None:
                 p = (Path.cwd() / p).resolve()
             value = str(p)
         config.setdefault(section, {})[key] = value
+
+    server = config.setdefault("server", {})
+    host = (
+        os.environ.get("CHATTR_HOST", "").strip()
+        or os.environ.get("KAI_CHATTR_API_HOST", "").strip()
+    )
+    if host:
+        server["host"] = host
+
+    port = os.environ.get("PORT", "").strip()
+    if port and not os.environ.get("CHATTR_PORT"):
+        try:
+            server["port"] = int(port)
+        except ValueError:
+            print(f"  Warning: PORT={port!r} is not a valid integer, ignoring")
+
+    database = config.setdefault("database", {})
+    database_url = os.environ.get("KAI_CHATTR_DATABASE_URL", "").strip()
+    database_mode = os.environ.get("KAI_CHATTR_DATABASE_MODE", "").strip().lower()
+    if database_url:
+        database["url"] = database_url
+    if database_mode:
+        database["mode"] = database_mode
+    elif database_url:
+        database["mode"] = "postgres"
+    database.setdefault("mode", "file")
+
+    allowed_origins = os.environ.get("KAI_CHATTR_ALLOWED_ORIGINS", "").strip()
+    if allowed_origins:
+        config.setdefault("security", {})["allowed_origins"] = [
+            origin.strip().rstrip("/")
+            for origin in allowed_origins.split(",")
+            if origin.strip()
+        ]
 
 
 def load_config(root: Path | None = None) -> dict:

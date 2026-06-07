@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -67,11 +67,24 @@ function startChild(label, command, args, cwd, env) {
 
 function shutdown(code) {
   for (const child of children) {
-    if (!child.killed) {
-      child.kill();
-    }
+    killProcessTree(child);
   }
   process.exit(code);
+}
+
+function killProcessTree(child) {
+  if (child.killed || typeof child.pid !== 'number') {
+    return;
+  }
+
+  if (process.platform === 'win32') {
+    spawnSync('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], {
+      stdio: 'ignore',
+    });
+    return;
+  }
+
+  child.kill();
 }
 
 function writeRedacted(stream, label, data) {

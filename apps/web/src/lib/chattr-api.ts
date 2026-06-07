@@ -46,6 +46,17 @@ export async function chattrHeaders(init?: HeadersInit) {
   return headers
 }
 
+export function chattrApiUrl(path: string) {
+  const configuredOrigin = import.meta.env.VITE_KAI_CHATTR_API_ORIGIN
+  const origin = typeof configuredOrigin === 'string' ? configuredOrigin.replace(/\/$/, '') : ''
+
+  if (!origin || /^https?:\/\//i.test(path)) {
+    return path
+  }
+
+  return `${origin}${path.startsWith('/') ? path : `/${path}`}`
+}
+
 export async function chattrJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = await chattrHeaders(init.headers)
 
@@ -53,7 +64,7 @@ export async function chattrJson<T>(path: string, init: RequestInit = {}): Promi
     headers.set('Content-Type', 'application/json')
   }
 
-  const response = await fetch(path, {
+  const response = await fetch(chattrApiUrl(path), {
     ...init,
     cache: 'no-store',
     headers,

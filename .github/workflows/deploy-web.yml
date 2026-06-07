@@ -27,4 +27,5 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy apps/web/dist --project-name=kai-chattr --branch=${{ github.ref_name }}
+          workingDirectory: apps/web
+          command: pages deploy dist --project-name=kai-chattr --branch=${{ github.ref_name }}

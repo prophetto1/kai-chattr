@@ -1,0 +1,104 @@
+import os
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = ROOT.parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from app import config as config_loader  # noqa: E402
+
+
+def test_database_url_env_selects_postgres_mode(monkeypatch):
+    monkeypatch.setenv(
+        "KAI_CHATTR_DATABASE_URL",
+        "postgresql://kai_chattr:secret@ep-dev-example.us-east-2.aws.neon.tech/kai_chattr_dev?sslmode=require",
+    )
+
+    config = config_loader.load_config(ROOT)
+
+    assert config["database"]["mode"] == "postgres"
+    assert config["database"]["url"] == os.environ["KAI_CHATTR_DATABASE_URL"]
+
+
+def test_hosted_env_overrides_select_host_port_and_allowed_origins(monkeypatch):
+    monkeypatch.setenv("CHATTR_HOST", "0.0.0.0")
+    monkeypatch.setenv("PORT", "9000")
+    monkeypatch.setenv(
+        "KAI_CHATTR_ALLOWED_ORIGINS",
+        "https://dev.kai-chattr.pages.dev,https://kai-chattr.pages.dev/",
+    )
+
+    config = config_loader.load_config(ROOT)
+
+    assert config["server"]["host"] == "0.0.0.0"
+    assert config["server"]["port"] == 9000
+    assert config["security"]["allowed_origins"] == [
+        "https://dev.kai-chattr.pages.dev",
+        "https://kai-chattr.pages.dev",
+    ]
+
+
+def test_alembic_scaffold_exists_for_services_api():
+    assert (ROOT / "alembic.ini").exists()
+    env_py = ROOT / "migrations" / "env.py"
+    assert env_py.exists()
+    assert 'VERSION_TABLE = "kai_chattr_alembic_version"' in env_py.read_text("utf-8")
+    assert "MIGRATION_DATABASE_URL_ENV" in env_py.read_text("utf-8")
+    versions = ROOT / "migrations" / "versions"
+    assert versions.exists()
+    assert any(path.name.endswith("_create_board_rules.py") for path in versions.iterdir())
+
+
+def test_sqlalchemy_rule_store_supports_rule_lifecycle(tmp_path):
+    from app.stores.rules_db import SqlAlchemyRuleStore
+
+    store = SqlAlchemyRuleStore(f"sqlite:///{tmp_path / 'rules.db'}")
+
+    created = store.propose(
+        "Keep Board rules in the API-owned data plane.",
+        "codex",
+        "Postgres migration smoke test",
+    )
+    assert created is not None
+    assert created["id"] == 1
+    assert created["status"] == "pending"
+
+    drafted = store.make_draft(created["id"])
+    assert drafted["status"] == "draft"
+
+    activated = store.activate(created["id"])
+    assert activated["status"] == "active"
+    assert store.active_list() == {
+        "epoch": 1,
+        "rules": ["Keep Board rules in the API-owned data plane."],
+    }
+
+    edited = store.edit(created["id"], text="Keep Board rules in Postgres.")
+    assert edited["text"] == "Keep Board rules in Postgres."
+    assert store.active_list()["epoch"] == 2
+
+    archived = store.deactivate(created["id"])
+    assert archived["status"] == "archived"
+    assert store.active_list() == {"epoch": 3, "rules": []}
+
+    deleted = store.delete(created["id"])
+    assert deleted["id"] == created["id"]
+    assert store.list_all() == []
+
+
+def test_rule_store_factory_uses_sqlalchemy_when_database_configured(tmp_path):
+    from app.stores.factory import create_rule_store
+    from app.stores.rules_db import SqlAlchemyRuleStore
+
+    config = {
+        "database": {
+            "mode": "postgres",
+            "url": f"sqlite:///{tmp_path / 'rules.db'}",
+        }
+    }
+
+    store = create_rule_store(config, str(tmp_path / "rules.json"))
+
+    assert isinstance(store, SqlAlchemyRuleStore)

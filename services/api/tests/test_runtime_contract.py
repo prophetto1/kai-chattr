@@ -16,6 +16,7 @@ from app.runtime_contract import (
     DEFAULT_FRONTEND_PORT,
     DEFAULT_MCP_HTTP_PORT,
     DEFAULT_MCP_SSE_PORT,
+    resolve_session_token_from_env,
 )
 from conftest import chattr_test_configure
 
@@ -45,6 +46,7 @@ class RuntimeArchitectureContractTests(unittest.TestCase):
             for route in app_module.app.routes
             if getattr(route, "path", None)
         }
+        self.assertIn("/healthz", paths)
         self.assertIn("/api/runtime/ports", paths)
         self.assertIn("/api/status", paths)
         self.assertIn("/api/right-rail/capabilities", paths)
@@ -62,6 +64,13 @@ class RuntimeArchitectureContractTests(unittest.TestCase):
         self.assertEqual(self.client.get("/workbench", headers=headers).status_code, 404)
         self.assertEqual(self.client.get("/static/app.js", headers=headers).status_code, 404)
 
+    def test_healthz_is_public_and_reports_database_mode(self):
+        response = self.client.get("/healthz")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["ok"], True)
+        self.assertIn("database_mode", response.json())
+
     def test_right_rail_capabilities_are_protected_and_available_when_authenticated(self):
         forbidden = self.client.get("/api/right-rail/capabilities")
         self.assertEqual(forbidden.status_code, 403)
@@ -73,6 +82,56 @@ class RuntimeArchitectureContractTests(unittest.TestCase):
         self.assertEqual(authed.status_code, 200)
         tab_ids = [tab["id"] for tab in authed.json()["tabs"]]
         self.assertEqual(tab_ids, ["rules", "jobs", "locked", "pins"])
+
+    def test_configured_origin_gets_cors_preflight_without_session_token(self):
+        with tempfile.TemporaryDirectory() as data_dir:
+            token = chattr_test_configure(
+                data_dir,
+                extra_cfg={
+                    "security": {
+                        "allowed_origins": ["https://dev.kai-chattr.pages.dev"],
+                    },
+                },
+            )
+            client = TestClient(app_module.app)
+
+            preflight = client.options(
+                "/api/right-rail/capabilities",
+                headers={
+                    "Origin": "https://dev.kai-chattr.pages.dev",
+                    "Access-Control-Request-Method": "GET",
+                    "Access-Control-Request-Headers": "x-session-token",
+                },
+            )
+            self.assertEqual(preflight.status_code, 204)
+            self.assertEqual(
+                preflight.headers["access-control-allow-origin"],
+                "https://dev.kai-chattr.pages.dev",
+            )
+
+            authed = client.get(
+                "/api/right-rail/capabilities",
+                headers={
+                    "Origin": "https://dev.kai-chattr.pages.dev",
+                    "X-Session-Token": token,
+                },
+            )
+            self.assertEqual(authed.status_code, 200)
+            self.assertEqual(
+                authed.headers["access-control-allow-origin"],
+                "https://dev.kai-chattr.pages.dev",
+            )
+
+    def test_hosted_session_token_fails_closed_when_missing(self):
+        from pytest import MonkeyPatch
+
+        monkeypatch = MonkeyPatch()
+        monkeypatch.delenv("KAI_CHATTR_SESSION_TOKEN", raising=False)
+        monkeypatch.delenv("CHATTR_SESSION_TOKEN", raising=False)
+        self.addCleanup(monkeypatch.undo)
+
+        with self.assertRaises(RuntimeError):
+            resolve_session_token_from_env(require_configured=True)
 
 
 if __name__ == "__main__":

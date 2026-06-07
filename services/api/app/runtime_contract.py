@@ -22,13 +22,15 @@ class SessionTokenContract:
     source: str
 
 
-def resolve_session_token_from_env() -> SessionTokenContract:
+def resolve_session_token_from_env(*, require_configured: bool = False) -> SessionTokenContract:
     token = (
         os.environ.get("KAI_CHATTR_SESSION_TOKEN", "").strip()
         or os.environ.get("CHATTR_SESSION_TOKEN", "").strip()
     )
     if token:
         return SessionTokenContract(token=token, source="environment")
+    if require_configured:
+        raise RuntimeError("KAI_CHATTR_SESSION_TOKEN is required for hosted API startup")
     return SessionTokenContract(token=secrets.token_hex(32), source="generated in-memory")
 
 

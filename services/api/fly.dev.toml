@@ -1,0 +1,27 @@
+app = "kai-chattr-api-dev"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[deploy]
+  release_command = "alembic upgrade head"
+
+[env]
+  CHATTR_HOST = "0.0.0.0"
+  KAI_CHATTR_DATABASE_MODE = "postgres"
+  KAI_CHATTR_REQUIRE_SESSION_TOKEN = "1"
+  KAI_CHATTR_ALLOWED_ORIGINS = "https://dev.kai-chattr.pages.dev"
+
+[http_service]
+  internal_port = 8840
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
