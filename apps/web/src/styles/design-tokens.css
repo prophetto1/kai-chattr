@@ -1,11 +1,36 @@
 /*
- * JWC Global docs tokens for Fumadocs.
- * Typography and primary blue are borrowed from Blockdata devdocs.
+ * JWC Global design tokens — single source of color + type truth.
+ *
+ * Structure (refactored, behaviour-preserving):
+ *   1. PRIMITIVES  — theme-independent: fonts, type scales, fixed brand accents, sizes.
+ *   2. THEME: DAY        (:root)        — light. Default when no theme class is present.
+ *   3. THEME: NIGHT      (.dark)        — the base experience (the app ships with .dark).
+ *   4. THEME: CATPPUCCIN (.catppuccin)  — mocha, now a complete theme.
+ *
+ * Each theme block defines ONE canonical semantic palette (--background … --ring,
+ * --sidebar*, --wb-tab-icon*) in oklch, PLUS the --bd-* docs prose/code palette.
+ * fumadocs --color-fd-* derive FROM the semantic palette (see fumadocs-theme.css),
+ * and the shadcn bridge registers utilities from it (see shadcn-tokens.css). Nothing
+ * redefines the semantic palette a second time, so there is no load-order conflict.
+ *
+ * Values are the ones that previously won after the full cascade — relocated here,
+ * deduped, and completed for every theme. No token name was removed.
+ *
+ * WORKBENCH SURFACE ROLES (which token drives which area of the redesign):
+ *   app background / chat scroll ...... --background
+ *   left rail ......................... --sidebar (+ --sidebar-border)
+ *   dock + message / composer cards ... --card / --popover
+ *   hover + lane separators ........... --accent / --border / --border-strong
+ *   primary accent + active tab ....... --primary (+ --ring)
+ *   dock-tab icons .................... --wb-tab-icon / --wb-tab-icon-active
+ * Flip the whole look by swapping the theme class (.dark = night, none = day,
+ * .catppuccin = mocha, .ember = warm); every surface re-themes from these tokens.
  */
 
+/* ════════════════════════════════════════════════════════════════════════
+ * 1. PRIMITIVES — theme-independent (fonts, type scales, fixed accents, sizes)
+ * ════════════════════════════════════════════════════════════════════════ */
 :root {
-  color-scheme: light dark;
-
   /* Blockdata docs fonts: Inter UI, Plus Jakarta Sans prose, JetBrains Mono code */
   --bd-font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --bd-font-prose: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -23,7 +48,7 @@
   --app-font-sans: var(--bd-font-ui);
   --bd-font-serif: var(--kai-font-serif);
 
-  /* KAI content accents retained for existing home content. */
+  /* KAI fixed content accents (theme-independent, retained for home content). */
   --kai-brand-k: #f06138;
   --kai-brand-a: #2e6bff;
   --kai-brand-i: #a87cf7;
@@ -39,12 +64,7 @@
   --layer-k-bg: rgba(240, 97, 56, 0.16);
   --layer-a-bg: rgba(46, 107, 255, 0.16);
   --layer-i-bg: rgba(168, 124, 247, 0.18);
-  --brand: #2e6bff;
-  --brand-2: #1d55e8;
-  --brand-bg: rgba(46, 107, 255, 0.14);
-  --brand-text: #2e6bff;
-  --bd-brand: var(--brand);
-  --bd-heading: #1c1917;
+
   --bd-radius: 0.625rem;
 
   /* KAI A8 typography roles */
@@ -103,15 +123,62 @@
   --bd-fs-body: 14px;
   --bd-fs-label: 12px;
   --bd-fs-sidebar: 14px;
+}
 
-  /* Light (default for Fumadocs until .dark) */
+/* ════════════════════════════════════════════════════════════════════════
+ * 2. THEME: DAY (:root) — light. Default with no theme class.
+ * ════════════════════════════════════════════════════════════════════════ */
+:root {
+  color-scheme: light;
+
+  /* — Canonical semantic palette (shadcn) — */
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0.21 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+  --secondary: oklch(0.965 0 0);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.965 0 0);
+  --muted-foreground: oklch(0.45 0 0);
+  --accent: oklch(0.95 0 0);
+  --accent-foreground: var(--foreground);
+  --border: oklch(0 0 0 / 10%);
+  --border-strong: oklch(0 0 0 / 16%);
+  --input: oklch(0 0 0 / 12%);
+  --primary: oklch(0.55 0.18 258);
+  --primary-foreground: oklch(0.99 0 0);
+  --ring: oklch(0.55 0.18 258 / 45%);
+
+  /* — Sidebar — */
+  --sidebar: hsl(0 0% 98%);
+  --sidebar-foreground: hsl(240 5.3% 26.1%);
+  --sidebar-primary: hsl(240 5.9% 10%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(240 4.8% 95.9%);
+  --sidebar-accent-foreground: hsl(240 5.9% 10%);
+  --sidebar-border: hsl(220 13% 91%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+
+  /* — Workbench dock-tab icon — */
+  --wb-tab-icon: oklch(0.30 0 0);
+  --wb-tab-icon-active: var(--primary);
+
+  /* — Docs content palette (--bd-*): drives fumadocs prose & code — */
+  --brand: #2e6bff;
+  --brand-2: #1d55e8;
+  --brand-bg: rgba(46, 107, 255, 0.14);
+  --brand-text: #2e6bff;
+  --bd-brand: var(--brand);
+  --bd-heading: #1c1917;
+  --bd-on-brand: #ffffff;
   --bd-text: #1c1917;
   --bd-text-muted: rgba(28, 25, 23, 0.48);
   --bd-border: rgba(28, 25, 23, 0.1);
   --bd-card: #ffffff;
   --bd-background: #faf9f7;
   --bd-muted: #f0eeed;
-  --bd-on-brand: #ffffff;
   --bd-fd-background: #f7f4ef;
   --bd-fd-muted: #f3f0ec;
   --bd-fd-popover: #fefdfa;
@@ -125,25 +192,59 @@
   --bd-code-border: color-mix(in oklab, var(--bd-border) 78%, var(--bd-brand) 22%);
   --bd-inline-code-bg: color-mix(in oklab, #f5ebe6 72%, #faf9f7 28%);
   --bd-pre-bg: color-mix(in oklab, #ffffff 88%, #faf9f7 12%);
-
   --shiki-light-bg: var(--bd-pre-bg);
   --shiki-dark-bg: var(--bd-pre-bg);
 }
-/* ── Dark Themes ── */
 
-.dark,
-.catppuccin {
-  color-scheme: dark;
-}
-
-/* Default Dark (Dusk) */
+/* ════════════════════════════════════════════════════════════════════════
+ * 3. THEME: NIGHT (.dark) — the base experience. App ships with class="dark".
+ *    Layered surfaces: bg(editor) < card/dock < popover < accent(hover).
+ * ════════════════════════════════════════════════════════════════════════ */
 .dark {
+  color-scheme: dark;
+
+  /* — Canonical semantic palette (shadcn) — */
+  --background: oklch(0.185 0.004 270);
+  --foreground: oklch(0.95 0 0);
+  --card: oklch(0.215 0.004 270);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.235 0.004 270);
+  --popover-foreground: var(--foreground);
+  --secondary: oklch(0.235 0.004 270);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.235 0.004 270);
+  --muted-foreground: oklch(0.68 0.008 270);
+  --accent: oklch(0.275 0.005 270);
+  --accent-foreground: var(--foreground);
+  --border: oklch(1 0 0 / 11%);
+  --border-strong: oklch(1 0 0 / 16%);
+  --input: oklch(1 0 0 / 14%);
+  --primary: oklch(0.62 0.17 258);
+  --primary-foreground: oklch(0.98 0 0);
+  --ring: oklch(0.62 0.17 258 / 55%);
+
+  /* — Sidebar — */
+  --sidebar: oklch(0.205 0.004 270);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: hsl(224.3 76.3% 48%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: oklch(0.275 0.005 270);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: oklch(1 0 0 / 9%);
+  --sidebar-ring: var(--ring);
+
+  /* — Workbench dock-tab icon — */
+  --wb-tab-icon: oklch(0.97 0 0);
+  --wb-tab-icon-active: var(--primary);
+
+  /* — Docs content palette (--bd-*) — */
   --bd-brand: #2e6bff;
   --brand: var(--bd-brand);
   --brand-2: #6f97ff;
   --brand-bg: rgba(46, 107, 255, 0.16);
   --brand-text: #8fb0ff;
   --bd-heading: rgb(238, 238, 238);
+  --bd-on-brand: #ffffff;
   --bd-text: rgb(238, 238, 238);
   --bd-text-muted: rgba(255, 255, 255, 0.447);
   --bd-border: rgba(255, 255, 255, 0.1);
@@ -167,14 +268,55 @@
   --shiki-dark-bg: var(--bd-pre-bg);
 }
 
-/* Catppuccin Mocha */
+/* ════════════════════════════════════════════════════════════════════════
+ * 4. THEME: CATPPUCCIN MOCHA (.catppuccin) — completed to a full theme.
+ *    Semantic palette mapped from the existing mocha --bd-* values.
+ * ════════════════════════════════════════════════════════════════════════ */
 .catppuccin {
+  color-scheme: dark;
+
+  /* — Canonical semantic palette (shadcn), mapped from mocha — */
+  --background: #1e1e2e; /* base */
+  --foreground: #cdd6f4; /* text */
+  --card: #181825; /* mantle */
+  --card-foreground: var(--foreground);
+  --popover: #11111b; /* crust */
+  --popover-foreground: var(--foreground);
+  --secondary: #313244; /* surface0 */
+  --secondary-foreground: var(--foreground);
+  --muted: #313244;
+  --muted-foreground: #a6adc8; /* subtext0 */
+  --accent: #45475a; /* surface1 */
+  --accent-foreground: var(--foreground);
+  --border: #45475a;
+  --border-strong: #585b70;
+  --input: #585b70; /* surface2 */
+  --primary: #cba6f7; /* mauve */
+  --primary-foreground: #1e1e2e;
+  --ring: #cba6f7;
+
+  /* — Sidebar — */
+  --sidebar: #181825;
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: #cba6f7;
+  --sidebar-primary-foreground: #1e1e2e;
+  --sidebar-accent: #45475a;
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: #45475a;
+  --sidebar-ring: var(--ring);
+
+  /* — Workbench dock-tab icon — */
+  --wb-tab-icon: #cdd6f4;
+  --wb-tab-icon-active: var(--primary);
+
+  /* — Docs content palette (--bd-*) — */
   --bd-brand: #cba6f7;
   --brand: var(--bd-brand);
   --brand-2: #f5c2e7;
   --brand-bg: rgba(203, 166, 247, 0.15);
   --brand-text: #cba6f7;
   --bd-heading: #f5e0dc;
+  --bd-on-brand: #1e1e2e;
   --bd-text: #cdd6f4;
   --bd-text-muted: #a6adc8;
   --bd-border: #45475a;
@@ -194,6 +336,78 @@
   --bd-code-border: #585b70;
   --bd-inline-code-bg: rgba(203, 166, 247, 0.15);
   --bd-pre-bg: #11111b;
+  --shiki-light-bg: var(--bd-pre-bg);
+  --shiki-dark-bg: var(--bd-pre-bg);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+ * 5. THEME: EMBER (.ember) — warm dark. Warm charcoal surfaces + amber accent.
+ *    Same lightness ladder as Night, shifted to a warm hue with a gold accent.
+ * ════════════════════════════════════════════════════════════════════════ */
+.ember {
+  color-scheme: dark;
+
+  /* — Canonical semantic palette (shadcn) — */
+  --background: oklch(0.185 0.008 64);
+  --foreground: oklch(0.95 0.01 70);
+  --card: oklch(0.215 0.009 64);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.235 0.01 64);
+  --popover-foreground: var(--foreground);
+  --secondary: oklch(0.235 0.01 64);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.235 0.01 64);
+  --muted-foreground: oklch(0.7 0.025 70);
+  --accent: oklch(0.28 0.015 64);
+  --accent-foreground: var(--foreground);
+  --border: oklch(0.9 0.04 70 / 12%);
+  --border-strong: oklch(0.9 0.04 70 / 18%);
+  --input: oklch(0.9 0.04 70 / 15%);
+  --primary: oklch(0.78 0.14 68);
+  --primary-foreground: oklch(0.2 0.03 64);
+  --ring: oklch(0.78 0.14 68 / 50%);
+
+  /* — Sidebar — */
+  --sidebar: oklch(0.205 0.009 64);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: oklch(0.78 0.14 68);
+  --sidebar-primary-foreground: oklch(0.2 0.03 64);
+  --sidebar-accent: oklch(0.28 0.015 64);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: oklch(0.9 0.04 70 / 10%);
+  --sidebar-ring: var(--ring);
+
+  /* — Workbench dock-tab icon — */
+  --wb-tab-icon: oklch(0.96 0.012 70);
+  --wb-tab-icon-active: var(--primary);
+
+  /* — Docs content palette (--bd-*) — */
+  --bd-brand: #e8973a;
+  --brand: var(--bd-brand);
+  --brand-2: #f4b15c;
+  --brand-bg: rgba(232, 151, 58, 0.16);
+  --brand-text: #f0b274;
+  --bd-heading: rgb(242, 236, 228);
+  --bd-on-brand: #1c1408;
+  --bd-text: rgb(242, 236, 228);
+  --bd-text-muted: rgba(250, 242, 230, 0.46);
+  --bd-border: rgba(250, 238, 220, 0.1);
+  --bd-card: #211c15;
+  --bd-background: #14110b;
+  --bd-muted: #1d1810;
+  --bd-fd-background: var(--bd-background);
+  --bd-fd-muted: var(--bd-card);
+  --bd-fd-popover: var(--bd-card);
+  --bd-fd-card: var(--bd-card);
+  --bd-fd-secondary: var(--bd-muted);
+  --bd-fd-accent: rgba(250, 238, 220, 0.05);
+  --bd-fd-ring: rgba(232, 151, 58, 0.35);
+  --bd-fd-sidebar-muted: #17130c;
+  --bd-fd-sidebar-secondary: var(--bd-card);
+  --bd-code-text: var(--bd-text);
+  --bd-code-border: rgba(250, 238, 220, 0.1);
+  --bd-inline-code-bg: color-mix(in oklab, rgba(232, 151, 58, 0.14) 88%, #14110b 12%);
+  --bd-pre-bg: color-mix(in oklab, #211c15 88%, #14110b 12%);
   --shiki-light-bg: var(--bd-pre-bg);
   --shiki-dark-bg: var(--bd-pre-bg);
 }

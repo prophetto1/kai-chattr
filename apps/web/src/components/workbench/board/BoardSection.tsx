@@ -23,6 +23,12 @@ type BoardSectionProps = {
   title: string
 }
 
+/*
+ * Flat lane section. No enclosed bordered card — just a lightweight header
+ * (chevron + title + count + optional description) and the items beneath it,
+ * separated by spacing. Matches the cleaner Jobs pattern; the dock pane itself
+ * is the only container.
+ */
 export function BoardSection({
   action,
   children,
@@ -37,12 +43,15 @@ export function BoardSection({
 
   const heading = (
     <>
-      <span className="truncate">{title}</span>
-      <Badge variant="secondary" className="ml-1 h-4 min-w-4 px-1 text-[10px] tabular-nums">
+      <span className="truncate text-xs font-semibold text-foreground">{title}</span>
+      <Badge
+        variant="secondary"
+        className="h-[18px] min-w-[18px] justify-center rounded-full px-1.5 text-[10px] tabular-nums"
+      >
         {count}
       </Badge>
       {description ? (
-        <span className="ml-1 min-w-0 truncate text-[11px] font-normal text-muted-foreground">
+        <span className="ml-0.5 min-w-0 truncate text-[11px] font-normal text-muted-foreground">
           {description}
         </span>
       ) : null}
@@ -51,34 +60,31 @@ export function BoardSection({
 
   if (!collapsible) {
     return (
-      <section className={cn('overflow-hidden rounded-md border border-border/70 bg-background', className)}>
-        <div className="flex min-h-9 items-center gap-2 border-b border-border/60 px-2">
-          <div className="flex h-8 min-w-0 flex-1 items-center justify-start gap-1 px-1.5 text-xs font-medium">
-            {heading}
-          </div>
+      <section className={cn('pt-2', className)}>
+        <div className="flex min-h-7 items-center gap-2 px-1">
+          <div className="flex min-w-0 flex-1 items-center gap-2">{heading}</div>
           {action ? <div className="shrink-0">{action}</div> : null}
         </div>
-        <div className="space-y-1.5 p-1.5">{children}</div>
+        <div className="flex flex-col gap-2 pt-1.5">{children}</div>
       </section>
     )
   }
 
   return (
-    <Collapsible
-      className={cn('overflow-hidden rounded-md border border-border/70 bg-background', className)}
-      onOpenChange={setOpen}
-      open={open}
-    >
-      <div className="flex min-h-9 items-center gap-2 border-b border-border/60 px-2">
+    <Collapsible className={cn('pt-2', className)} onOpenChange={setOpen} open={open}>
+      <div className="flex min-h-7 items-center gap-2">
         <CollapsibleTrigger asChild>
           <Button
-            className="h-8 min-w-0 flex-1 justify-start gap-1 px-1.5 text-xs font-medium"
+            className="h-7 min-w-0 flex-1 justify-start gap-2 rounded-md px-1 text-xs font-semibold hover:bg-accent/60"
             size="sm"
             type="button"
             variant="ghost"
           >
             <IconChevronRight
-              className={cn('size-3.5 shrink-0 transition-transform', open ? 'rotate-90' : '')}
+              className={cn(
+                'size-3.5 shrink-0 text-muted-foreground transition-transform',
+                open ? 'rotate-90' : ''
+              )}
             />
             {heading}
           </Button>
@@ -86,7 +92,7 @@ export function BoardSection({
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>
       <CollapsibleContent>
-        <div className="space-y-1.5 p-1.5">{children}</div>
+        <div className="flex flex-col gap-2 pt-1.5">{children}</div>
       </CollapsibleContent>
     </Collapsible>
   )

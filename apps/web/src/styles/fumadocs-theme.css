@@ -1,28 +1,34 @@
 /*
  * JWC platform tokens for the docs (--color-fd-*). These @theme entries keep the
  * fd-* Tailwind utilities emitting after fumadocs-ui's CSS preset was removed.
- * Source values: design-tokens.css (--bd-*).
+ *
+ * Refactored: the fd CHROME tokens now derive from the ONE canonical semantic
+ * palette (--background/--foreground/--card/… defined per theme in
+ * design-tokens.css) instead of the warm-paper --bd-fd-* set. Because the
+ * semantic palette already switches across :root / .dark / .catppuccin, the fd
+ * tokens follow automatically — so the old per-theme re-declaration block is gone.
+ * Docs PROSE & CODE still read the --bd-* content palette, so typography is intact.
  */
 
 @theme {
-  --color-fd-background: var(--bd-fd-background);
-  --color-fd-foreground: var(--bd-text);
-  --color-fd-muted: var(--bd-fd-muted);
-  --color-fd-muted-foreground: var(--bd-text-muted);
-  --color-fd-popover: var(--bd-fd-popover);
-  --color-fd-popover-foreground: var(--bd-text);
-  --color-fd-card: var(--bd-fd-card);
-  --color-fd-card-foreground: var(--bd-text);
-  --color-fd-border: var(--bd-border);
-  --color-fd-primary: var(--bd-brand);
-  --color-fd-primary-foreground: var(--bd-on-brand);
-  --color-fd-secondary: var(--bd-fd-secondary);
-  --color-fd-secondary-foreground: var(--bd-text);
-  --color-fd-accent: var(--bd-fd-accent);
-  --color-fd-accent-foreground: var(--bd-text);
-  --color-fd-ring: var(--bd-fd-ring);
+  --color-fd-background: var(--background);
+  --color-fd-foreground: var(--foreground);
+  --color-fd-muted: var(--muted);
+  --color-fd-muted-foreground: var(--muted-foreground);
+  --color-fd-popover: var(--popover);
+  --color-fd-popover-foreground: var(--popover-foreground);
+  --color-fd-card: var(--card);
+  --color-fd-card-foreground: var(--card-foreground);
+  --color-fd-border: var(--border);
+  --color-fd-primary: var(--primary);
+  --color-fd-primary-foreground: var(--primary-foreground);
+  --color-fd-secondary: var(--secondary);
+  --color-fd-secondary-foreground: var(--secondary-foreground);
+  --color-fd-accent: var(--accent);
+  --color-fd-accent-foreground: var(--accent-foreground);
+  --color-fd-ring: var(--ring);
 
-  /* Semantic colors for callouts (reserved content form). */
+  /* Semantic colors for callouts (reserved content form, theme-independent). */
   --color-fd-info: oklch(0.62 0.19 256);
   --color-fd-warning: oklch(0.75 0.16 75);
   --color-fd-error: oklch(0.63 0.24 25);
@@ -66,31 +72,13 @@
   }
 }
 
-.dark,
-.catppuccin {
-  --color-fd-background: var(--bd-fd-background);
-  --color-fd-foreground: var(--bd-text);
-  --color-fd-muted: var(--bd-fd-muted);
-  --color-fd-muted-foreground: var(--bd-text-muted);
-  --color-fd-popover: var(--bd-fd-popover);
-  --color-fd-popover-foreground: var(--bd-text);
-  --color-fd-card: var(--bd-fd-card);
-  --color-fd-card-foreground: var(--bd-text);
-  --color-fd-border: var(--bd-border);
-  --color-fd-primary: var(--bd-brand);
-  --color-fd-primary-foreground: var(--bd-on-brand);
-  --color-fd-secondary: var(--bd-fd-secondary);
-  --color-fd-secondary-foreground: var(--bd-text);
-  --color-fd-accent: var(--bd-fd-accent);
-  --color-fd-accent-foreground: var(--bd-text);
-  --color-fd-ring: var(--bd-fd-ring);
-
-  --font-sans: var(--bd-font-ui);
-}
-
-/* Sidebar uses slightly different muted tokens in the dark themes. */
+/*
+ * Docs sidebar uses slightly different muted surfaces than the app chrome in the
+ * dark themes — scoped to the docs sidebar only, sourced from the --bd-* palette.
+ */
 .dark .jwc-docs-sidebar,
-.catppuccin .jwc-docs-sidebar {
+.catppuccin .jwc-docs-sidebar,
+.ember .jwc-docs-sidebar {
   --sidebar: var(--bd-fd-sidebar-secondary);
   --sidebar-foreground: var(--bd-text);
   --sidebar-accent: var(--bd-fd-accent);

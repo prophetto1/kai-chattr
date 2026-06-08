@@ -446,7 +446,7 @@ const docsPaneSource = `# Workbench Surface
 
 const dockContentClassName =
   'm-0 min-h-0 flex-1 overflow-hidden data-[state=active]:flex data-[state=inactive]:hidden'
-const dockWorkspaceContentClassName = `${dockContentClassName} bg-background p-1.5`
+const dockWorkspaceContentClassName = `${dockContentClassName} bg-card`
 
 const composerModelGroups = Array.from(new Set(composerModels.map((model) => model.chef)))
 
@@ -1149,13 +1149,11 @@ export default function WorkbenchPage() {
           />
 
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-            <header className="flex h-9 shrink-0 items-center gap-2 px-3">
-              <Button asChild variant="ghost" size="sm" className="-ml-1 h-7 px-2 text-xs active:scale-95">
-                <a href="/home" aria-label="Exit workbench">
-                  <IconArrowLeft className="size-3.5" />
-                  <span>Exit</span>
-                </a>
-              </Button>
+            <header className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
+                <span className="truncate text-xs font-medium text-foreground">Workbench session</span>
+              </div>
               <div className="ml-auto flex items-center gap-1">
                 <TabsList
                   variant="line"
@@ -1202,7 +1200,7 @@ export default function WorkbenchPage() {
             >
               <div className="flex h-full flex-col bg-background">
                 <Conversation className="flex-1">
-                  <ConversationContent className="mx-auto w-full max-w-2xl gap-5 px-4 py-4">
+                  <ConversationContent className="mx-auto w-full max-w-3xl gap-5 px-4 py-6">
                     {chatMessages.map((m, i) => (
                       <WorkbenchChatMessage
                         index={i}
@@ -1213,8 +1211,8 @@ export default function WorkbenchPage() {
                   </ConversationContent>
                   <ConversationScrollButton />
                 </Conversation>
-                <div className="shrink-0 border-t border-border p-2.5">
-                  <div className="grid gap-2">
+                <div className="shrink-0 px-4 pb-4 pt-1.5">
+                  <div className="mx-auto grid w-full max-w-3xl gap-2">
                     <PromptInput
                       globalDrop
                       multiple
@@ -1225,8 +1223,9 @@ export default function WorkbenchPage() {
                       </PromptInputHeader>
                       <PromptInputBody>
                         <PromptInputTextarea
+                          className="min-h-[72px]"
                           onChange={handleComposerTextChange}
-                          placeholder="Type / for commands"
+                          placeholder="Run task with Claude — type / for commands"
                           value={composerText}
                         />
                       </PromptInputBody>

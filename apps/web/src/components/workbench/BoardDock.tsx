@@ -342,7 +342,7 @@ function BoardDragPreview({
       <BoardItemRow
         className={previewClassName}
         isDragging
-        meta={<>#{rule.id} by {rule.created_by ?? 'user'}</>}
+        meta={<>#{rule.id} by {rule.author ?? 'user'}</>}
         status={status}
         statusClassName={statusBadgeClass(status)}
         title={<span>{rule.text}</span>}
@@ -679,7 +679,7 @@ export function BoardDock() {
             >
               {availableTabs.map((tab) => (
                 <TabsTrigger
-                  className="h-10 min-w-0 flex-1 basis-0 overflow-hidden rounded-none px-1.5 text-xs"
+                  className="h-10 min-w-0 overflow-hidden rounded-none px-3 text-xs"
                   disabled={loading}
                   key={tab.id}
                   value={tab.id}
@@ -715,7 +715,6 @@ export function BoardDock() {
                       <div className="pr-1 pb-2">
                         <BoardDropZone id={`rules:${activeRuleLane.id}`}>
                           <BoardSection
-                            className="shadow-[0_10px_24px_-22px_hsl(var(--foreground)/0.65)]"
                             collapsible={false}
                             count={groupedRules[activeRuleLane.id].length}
                             title={activeRuleLane.label}

@@ -1,19 +1,373 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  IconBrandGithub,
+  IconGitBranch,
+  IconGitFork,
+  IconList,
+  IconPlus,
+  IconSettings2,
+  IconSparkles,
+} from '@tabler/icons-react'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
+
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  createConversation,
+  listBranches,
+  listRecentConversations,
+  listRepositories,
+  listSuggestedTasks,
+  type BranchSummary,
+  type ConversationSummary,
+  type RepositorySummary,
+  type SuggestedTask,
+} from '@/lib/home-start-api'
+
+function HomeRail() {
+  return (
+    <aside className="flex h-screen w-[60px] shrink-0 flex-col items-center border-r border-border bg-background px-2 py-3">
+      <a
+        aria-label="kai-chattr home"
+        className="flex size-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground active:scale-95"
+        href="/home"
+      >
+        K
+      </a>
+      <nav aria-label="Primary workspace" className="mt-3 flex flex-col items-center gap-2">
+        <Button aria-label="New session" size="icon" type="button" variant="ghost">
+          <IconPlus />
+        </Button>
+        <Button aria-label="Conversations" size="icon" type="button" variant="ghost">
+          <IconList />
+        </Button>
+      </nav>
+      <div className="mt-auto flex flex-col items-center gap-2">
+        <Button aria-label="Settings" size="icon" type="button" variant="ghost">
+          <IconSettings2 />
+        </Button>
+        <Avatar className="size-8">
+          <AvatarFallback className="text-xs">J</AvatarFallback>
+        </Avatar>
+      </div>
+    </aside>
+  )
+}
+
+function EmptyText({ children }: { children: string }) {
+  return <p className="text-sm text-muted-foreground">{children}</p>
+}
+
+function OpenRepositoryCard({
+  branches,
+  branchesLoading,
+  canCreate,
+  onCreate,
+  repositories,
+  selectedBranch,
+  selectedRepository,
+  setSelectedBranch,
+  setSelectedRepository,
+}: {
+  branches: BranchSummary[]
+  branchesLoading: boolean
+  canCreate: boolean
+  onCreate: () => void
+  repositories: RepositorySummary[]
+  selectedBranch: string
+  selectedRepository: RepositorySummary | null
+  setSelectedBranch: (branch: string) => void
+  setSelectedRepository: (repository: RepositorySummary | null) => void
+}) {
+  return (
+    <Card className="min-h-[236px] border-white/10 bg-card/80 py-0 shadow-sm">
+      <CardHeader className="gap-2 px-5 pt-5">
+        <CardTitle aria-level={2} className="flex items-center gap-2 text-base" role="heading">
+          <IconGitFork className="size-4" />
+          Open Repository
+        </CardTitle>
+        <CardDescription className="text-xs text-muted-foreground">
+          Select or insert a URL
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3 px-5 pb-5">
+        <Select
+          onValueChange={(value) => {
+            setSelectedBranch('')
+            setSelectedRepository(
+              repositories.find((repository) => repository.full_name === value) ?? null
+            )
+          }}
+          value={selectedRepository?.full_name ?? ''}
+        >
+          <SelectTrigger aria-label="Repository" className="w-full">
+            <SelectValue placeholder="user/repo" />
+          </SelectTrigger>
+          <SelectContent>
+            {repositories.map((repository) => (
+              <SelectItem key={repository.id} value={repository.full_name}>
+                {repository.full_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          disabled={!selectedRepository}
+          onValueChange={setSelectedBranch}
+          value={selectedBranch}
+        >
+          <SelectTrigger aria-label="Branch" className="w-full">
+            <SelectValue
+              placeholder={
+                !selectedRepository
+                  ? 'Select repository first'
+                  : branchesLoading
+                    ? 'Loading branches...'
+                    : 'Select branch...'
+              }
+            />
+          </SelectTrigger>
+          <SelectContent>
+            {branches.map((branch) => (
+              <SelectItem key={branch.name} value={branch.name}>
+                {branch.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Button
+          className="mt-auto w-full active:scale-95"
+          disabled={!canCreate}
+          onClick={onCreate}
+          type="button"
+        >
+          Launch
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
+function NewConversationCard({
+  disabled,
+  onCreate,
+}: {
+  disabled: boolean
+  onCreate: () => void
+}) {
+  return (
+    <Card className="min-h-[236px] border-white/10 bg-card/80 py-0 shadow-sm">
+      <CardHeader className="gap-2 px-5 pt-5">
+        <CardTitle aria-level={2} className="flex items-center gap-2 text-base" role="heading">
+          <IconPlus className="size-4" />
+          Start from Scratch
+        </CardTitle>
+        <CardDescription className="text-xs text-muted-foreground">
+          Start a new conversation that is not connected to an existing repository.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="mt-auto px-5 pb-5">
+        <Button
+          className="w-full active:scale-95"
+          disabled={disabled}
+          onClick={onCreate}
+          type="button"
+        >
+          New Conversation
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
+function RecentConversationsList({
+  conversations,
+}: {
+  conversations: ConversationSummary[]
+}) {
+  return (
+    <section className="min-w-0">
+      <h2 className="px-1 py-3 text-xs font-semibold">Recent Conversations</h2>
+      {conversations.length === 0 ? (
+        <EmptyText>No recent conversations</EmptyText>
+      ) : (
+        <div className="flex flex-col gap-1">
+          {conversations.slice(0, 3).map((conversation) => (
+            <a
+              className="rounded-lg px-3 py-2 text-left transition-colors hover:bg-accent"
+              href={conversation.url}
+              key={conversation.id}
+            >
+              <span className="block truncate text-sm font-medium">{conversation.title}</span>
+              <span className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                <IconBrandGithub className="size-3" />
+                {conversation.selected_repository ?? 'No Repository'}
+                {conversation.selected_branch ? (
+                  <>
+                    <IconGitBranch className="size-3" />
+                    {conversation.selected_branch}
+                  </>
+                ) : null}
+              </span>
+            </a>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function SuggestedTasksList({ tasks }: { tasks: SuggestedTask[] }) {
+  return (
+    <section className="min-w-0">
+      <h2 className="px-1 py-3 text-xs font-semibold">Suggested Tasks</h2>
+      {tasks.length === 0 ? (
+        <EmptyText>No tasks available</EmptyText>
+      ) : (
+        <div className="flex flex-col gap-1">
+          {tasks.slice(0, 3).map((task) => (
+            <button
+              className="rounded-lg px-3 py-2 text-left transition-colors hover:bg-accent active:scale-[0.99]"
+              key={task.id}
+              type="button"
+            >
+              <span className="block truncate text-sm font-medium">{task.title}</span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                {task.repo ?? 'No repository'}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
 
 export default function HomePage() {
+  const [selectedRepository, setSelectedRepository] = useState<RepositorySummary | null>(null)
+  const [selectedBranch, setSelectedBranch] = useState('')
+
+  const repositories = useQuery({
+    queryKey: ['home-start', 'repositories'],
+    queryFn: listRepositories,
+  })
+  const branches = useQuery({
+    enabled: !!selectedRepository,
+    queryKey: ['home-start', 'branches', selectedRepository?.full_name],
+    queryFn: () => listBranches(selectedRepository?.full_name ?? ''),
+  })
+  const recentConversations = useQuery({
+    queryKey: ['home-start', 'recent-conversations'],
+    queryFn: listRecentConversations,
+  })
+  const suggestedTasks = useQuery({
+    queryKey: ['home-start', 'suggested-tasks'],
+    queryFn: listSuggestedTasks,
+  })
+
+  const createMutation = useMutation({
+    mutationFn: createConversation,
+    onSuccess: (response) => {
+      window.location.assign(response.url)
+    },
+  })
+
+  const repositoryItems = repositories.data?.items ?? []
+  const branchItems = branches.data?.items ?? []
+  const recentItems = recentConversations.data?.items ?? []
+  const taskItems = suggestedTasks.data?.items ?? []
+  const apiError = useMemo(
+    () =>
+      repositories.error ??
+      branches.error ??
+      recentConversations.error ??
+      suggestedTasks.error ??
+      createMutation.error,
+    [
+      branches.error,
+      createMutation.error,
+      recentConversations.error,
+      repositories.error,
+      suggestedTasks.error,
+    ]
+  )
+  const creating = createMutation.isPending
+
   return (
-    <main className="flex min-h-screen items-center justify-center p-6">
-      <Card className="w-full max-w-lg">
-        <CardHeader>
-          <CardTitle>Home</CardTitle>
-          <CardDescription>
-            Placeholder — the signed-in user&apos;s home. Auth-gated (gate pending the auth/tenant backend).
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          Per-user / per-tenant content goes here.
-        </CardContent>
-      </Card>
+    <main className="flex min-h-screen bg-background text-foreground">
+      <HomeRail />
+      <section className="flex min-w-0 flex-1 justify-center overflow-y-auto px-6 py-8">
+        <div className="w-full max-w-[720px]">
+          <div className="flex justify-center">
+            <a
+              className="rounded-lg bg-muted px-4 py-2 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              href="https://docs.all-hands.dev/usage/getting-started"
+              rel="noreferrer"
+              target="_blank"
+            >
+              New around here? Not sure where to start? Click here
+            </a>
+          </div>
+
+          <h1 className="mt-16 text-center text-3xl font-semibold tracking-normal text-foreground">
+            Let's Start Building!
+          </h1>
+
+          {apiError ? (
+            <div className="mt-6 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              Home API error: {apiError instanceof Error ? apiError.message : 'Unknown error'}
+            </div>
+          ) : null}
+
+          <div className="mt-10 grid gap-5 md:grid-cols-2">
+            <OpenRepositoryCard
+              branches={branchItems}
+              branchesLoading={branches.isFetching}
+              canCreate={!!selectedRepository && !!selectedBranch && !creating}
+              onCreate={() => {
+                if (!selectedRepository || !selectedBranch) return
+                createMutation.mutate({
+                  repository: {
+                    name: selectedRepository.full_name,
+                    branch: selectedBranch,
+                    gitProvider: selectedRepository.git_provider,
+                  },
+                })
+              }}
+              repositories={repositoryItems}
+              selectedBranch={selectedBranch}
+              selectedRepository={selectedRepository}
+              setSelectedBranch={setSelectedBranch}
+              setSelectedRepository={setSelectedRepository}
+            />
+            <NewConversationCard
+              disabled={creating}
+              onCreate={() => createMutation.mutate({})}
+            />
+          </div>
+
+          <div className="mt-8 grid gap-8 md:grid-cols-2">
+            <RecentConversationsList conversations={recentItems} />
+            <SuggestedTasksList tasks={taskItems} />
+          </div>
+        </div>
+      </section>
     </main>
   )
 }

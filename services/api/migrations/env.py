@@ -19,6 +19,7 @@ from app.database import (  # noqa: E402
 )
 from app.stores.rules_db import Base  # noqa: E402
 import app.stores.jobs_db  # noqa: E402, F401
+import app.stores.home_start_db  # noqa: E402, F401
 
 config = context.config
 VERSION_TABLE = "kai_chattr_alembic_version"

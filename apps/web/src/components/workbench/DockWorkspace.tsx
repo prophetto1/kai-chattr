@@ -47,11 +47,11 @@ export function DockWorkspace({
   return (
     <section
       className={cn(
-        'flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-md bg-card text-card-foreground shadow-[0_1px_3px_rgba(0,0,0,0.10)] ring-1 ring-border/30',
+        'flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-card text-card-foreground',
         className
       )}
     >
-      <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border/35 bg-muted/20 px-2">
+      <header className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-3">
         <div className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted-foreground">
           <Icon className="size-3.5 shrink-0" />
           <div className="min-w-0 truncate text-xs font-medium leading-tight text-foreground">

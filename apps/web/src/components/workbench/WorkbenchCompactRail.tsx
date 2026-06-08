@@ -2,6 +2,8 @@
 
 import {
   IconBell,
+  IconChevronLeft,
+  IconChevronRight,
   IconCircleCheck,
   IconCreditCard,
   IconList,
@@ -10,7 +12,7 @@ import {
   IconSettings2,
   IconSparkles,
 } from '@tabler/icons-react'
-import type { ComponentType, ReactNode } from 'react'
+import { type ComponentType, type ReactNode, useState } from 'react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -44,8 +46,13 @@ type WorkbenchCompactRailProps = {
   activeItem?: WorkbenchCompactRailItem
   account?: WorkbenchCompactRailAccount
   className?: string
+  /** Open (expanded sidebar) by default; collapse toggles to the 60px icon rail. */
+  defaultExpanded?: boolean
   /** Brand mark for the reserved top-left slot. Falls back to a lettermark. */
   logo?: ReactNode
+  /** Sessions list — rendered under a "Sessions" heading when expanded. Wire your
+   *  conversation data here; the rail does not fetch it. */
+  sessions?: ReactNode
   onAccount?: () => void
   onBilling?: () => void
   onBrand?: () => void
@@ -57,8 +64,9 @@ type WorkbenchCompactRailProps = {
   onUpgrade?: () => void
 }
 
-type RailActionProps = {
+type RailItemProps = {
   active?: boolean
+  expanded: boolean
   icon: ComponentType<{ size?: number | string; stroke?: number; className?: string }>
   label: string
   onClick?: () => void
@@ -70,26 +78,35 @@ const statusClassName = {
   online: 'bg-emerald-400',
 } satisfies Record<NonNullable<WorkbenchCompactRailAccount['status']>, string>
 
-function RailAction({ active, icon: Icon, label, onClick }: RailActionProps) {
+function RailItem({ active, expanded, icon: Icon, label, onClick }: RailItemProps) {
+  const button = (
+    <Button
+      aria-current={active ? 'page' : undefined}
+      aria-label={label}
+      className={cn(
+        'text-muted-foreground active:scale-95 hover:bg-accent hover:text-foreground [&_svg]:size-[18px]',
+        expanded
+          ? 'h-9 w-full justify-start gap-2.5 rounded-lg px-2.5 text-[13px] font-medium'
+          : 'size-10 rounded-lg',
+        active && 'bg-accent text-foreground'
+      )}
+      onClick={onClick}
+      size={expanded ? 'default' : 'icon'}
+      type="button"
+      variant="ghost"
+    >
+      <Icon />
+      {expanded ? <span className="truncate">{label}</span> : null}
+    </Button>
+  )
+
+  if (expanded) {
+    return button
+  }
+
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          aria-current={active ? 'page' : undefined}
-          aria-label={label}
-          className={cn(
-            'size-10 rounded-lg text-muted-foreground active:scale-95 [&_svg]:size-[18px]',
-            'hover:bg-accent hover:text-foreground',
-            active && 'bg-accent text-foreground'
-          )}
-          onClick={onClick}
-          size="icon"
-          type="button"
-          variant="ghost"
-        >
-          <Icon />
-        </Button>
-      </TooltipTrigger>
+      <TooltipTrigger asChild>{button}</TooltipTrigger>
       <TooltipContent side="right">{label}</TooltipContent>
     </Tooltip>
   )
@@ -142,7 +159,9 @@ export function WorkbenchCompactRail({
     status: 'online',
   },
   className,
+  defaultExpanded = true,
   logo,
+  sessions,
   onAccount,
   onBilling,
   onBrand,
@@ -153,6 +172,7 @@ export function WorkbenchCompactRail({
   onShowConversations,
   onUpgrade,
 }: WorkbenchCompactRailProps) {
+  const [expanded, setExpanded] = useState(defaultExpanded)
   const accountStatus = account.status ?? 'online'
   const handleAccount = onAccount ?? onOpenSettings
   const handleBilling = onBilling ?? onOpenSettings
@@ -162,30 +182,83 @@ export function WorkbenchCompactRail({
     <aside
       aria-label="Workbench shell rail"
       className={cn(
-        'flex h-full w-[60px] shrink-0 flex-col items-center gap-3 border-r border-border bg-background px-2 py-3',
+        'flex h-full shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200',
+        expanded ? 'w-64' : 'w-[60px]',
         className
       )}
     >
-      <RailBrand logo={logo} onBrand={onBrand} />
+      <div className={cn('flex h-12 shrink-0 items-center gap-2', expanded ? 'pr-2 pl-3' : 'justify-center')}>
+        <RailBrand logo={logo} onBrand={onBrand} />
+        {expanded ? <span className="truncate text-sm font-semibold">kai-chattr</span> : null}
+        {expanded ? (
+          <Button
+            aria-label="Collapse rail"
+            className="ml-auto size-7 text-muted-foreground hover:bg-accent hover:text-foreground active:scale-95"
+            onClick={() => setExpanded(false)}
+            size="icon"
+            type="button"
+            variant="ghost"
+          >
+            <IconChevronLeft className="size-4" />
+          </Button>
+        ) : null}
+      </div>
 
-      <nav aria-label="Workbench actions" className="flex flex-col items-center gap-2">
-        <RailAction
+      {!expanded ? (
+        <div className="flex justify-center pb-1">
+          <Button
+            aria-label="Expand rail"
+            className="size-9 text-muted-foreground hover:bg-accent hover:text-foreground active:scale-95"
+            onClick={() => setExpanded(true)}
+            size="icon"
+            type="button"
+            variant="ghost"
+          >
+            <IconChevronRight className="size-4" />
+          </Button>
+        </div>
+      ) : null}
+
+      <nav
+        aria-label="Workbench actions"
+        className={cn('flex flex-col gap-1 px-2', expanded ? '' : 'items-center')}
+      >
+        <RailItem
           active={activeItem === 'new-session'}
+          expanded={expanded}
           icon={IconPlus}
           label="New session"
           onClick={onNewSession}
         />
-        <RailAction
+        <RailItem
           active={activeItem === 'conversations'}
+          expanded={expanded}
           icon={IconList}
           label="Past conversations"
           onClick={onShowConversations}
         />
       </nav>
 
-      <div className="mt-auto flex flex-col items-center gap-2">
-        <RailAction
+      {expanded && sessions ? (
+        <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-y-auto px-2">
+          <div className="px-1 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Sessions
+          </div>
+          {sessions}
+        </div>
+      ) : (
+        <div className="min-h-0 flex-1" />
+      )}
+
+      <div
+        className={cn(
+          'mt-auto flex flex-col gap-1 border-t border-sidebar-border p-2',
+          expanded ? '' : 'items-center'
+        )}
+      >
+        <RailItem
           active={activeItem === 'settings'}
+          expanded={expanded}
           icon={IconSettings2}
           label="Settings"
           onClick={onOpenSettings}
@@ -193,22 +266,50 @@ export function WorkbenchCompactRail({
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              aria-label={`${account.label} account`}
-              className="relative size-9 rounded-full p-0 hover:bg-accent data-[state=open]:bg-accent data-[state=open]:text-accent-foreground active:scale-95"
-              size="icon"
-              type="button"
-              variant="ghost"
-            >
-              <AccountAvatar account={account} />
-              <span
-                aria-hidden="true"
-                className={cn(
-                  'absolute right-0.5 bottom-0.5 size-1.5 rounded-full ring-2 ring-background',
-                  statusClassName[accountStatus]
-                )}
-              />
-            </Button>
+            {expanded ? (
+              <Button
+                aria-label={`${account.label} account`}
+                className="h-12 w-full justify-start gap-2.5 rounded-lg px-2 hover:bg-accent data-[state=open]:bg-accent active:scale-95"
+                type="button"
+                variant="ghost"
+              >
+                <span className="relative shrink-0">
+                  <AccountAvatar account={account} />
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      'absolute right-0 bottom-0 size-2 rounded-full ring-2 ring-sidebar',
+                      statusClassName[accountStatus]
+                    )}
+                  />
+                </span>
+                <span className="grid min-w-0 flex-1 text-left leading-tight">
+                  <span className="truncate text-[13px] font-medium">{account.label}</span>
+                  {account.secondaryLabel ? (
+                    <span className="truncate text-[11px] text-muted-foreground">
+                      {account.secondaryLabel}
+                    </span>
+                  ) : null}
+                </span>
+              </Button>
+            ) : (
+              <Button
+                aria-label={`${account.label} account`}
+                className="relative size-9 rounded-full p-0 hover:bg-accent data-[state=open]:bg-accent data-[state=open]:text-accent-foreground active:scale-95"
+                size="icon"
+                type="button"
+                variant="ghost"
+              >
+                <AccountAvatar account={account} />
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'absolute right-0.5 bottom-0.5 size-1.5 rounded-full ring-2 ring-sidebar',
+                    statusClassName[accountStatus]
+                  )}
+                />
+              </Button>
+            )}
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"

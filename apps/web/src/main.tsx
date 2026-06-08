@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider, useRouteError } from 'react-router'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { Button } from '@/components/ui/button'
 import HomePage from './routes/home'
@@ -48,8 +49,22 @@ const router = createBrowserRouter([
   { path: '/workbench/board-rules-visual', element: <BoardRulesVisualPage /> },
 ])
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      retry: false,
+    },
+  },
+})
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
   </StrictMode>,
 )

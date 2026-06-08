@@ -10,6 +10,10 @@ services/api/static/
 .DS_Store
 .env
 .env.*
+
+# Root-level screenshots/captures are local artifacts. Put committed assets under an explicit app path.
+/*.png
+
 __pycache__/
 *.pyc
 .venv
@@ -36,6 +40,9 @@ playwright-report/
 
 # Session scratch screenshots (regenerated per session, not project history)
 docs/images/scratch/
+
+# Local planning/reference docs and screenshots stay machine-local.
+docs/
 
 # Python tooling caches & coverage
 .pytest_cache/
