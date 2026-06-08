@@ -1,16 +1,16 @@
 import {
   IconBrandGithub,
+  IconFolderOpen,
   IconGitBranch,
   IconGitFork,
-  IconList,
   IconPlus,
-  IconSettings2,
-  IconSparkles,
+  IconRobot,
 } from '@tabler/icons-react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router'
 
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { WorkbenchCompactRail } from '@/components/workbench/WorkbenchCompactRail'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -37,36 +37,6 @@ import {
   type RepositorySummary,
   type SuggestedTask,
 } from '@/lib/home-start-api'
-
-function HomeRail() {
-  return (
-    <aside className="flex h-screen w-[60px] shrink-0 flex-col items-center border-r border-border bg-background px-2 py-3">
-      <a
-        aria-label="kai-chattr home"
-        className="flex size-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground active:scale-95"
-        href="/home"
-      >
-        K
-      </a>
-      <nav aria-label="Primary workspace" className="mt-3 flex flex-col items-center gap-2">
-        <Button aria-label="New session" size="icon" type="button" variant="ghost">
-          <IconPlus />
-        </Button>
-        <Button aria-label="Conversations" size="icon" type="button" variant="ghost">
-          <IconList />
-        </Button>
-      </nav>
-      <div className="mt-auto flex flex-col items-center gap-2">
-        <Button aria-label="Settings" size="icon" type="button" variant="ghost">
-          <IconSettings2 />
-        </Button>
-        <Avatar className="size-8">
-          <AvatarFallback className="text-xs">J</AvatarFallback>
-        </Avatar>
-      </div>
-    </aside>
-  )
-}
 
 function EmptyText({ children }: { children: string }) {
   return <p className="text-sm text-muted-foreground">{children}</p>
@@ -196,6 +166,35 @@ function NewConversationCard({
   )
 }
 
+function PlaceholderStartCard({
+  description,
+  icon: Icon,
+  title,
+}: {
+  description: string
+  icon: typeof IconRobot
+  title: string
+}) {
+  return (
+    <Card className="min-h-[236px] border-white/10 bg-card/60 py-0 shadow-sm">
+      <CardHeader className="gap-2 px-5 pt-5">
+        <CardTitle aria-level={2} className="flex items-center gap-2 text-base" role="heading">
+          <Icon className="size-4" />
+          {title}
+        </CardTitle>
+        <CardDescription className="text-xs text-muted-foreground">
+          {description}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="mt-auto px-5 pb-5">
+        <Button className="w-full" disabled type="button" variant="secondary">
+          Coming soon
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
 function RecentConversationsList({
   conversations,
 }: {
@@ -260,6 +259,7 @@ function SuggestedTasksList({ tasks }: { tasks: SuggestedTask[] }) {
 }
 
 export default function HomePage() {
+  const navigate = useNavigate()
   const [selectedRepository, setSelectedRepository] = useState<RepositorySummary | null>(null)
   const [selectedBranch, setSelectedBranch] = useState('')
 
@@ -311,20 +311,22 @@ export default function HomePage() {
 
   return (
     <main className="flex min-h-screen bg-background text-foreground">
-      <HomeRail />
+      <WorkbenchCompactRail
+        account={{
+          initials: 'J',
+          label: 'Jon',
+          secondaryLabel: 'kai-chattr workspace',
+          status: 'online',
+        }}
+        activeItem="new-session"
+        defaultExpanded={false}
+        onBrand={() => navigate('/home')}
+        onNewSession={() => createMutation.mutate({})}
+        onOpenSettings={() => navigate('/workbench')}
+        onShowConversations={() => navigate('/home')}
+      />
       <section className="flex min-w-0 flex-1 justify-center overflow-y-auto px-6 py-8">
         <div className="w-full max-w-[720px]">
-          <div className="flex justify-center">
-            <a
-              className="rounded-lg bg-muted px-4 py-2 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-              href="https://docs.all-hands.dev/usage/getting-started"
-              rel="noreferrer"
-              target="_blank"
-            >
-              New around here? Not sure where to start? Click here
-            </a>
-          </div>
-
           <h1 className="mt-16 text-center text-3xl font-semibold tracking-normal text-foreground">
             Let's Start Building!
           </h1>
@@ -359,6 +361,16 @@ export default function HomePage() {
             <NewConversationCard
               disabled={creating}
               onCreate={() => createMutation.mutate({})}
+            />
+            <PlaceholderStartCard
+              description="Create a reusable agent configuration for cloud or local runtime use."
+              icon={IconRobot}
+              title="Design an Agent"
+            />
+            <PlaceholderStartCard
+              description="Select a local folder and connect it through a local runtime bridge."
+              icon={IconFolderOpen}
+              title="Open a Local Repository"
             />
           </div>
 

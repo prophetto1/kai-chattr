@@ -12,7 +12,7 @@ import {
   IconSettings2,
   IconSparkles,
 } from '@tabler/icons-react'
-import { type ComponentType, type ReactNode, useState } from 'react'
+import { type ComponentType, type CSSProperties, type ReactNode, useState } from 'react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -28,6 +28,7 @@ import {
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/cn'
@@ -79,23 +80,32 @@ const statusClassName = {
 } satisfies Record<NonNullable<WorkbenchCompactRailAccount['status']>, string>
 
 function RailItem({ active, expanded, icon: Icon, label, onClick }: RailItemProps) {
+  const itemStyle = {
+    color: active
+      ? 'var(--sidebar-foreground)'
+      : 'color-mix(in oklch, var(--sidebar-foreground) 70%, transparent)',
+  } satisfies CSSProperties
+
   const button = (
     <Button
       aria-current={active ? 'page' : undefined}
       aria-label={label}
       className={cn(
-        'text-muted-foreground active:scale-95 hover:bg-accent hover:text-foreground [&_svg]:size-[18px]',
+        'transition-colors active:scale-95',
         expanded
-          ? 'h-9 w-full justify-start gap-2.5 rounded-lg px-2.5 text-[13px] font-medium'
-          : 'size-10 rounded-lg',
-        active && 'bg-accent text-foreground'
+          ? 'h-[26px] w-full justify-start gap-2 rounded-[5px] px-1.5 text-[13px] font-medium leading-[1.35]'
+          : 'size-[42px] rounded-[5px]',
+        active
+          ? 'bg-transparent font-semibold hover:bg-transparent'
+          : 'hover:bg-sidebar-accent/55'
       )}
       onClick={onClick}
       size={expanded ? 'default' : 'icon'}
+      style={itemStyle}
       type="button"
       variant="ghost"
     >
-      <Icon />
+      <Icon className={expanded ? 'size-[13px] shrink-0' : 'size-[22px]'} stroke={1.75} />
       {expanded ? <span className="truncate">{label}</span> : null}
     </Button>
   )
@@ -179,21 +189,22 @@ export function WorkbenchCompactRail({
   const handleNotifications = onNotifications ?? onOpenSettings
 
   return (
+    <TooltipProvider delayDuration={150}>
     <aside
       aria-label="Workbench shell rail"
       className={cn(
-        'flex h-full shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200',
+        'flex h-full min-h-dvh shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-[width] duration-200',
         expanded ? 'w-64' : 'w-[60px]',
         className
       )}
     >
-      <div className={cn('flex h-12 shrink-0 items-center gap-2', expanded ? 'pr-2 pl-3' : 'justify-center')}>
+      <div className={cn('flex h-14 shrink-0 items-center gap-2', expanded ? 'pr-2 pl-3' : 'justify-center')}>
         <RailBrand logo={logo} onBrand={onBrand} />
-        {expanded ? <span className="truncate text-sm font-semibold">kai-chattr</span> : null}
+        {expanded ? <span className="truncate text-[13px] font-semibold">kai-chattr</span> : null}
         {expanded ? (
           <Button
             aria-label="Collapse rail"
-            className="ml-auto size-7 text-muted-foreground hover:bg-accent hover:text-foreground active:scale-95"
+            className="ml-auto size-8 rounded-[5px] text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:scale-95"
             onClick={() => setExpanded(false)}
             size="icon"
             type="button"
@@ -208,7 +219,7 @@ export function WorkbenchCompactRail({
         <div className="flex justify-center pb-1">
           <Button
             aria-label="Expand rail"
-            className="size-9 text-muted-foreground hover:bg-accent hover:text-foreground active:scale-95"
+            className="size-[42px] rounded-[5px] text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:scale-95"
             onClick={() => setExpanded(true)}
             size="icon"
             type="button"
@@ -221,7 +232,7 @@ export function WorkbenchCompactRail({
 
       <nav
         aria-label="Workbench actions"
-        className={cn('flex flex-col gap-1 px-2', expanded ? '' : 'items-center')}
+        className={cn('flex flex-col', expanded ? 'mt-3 gap-2.5 px-2' : 'mt-3 items-center gap-2.5 px-0')}
       >
         <RailItem
           active={activeItem === 'new-session'}
@@ -240,8 +251,8 @@ export function WorkbenchCompactRail({
       </nav>
 
       {expanded && sessions ? (
-        <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-y-auto px-2">
-          <div className="px-1 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-y-auto px-1.5">
+          <div className="mb-1 px-1.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-foreground/50 dark:text-sidebar-foreground/48">
             Sessions
           </div>
           {sessions}
@@ -252,8 +263,8 @@ export function WorkbenchCompactRail({
 
       <div
         className={cn(
-          'mt-auto flex flex-col gap-1 border-t border-sidebar-border p-2',
-          expanded ? '' : 'items-center'
+          'mt-auto flex flex-col gap-px py-2',
+          expanded ? 'px-1.5' : 'items-center px-0'
         )}
       >
         <RailItem
@@ -269,7 +280,7 @@ export function WorkbenchCompactRail({
             {expanded ? (
               <Button
                 aria-label={`${account.label} account`}
-                className="h-12 w-full justify-start gap-2.5 rounded-lg px-2 hover:bg-accent data-[state=open]:bg-accent active:scale-95"
+                className="h-10 w-full justify-start gap-2 rounded-[5px] px-1.5 hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent active:scale-95"
                 type="button"
                 variant="ghost"
               >
@@ -295,7 +306,7 @@ export function WorkbenchCompactRail({
             ) : (
               <Button
                 aria-label={`${account.label} account`}
-                className="relative size-9 rounded-full p-0 hover:bg-accent data-[state=open]:bg-accent data-[state=open]:text-accent-foreground active:scale-95"
+                className="relative size-[42px] rounded-full p-0 hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground active:scale-95"
                 size="icon"
                 type="button"
                 variant="ghost"
@@ -361,5 +372,6 @@ export function WorkbenchCompactRail({
         </DropdownMenu>
       </div>
     </aside>
+    </TooltipProvider>
   )
 }

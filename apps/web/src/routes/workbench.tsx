@@ -9,6 +9,7 @@
  */
 
 import { type ComponentType, useCallback, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router'
 import { DiffEditor, Editor } from '@monaco-editor/react'
 import {
   IconArrowLeft,
@@ -1028,6 +1029,7 @@ function WorkbenchChatMessage({
 }
 
 export default function WorkbenchPage() {
+  const navigate = useNavigate()
   const chatPanelRef = useRef<PanelImperativeHandle | null>(null)
   const rightDockRef = useRef<PanelImperativeHandle | null>(null)
   const isMobile = useIsMobile()
@@ -1143,13 +1145,14 @@ export default function WorkbenchPage() {
             activeItem="conversations"
             onAccount={() => setSettingsOpen(true)}
             onBilling={() => setSettingsOpen(true)}
+            onBrand={() => navigate('/home')}
             onNewSession={handleNewSession}
             onNotifications={() => setSettingsOpen(true)}
             onOpenSettings={() => setSettingsOpen(true)}
           />
 
-          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-            <header className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-3">
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
+            <header className="flex h-10 shrink-0 items-center gap-2 bg-background px-3 text-foreground">
               <div className="flex min-w-0 items-center gap-2">
                 <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
                 <span className="truncate text-xs font-medium text-foreground">Workbench session</span>
@@ -1189,16 +1192,16 @@ export default function WorkbenchPage() {
                     : 'desktop-workbench-panels'
                 }
               >
-            <ResizablePanel
-              id="chat"
-              order={1}
-              collapsible={isMobile}
-              collapsedSize={0}
-              defaultSize={isMobile && mobileDockOpen ? 0 : 54}
-              minSize={isMobile ? 0 : 32}
-              panelRef={chatPanelRef}
-            >
-              <div className="flex h-full flex-col bg-background">
+                <ResizablePanel
+                  id="chat"
+                  order={1}
+                  collapsible={isMobile}
+                  collapsedSize={0}
+                  defaultSize={isMobile && mobileDockOpen ? 0 : 54}
+                  minSize={isMobile ? 0 : 32}
+                  panelRef={chatPanelRef}
+                >
+                  <div className="flex h-full flex-col bg-background">
                 <Conversation className="flex-1">
                   <ConversationContent className="mx-auto w-full max-w-3xl gap-5 px-4 py-6">
                     {chatMessages.map((m, i) => (
@@ -1304,88 +1307,90 @@ export default function WorkbenchPage() {
                     </PromptInput>
                   </div>
                 </div>
-              </div>
-            </ResizablePanel>
+                  </div>
+                </ResizablePanel>
 
-            <ResizableHandle className="bg-transparent" />
+                <ResizableHandle className="bg-transparent" />
 
-            <ResizablePanel
-              id="dock"
-              order={2}
-              collapsible
-              collapsedSize={0}
-              defaultSize={isMobile ? (mobileDockOpen ? 100 : 0) : 46}
-              minSize={isMobile ? (mobileDockOpen ? 72 : 0) : 28}
-              panelRef={rightDockRef}
-            >
-              <div className="flex h-full min-h-0 flex-col bg-card">
-                <TabsContent value="board" className={dockWorkspaceContentClassName}>
-                  <DockWorkspace
-                    title="Board"
-                    path="Rules, Decisions, Pinned"
-                    icon={IconLayoutKanban}
-                    onClose={closeRightDock}
-                    main={<BoardDock />}
-                  />
-                </TabsContent>
+                <ResizablePanel
+                  id="dock"
+                  order={2}
+                  collapsible
+                  collapsedSize={0}
+                  defaultSize={isMobile ? (mobileDockOpen ? 100 : 0) : 46}
+                  minSize={isMobile ? (mobileDockOpen ? 72 : 0) : 28}
+                  panelRef={rightDockRef}
+                >
+                  <div className="h-full min-h-0 bg-background pb-[5px] pr-[5px]">
+                    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md bg-card">
+                      <TabsContent value="board" className={dockWorkspaceContentClassName}>
+                        <DockWorkspace
+                          title="Board"
+                          path="Rules, Decisions, Pinned"
+                          icon={IconLayoutKanban}
+                          onClose={closeRightDock}
+                          main={<BoardDock />}
+                        />
+                      </TabsContent>
 
-                <TabsContent value="jobs" className={dockWorkspaceContentClassName}>
-                  <DockWorkspace
-                    title="Jobs"
-                    path="Open, Done, Closed"
-                    icon={IconBriefcase}
-                    onClose={closeRightDock}
-                    main={<JobsDock />}
-                  />
-                </TabsContent>
+                      <TabsContent value="jobs" className={dockWorkspaceContentClassName}>
+                        <DockWorkspace
+                          title="Jobs"
+                          path="Open, Done, Closed"
+                          icon={IconBriefcase}
+                          onClose={closeRightDock}
+                          main={<JobsDock />}
+                        />
+                      </TabsContent>
 
-                <TabsContent value="changes" className={dockWorkspaceContentClassName}>
-                  <ChangesViewerPane onClose={closeRightDock} />
-                </TabsContent>
+                      <TabsContent value="changes" className={dockWorkspaceContentClassName}>
+                        <ChangesViewerPane onClose={closeRightDock} />
+                      </TabsContent>
 
-                <TabsContent value="browser" className={dockWorkspaceContentClassName}>
-                  <DockWorkspace
-                    title="Browser"
-                    path="http://localhost:1717/workbench"
-                    icon={IconWorld}
-                    onClose={closeRightDock}
-                    main={<BrowserPreviewPane />}
-                  />
-                </TabsContent>
+                      <TabsContent value="browser" className={dockWorkspaceContentClassName}>
+                        <DockWorkspace
+                          title="Browser"
+                          path="http://localhost:1717/workbench"
+                          icon={IconWorld}
+                          onClose={closeRightDock}
+                          main={<BrowserPreviewPane />}
+                        />
+                      </TabsContent>
 
-                <TabsContent value="code" className={dockWorkspaceContentClassName}>
-                  <SourceViewerPane
-                    code={codePaneSource}
-                    title="Code"
-                    icon={IconCode}
-                    language="tsx"
-                    onClose={closeRightDock}
-                    selectedPath="apps/web/src/routes/workbench.tsx"
-                  />
-                </TabsContent>
+                      <TabsContent value="code" className={dockWorkspaceContentClassName}>
+                        <SourceViewerPane
+                          code={codePaneSource}
+                          title="Code"
+                          icon={IconCode}
+                          language="tsx"
+                          onClose={closeRightDock}
+                          selectedPath="apps/web/src/routes/workbench.tsx"
+                        />
+                      </TabsContent>
 
-                <TabsContent value="docs" className={dockWorkspaceContentClassName}>
-                  <SourceViewerPane
-                    code={docsPaneSource}
-                    title="Docs"
-                    icon={IconBook}
-                    language="markdown"
-                    onClose={closeRightDock}
-                    selectedPath="apps/internal/content/projects/chattr/contracts/frontend.mdx"
-                  />
-                </TabsContent>
+                      <TabsContent value="docs" className={dockWorkspaceContentClassName}>
+                        <SourceViewerPane
+                          code={docsPaneSource}
+                          title="Docs"
+                          icon={IconBook}
+                          language="markdown"
+                          onClose={closeRightDock}
+                          selectedPath="apps/internal/content/projects/chattr/contracts/frontend.mdx"
+                        />
+                      </TabsContent>
 
-                <TabsContent value="terminal" className={dockWorkspaceContentClassName}>
-                  <DockWorkspace
-                    title="Terminal"
-                    path="pnpm dev"
-                    icon={IconTerminal2}
-                    onClose={closeRightDock}
-                    main={<Terminal className="h-full rounded-none border-0" output={terminalOutput} />}
-                  />
-                </TabsContent>
-              </div>
-            </ResizablePanel>
+                      <TabsContent value="terminal" className={dockWorkspaceContentClassName}>
+                        <DockWorkspace
+                          title="Terminal"
+                          path="pnpm dev"
+                          icon={IconTerminal2}
+                          onClose={closeRightDock}
+                          main={<Terminal className="h-full rounded-none border-0" output={terminalOutput} />}
+                        />
+                      </TabsContent>
+                    </div>
+                  </div>
+                </ResizablePanel>
               </ResizablePanelGroup>
             </div>
           </div>

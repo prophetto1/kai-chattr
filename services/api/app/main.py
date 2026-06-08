@@ -58,6 +58,38 @@ _SESSION_DRAFT_RE = _re.compile(r"```session\s*\n(.*?)\n```", _re.DOTALL)
 # Fewer WS frames than one-per-row history; chunked so payload size stays bounded.
 _WS_HISTORY_BATCH_SIZE = 80
 
+DEFAULT_THEME_ID = "night"
+AVAILABLE_THEMES = (
+    {
+        "id": "day",
+        "label": "Day",
+        "description": "Light token palette",
+        "color_scheme": "light",
+        "html_classes": [],
+    },
+    {
+        "id": "night",
+        "label": "Night",
+        "description": "Default dark token palette",
+        "color_scheme": "dark",
+        "html_classes": ["dark"],
+    },
+    {
+        "id": "catppuccin",
+        "label": "Catppuccin",
+        "description": "Mocha token palette",
+        "color_scheme": "dark",
+        "html_classes": ["dark", "catppuccin"],
+    },
+    {
+        "id": "ember",
+        "label": "Ember",
+        "description": "Warm dark token palette",
+        "color_scheme": "dark",
+        "html_classes": ["dark", "ember"],
+    },
+)
+
 
 def _resolve_chattr_version() -> str:
     # Prefer installed-package metadata (works when chattr was `uv pip install`-ed);
@@ -118,6 +150,7 @@ room_settings: dict = {
     "title": "noname",
     "username": "user",
     "font": "sans",
+    "selected_theme": DEFAULT_THEME_ID,
     "channels": ["general"],
     "history_limit": "all",
     "contrast": "normal",
@@ -220,6 +253,21 @@ def _settings_path() -> Path:
     return Path(data_dir) / "settings.json"
 
 
+def _available_theme_ids() -> set[str]:
+    return {str(theme["id"]) for theme in AVAILABLE_THEMES}
+
+
+def _normalize_theme_id(value) -> str | None:
+    if not isinstance(value, str):
+        return None
+    theme_id = value.strip().lower()
+    return theme_id if theme_id in _available_theme_ids() else None
+
+
+def _selected_theme_id() -> str:
+    return _normalize_theme_id(room_settings.get("selected_theme")) or DEFAULT_THEME_ID
+
+
 def _load_settings():
     global room_settings
     p = _settings_path()
@@ -234,6 +282,7 @@ def _load_settings():
         room_settings["channels"] = ["general"]
     elif "general" not in room_settings["channels"]:
         room_settings["channels"].insert(0, "general")
+    room_settings["selected_theme"] = _selected_theme_id()
 
 
 def _save_settings():
@@ -1374,6 +1423,10 @@ async def websocket_endpoint(websocket: WebSocket):
                         room_settings["default_mention"] = router.default_mention
                 if "contrast" in new and new["contrast"] in ("normal", "high"):
                     room_settings["contrast"] = new["contrast"]
+                if "selected_theme" in new:
+                    selected_theme = _normalize_theme_id(new["selected_theme"])
+                    if selected_theme:
+                        room_settings["selected_theme"] = selected_theme
                 if "rules_refresh_interval" in new:
                     try:
                         ri = int(new["rules_refresh_interval"])
@@ -1702,6 +1755,38 @@ async def get_runtime_ports(request: Request):
 
 async def get_settings():
     return room_settings
+
+
+async def patch_settings(request: Request):
+    body = await request.json()
+    if not isinstance(body, dict):
+        return JSONResponse({"error": "settings payload must be an object"}, status_code=400)
+
+    if "selected_theme" not in body:
+        return JSONResponse({"error": "selected_theme is required"}, status_code=400)
+
+    selected_theme = _normalize_theme_id(body.get("selected_theme"))
+    if not selected_theme:
+        return JSONResponse(
+            {
+                "error": "selected_theme is not available",
+                "available": sorted(_available_theme_ids()),
+            },
+            status_code=400,
+        )
+
+    room_settings["selected_theme"] = selected_theme
+    _save_settings()
+    if _event_loop:
+        asyncio.run_coroutine_threadsafe(broadcast_settings(), _event_loop)
+    return room_settings
+
+
+async def get_themes():
+    return {
+        "items": list(AVAILABLE_THEMES),
+        "selected_theme": _selected_theme_id(),
+    }
 
 
 async def delete_hat(agent_name: str):

@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/cn";
 import type { UIMessage } from "ai";
 import {
@@ -9,7 +10,11 @@ import {
 } from "@tabler/icons-react";
 import type { ComponentProps } from "react";
 import { useCallback } from "react";
-import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
+import {
+  StickToBottom,
+  useStickToBottomContext,
+  type StickToBottomContext,
+} from "use-stick-to-bottom";
 
 export type ConversationProps = ComponentProps<typeof StickToBottom>;
 
@@ -29,13 +34,31 @@ export type ConversationContentProps = ComponentProps<
 
 export const ConversationContent = ({
   className,
+  scrollClassName,
   ...props
-}: ConversationContentProps) => (
-  <StickToBottom.Content
-    className={cn("flex flex-col gap-8 p-4", className)}
-    {...props}
-  />
-);
+}: ConversationContentProps) => {
+  const context = useStickToBottomContext();
+
+  return (
+    <ScrollArea
+      className="h-full w-full"
+      viewportClassName={scrollClassName}
+      viewportRef={
+        context.scrollRef as StickToBottomContext["scrollRef"] &
+          React.Ref<HTMLDivElement>
+      }
+      viewportStyle={{
+        scrollbarGutter: "stable both-edges",
+      }}
+    >
+      <div
+        {...props}
+        ref={context.contentRef}
+        className={cn("flex flex-col gap-8 p-4", className)}
+      />
+    </ScrollArea>
+  );
+};
 
 export type ConversationEmptyStateProps = ComponentProps<"div"> & {
   title?: string;
