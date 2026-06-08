@@ -14,6 +14,7 @@ Current runtime contract:
 Active files:
 
 - `kai-chattr-architecture-runtime-parity-implementation-plan.md` - complete runtime parity contract.
-- `kai-chattr-workbench-board-runtime-recovery-implementation-plan.md` - draft Board recovery material, runtime-corrected but not execution-ready.
+- `kai-chattr-workbench-live-runtime-store-implementation-plan.md` - current draft contract for the workbench live runtime store, Board workflow completion, and runtime convergence tests.
+- `kai-chattr-workbench-board-runtime-recovery-implementation-plan.md` - historical draft Board recovery material, runtime-corrected but superseded for execution by the live runtime store plan.
 
 Superseded drafts live in `docs/plans/superseded/`. Do not execute a superseded plan without rewriting it against the current runtime contract.

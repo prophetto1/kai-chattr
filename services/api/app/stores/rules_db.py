@@ -255,4 +255,9 @@ class SqlAlchemyRuleStore:
             ) or 0)
 
     def count_proposed(self) -> int:
-        return self.count_draft()
+        with self._lock, self._sessions() as session:
+            return int(session.scalar(
+                select(func.count())
+                .select_from(BoardRule)
+                .where(BoardRule.status.in_(("pending", "proposed")))
+            ) or 0)

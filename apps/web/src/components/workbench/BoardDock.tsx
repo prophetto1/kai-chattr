@@ -10,24 +10,23 @@ import {
 } from 'react'
 import {
   closestCenter,
+  DragOverlay,
   DndContext,
   type DragEndEvent,
+  type DragStartEvent,
   PointerSensor,
   useDraggable,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import {
-  SortableContext,
-  arrayMove,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
   IconArchive,
-  IconCheck,
+  IconCircle,
+  IconCircleCheck,
   IconEdit,
+  IconPlus,
+  IconRestore,
   IconTrash,
   IconX,
 } from '@tabler/icons-react'
@@ -47,8 +46,6 @@ import { BoardSection } from '@/components/workbench/board/BoardSection'
 import {
   type BoardTabId,
   type CapabilityTab,
-  type JobItem,
-  type JobLaneId,
   type LockedItem,
   type LockedLaneId,
   type PinItem,
@@ -57,39 +54,40 @@ import {
   type RuleLaneId,
   boardTabs,
   isBoardTabId,
-  normalizeJobStatus,
   normalizeLockedStatus,
   normalizePinStatus,
   normalizeRuleStatus,
 } from '@/components/workbench/board/types'
 import { chattrJson, errorMessage } from '@/lib/chattr-api'
-import { cn } from '@/lib/cn'
 
-type DragRecord =
-  | { type: 'rule'; id: number; status: RuleLaneId }
-  | { type: 'job'; id: number; status: JobLaneId }
+type DragRecord = { type: 'rule'; id: number; status: RuleLaneId }
+
+type RuleMode =
+  | { type: 'list' }
+  | { type: 'create'; text: string }
+  | { type: 'edit'; id: number; text: string }
 
 const ruleLanes: Array<{ id: RuleLaneId; label: string; description: string }> = [
-  { id: 'draft', label: 'Drafts', description: 'proposed and inactive rules' },
   { id: 'active', label: 'Active', description: 'injected into agent context' },
+  { id: 'draft', label: 'Drafts', description: 'proposed and inactive rules' },
   { id: 'archived', label: 'Archive', description: 'retained but inactive' },
 ]
-
-const jobLanes: Array<{ id: JobLaneId; label: string; description: string }> = [
-  { id: 'open', label: 'Open', description: 'ready for work' },
-  { id: 'done', label: 'Done', description: 'completed work threads' },
-  { id: 'archived', label: 'Closed', description: 'archived threads' },
-]
+const activeRuleLane = ruleLanes[0]
+const secondaryRuleLanes = ruleLanes.slice(1)
 
 const lockedLanes: Array<{ id: LockedLaneId; label: string; description: string }> = [
-  { id: 'active', label: 'Locked', description: 'current constraints' },
-  { id: 'archived', label: 'Archive', description: 'inactive constraints' },
+  { id: 'active', label: 'Decisions', description: 'current decisions' },
+  { id: 'archived', label: 'Archive', description: 'inactive decisions' },
 ]
 
 const pinLanes: Array<{ id: PinLaneId; label: string; description: string }> = [
   { id: 'todo', label: 'Todo', description: 'pinned follow-ups' },
   { id: 'done', label: 'Done', description: 'completed pins' },
 ]
+
+function boardEmptyText(tabId: BoardTabId) {
+  return boardTabs.find((tab) => tab.id === tabId)?.empty ?? `No ${tabId} items yet.`
+}
 
 function statusBadgeClass(status: string) {
   if (status === 'active' || status === 'open' || status === 'todo') {
@@ -123,20 +121,57 @@ function BoardForm({ children, onSubmit }: { children: ReactNode; onSubmit?: (ev
   )
 }
 
-function sortJobs(items: JobItem[]) {
-  return [...items].sort((a, b) => {
-    const aOrder = Number(a.sort_order ?? 0)
-    const bOrder = Number(b.sort_order ?? 0)
-    if (aOrder !== bOrder) {
-      return bOrder - aOrder
-    }
-    const aUpdated = Number(a.updated_at ?? 0)
-    const bUpdated = Number(b.updated_at ?? 0)
-    if (aUpdated !== bUpdated) {
-      return bUpdated - aUpdated
-    }
-    return b.id - a.id
-  })
+function RuleForm({
+  disabled,
+  onCancel,
+  onChange,
+  onSave,
+  title,
+  value,
+}: {
+  disabled: boolean
+  onCancel: () => void
+  onChange: (value: string) => void
+  onSave: () => void
+  title?: string
+  value: string
+}) {
+  const saveDisabled = disabled || !value.trim()
+
+  return (
+    <BoardForm
+      onSubmit={(event) => {
+        event.preventDefault()
+        if (!saveDisabled) {
+          onSave()
+        }
+      }}
+    >
+      {title ? <h3 className="mb-2 text-sm font-medium text-foreground">{title}</h3> : null}
+      <Textarea
+        className="min-h-28 resize-none text-sm"
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="Write the rule..."
+        value={value}
+      />
+      <div className="mt-2 flex justify-end gap-2">
+        <Button
+          className="border-destructive/35 text-destructive hover:bg-destructive/10"
+          disabled={disabled}
+          onClick={onCancel}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          <IconX className="size-4" />
+          Cancel
+        </Button>
+        <Button disabled={saveDisabled} size="sm" type="submit">
+          Save
+        </Button>
+      </div>
+    </BoardForm>
+  )
 }
 
 function groupByStatus<T, S extends string>(
@@ -156,21 +191,15 @@ function groupByStatus<T, S extends string>(
 
 function RuleRow({
   deleting,
-  editing,
   onDelete,
   onEdit,
-  onEditChange,
-  onSaveEdit,
   onStatus,
   rule,
   saving,
 }: {
   deleting: boolean
-  editing: { id: number; text: string; reason: string } | null
   onDelete: (ruleId: number) => void
   onEdit: (rule: RuleItem) => void
-  onEditChange: (value: { id: number; text: string; reason: string } | null) => void
-  onSaveEdit: (ruleId: number, value: { text: string; reason: string }) => void
   onStatus: (ruleId: number, status: RuleLaneId) => void
   rule: RuleItem
   saving: boolean
@@ -181,88 +210,72 @@ function RuleRow({
     id: `rule:${rule.id}`,
   })
   const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined
-  const activeEdit = editing?.id === rule.id ? editing : null
 
   return (
     <BoardItemRow
       actions={
         <ButtonGroup>
-          {activeEdit ? (
-            <>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    className="size-7"
-                    disabled={saving || !activeEdit.text.trim()}
-                    onClick={() => onSaveEdit(rule.id, activeEdit)}
-                    size="icon"
-                    type="button"
-                    variant="outline"
-                  >
-                    <IconCheck className="size-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Save rule</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    className="size-7"
-                    onClick={() => onEditChange(null)}
-                    size="icon"
-                    type="button"
-                    variant="ghost"
-                  >
-                    <IconX className="size-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Cancel edit</TooltipContent>
-              </Tooltip>
-            </>
-          ) : (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                aria-label="Edit rule"
+                className="size-7"
+                disabled={saving}
+                onClick={() => onEdit(rule)}
+                size="icon"
+                type="button"
+                variant="outline"
+              >
+                <IconEdit className="size-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Edit rule</TooltipContent>
+          </Tooltip>
+          {status !== 'active' ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
+                  aria-label={status === 'archived' ? 'Restore as active' : 'Activate rule'}
                   className="size-7"
-                  onClick={() => onEdit(rule)}
+                  disabled={saving}
+                  onClick={() => onStatus(rule.id, 'active')}
                   size="icon"
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                 >
-                  <IconEdit className="size-3.5" />
+                  <IconCircleCheck className="size-3.5" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Edit rule</TooltipContent>
+              <TooltipContent>{status === 'archived' ? 'Restore as active' : 'Activate rule'}</TooltipContent>
             </Tooltip>
-          )}
-          {status !== 'active' ? (
-            <Button
-              className="h-7 px-2 text-xs"
-              disabled={saving}
-              onClick={() => onStatus(rule.id, 'active')}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              Active
-            </Button>
           ) : null}
           {status !== 'draft' ? (
-            <Button
-              className="h-7 px-2 text-xs"
-              disabled={saving}
-              onClick={() => onStatus(rule.id, 'draft')}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              Draft
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label={status === 'archived' ? 'Restore as draft' : 'Return to draft'}
+                  className="size-7"
+                  disabled={saving}
+                  onClick={() => onStatus(rule.id, 'draft')}
+                  size="icon"
+                  type="button"
+                  variant="ghost"
+                >
+                  {status === 'archived' ? (
+                    <IconRestore className="size-3.5" />
+                  ) : (
+                    <IconCircle className="size-3.5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{status === 'archived' ? 'Restore as draft' : 'Return to draft'}</TooltipContent>
+            </Tooltip>
           ) : null}
           {status !== 'archived' ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
+                  aria-label="Archive rule"
                   className="size-7"
                   disabled={saving}
                   onClick={() => onStatus(rule.id, 'archived')}
@@ -276,21 +289,24 @@ function RuleRow({
               <TooltipContent>Archive rule</TooltipContent>
             </Tooltip>
           ) : null}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                className="size-7"
-                disabled={saving || deleting}
-                onClick={() => onDelete(rule.id)}
-                size="icon"
-                type="button"
-                variant="ghost"
-              >
-                <IconTrash className="size-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Delete rule</TooltipContent>
-          </Tooltip>
+          {status === 'archived' ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label="Delete rule"
+                  className="size-7"
+                  disabled={saving || deleting}
+                  onClick={() => onDelete(rule.id)}
+                  size="icon"
+                  type="button"
+                  variant="ghost"
+                >
+                  <IconTrash className="size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Delete rule</TooltipContent>
+            </Tooltip>
+          ) : null}
         </ButtonGroup>
       }
       dragHandleProps={{ ...attributes, ...listeners }}
@@ -305,197 +321,49 @@ function RuleRow({
       status={status}
       statusClassName={statusBadgeClass(status)}
       style={style}
-      title={
-        activeEdit ? (
-          <div className="space-y-1.5">
-            <Textarea
-              className="min-h-16 resize-none text-sm"
-              onChange={(event) => onEditChange({ ...activeEdit, text: event.target.value })}
-              value={activeEdit.text}
-            />
-            <Input
-              className="h-8 text-xs"
-              onChange={(event) => onEditChange({ ...activeEdit, reason: event.target.value })}
-              placeholder="Reason"
-              value={activeEdit.reason}
-            />
-          </div>
-        ) : (
-          <span>{rule.text}</span>
-        )
-      }
-    >
-      {!activeEdit && rule.reason ? (
-        <p className="text-xs leading-5 text-muted-foreground">{rule.reason}</p>
-      ) : null}
-    </BoardItemRow>
+      title={<span>{rule.text}</span>}
+    />
   )
 }
 
-function JobRow({
-  job,
-  onDelete,
-  onDraftChange,
-  onMessage,
-  onMessageChange,
-  onSave,
-  onStatus,
-  saving,
-  draft,
-  messageDraft,
+function BoardDragPreview({
+  drag,
+  rule,
 }: {
-  draft: { title: string; assignee: string }
-  job: JobItem
-  messageDraft: string
-  onDelete: (jobId: number) => void
-  onDraftChange: (jobId: number, value: { title: string; assignee: string }) => void
-  onMessage: (jobId: number) => void
-  onMessageChange: (jobId: number, value: string) => void
-  onSave: (jobId: number, value: { title: string; assignee: string }) => void
-  onStatus: (jobId: number, status: JobLaneId) => void
-  saving: boolean
+  drag: DragRecord | null
+  rule?: RuleItem
 }) {
-  const status = normalizeJobStatus(job.status)
-  const {
-    attributes,
-    isDragging,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({
-    data: { id: job.id, status, type: 'job' } satisfies DragRecord,
-    id: `job:${job.id}`,
-  })
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-  const visibleMessages = (job.messages ?? []).filter((message) => !message.deleted)
+  const previewClassName = 'pointer-events-none w-[520px] max-w-[calc(100vw-2rem)] cursor-grabbing'
 
-  return (
-    <BoardItemRow
-      actions={
-        <ButtonGroup>
-          <Button
-            className="h-7 px-2 text-xs"
-            disabled={saving || !draft.title.trim()}
-            onClick={() => onSave(job.id, draft)}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            Save
-          </Button>
-          {jobLanes.map((lane) => (
-            <Button
-              className="h-7 px-2 text-xs"
-              disabled={saving || status === lane.id}
-              key={lane.id}
-              onClick={() => onStatus(job.id, lane.id)}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              {lane.label}
-            </Button>
-          ))}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                className="size-7"
-                disabled={saving}
-                onClick={() => onDelete(job.id)}
-                size="icon"
-                type="button"
-                variant="ghost"
-              >
-                <IconTrash className="size-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Delete job</TooltipContent>
-          </Tooltip>
-        </ButtonGroup>
-      }
-      dragHandleProps={{ ...attributes, ...listeners }}
-      isDragging={isDragging}
-      meta={
-        <>
-          #{job.id} {job.channel ?? 'general'} / {visibleMessages.length} messages
-        </>
-      }
-      ref={setNodeRef}
-      status={status}
-      statusClassName={statusBadgeClass(status)}
-      style={style}
-      title={
-        <div className="space-y-1.5">
-          <Input
-            className="h-8 text-sm font-medium"
-            onChange={(event) => onDraftChange(job.id, { ...draft, title: event.target.value })}
-            value={draft.title}
-          />
-          <Input
-            className="h-8 text-xs"
-            onChange={(event) =>
-              onDraftChange(job.id, { ...draft, assignee: event.target.value })
-            }
-            placeholder="Assignee"
-            value={draft.assignee}
-          />
-        </div>
-      }
-    >
-      {job.body ? <p className="text-xs leading-5 text-muted-foreground">{job.body}</p> : null}
-      {visibleMessages.length > 0 ? (
-        <div className="space-y-1 border-t border-border/60 pt-1.5">
-          {visibleMessages.slice(-3).map((message) => (
-            <p className="text-xs text-muted-foreground" key={message.id}>
-              <span className="font-medium text-foreground">{message.sender ?? 'user'}:</span>{' '}
-              {message.text}
-            </p>
-          ))}
-        </div>
-      ) : null}
-      <ButtonGroup className="w-full">
-        <Input
-          className="h-8 text-xs"
-          onChange={(event) => onMessageChange(job.id, event.target.value)}
-          placeholder="Add thread message"
-          value={messageDraft}
-        />
-        <Button
-          className="h-8 px-2 text-xs"
-          disabled={saving || !messageDraft.trim()}
-          onClick={() => onMessage(job.id)}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          Send
-        </Button>
-      </ButtonGroup>
-    </BoardItemRow>
-  )
+  if (drag?.type === 'rule' && rule) {
+    const status = normalizeRuleStatus(rule.status)
+
+    return (
+      <BoardItemRow
+        className={previewClassName}
+        isDragging
+        meta={<>#{rule.id} by {rule.created_by ?? 'user'}</>}
+        status={status}
+        statusClassName={statusBadgeClass(status)}
+        title={<span>{rule.text}</span>}
+      />
+    )
+  }
+
+  return null
 }
 
 export function BoardDock() {
   const [activeTab, setActiveTab] = useState<BoardTabId>('rules')
   const [capabilities, setCapabilities] = useState<CapabilityTab[] | null>(null)
   const [rules, setRules] = useState<RuleItem[]>([])
-  const [jobs, setJobs] = useState<JobItem[]>([])
   const [locked, setLocked] = useState<LockedItem[]>([])
   const [pins, setPins] = useState<PinItem[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState('')
   const [error, setError] = useState('')
-  const [ruleDraft, setRuleDraft] = useState({ text: '', reason: '' })
-  const [editingRule, setEditingRule] = useState<{ id: number; text: string; reason: string } | null>(
-    null
-  )
-  const [jobDraft, setJobDraft] = useState({ title: '', body: '', assignee: '' })
-  const [jobEdits, setJobEdits] = useState<Record<number, { title: string; assignee: string }>>({})
-  const [jobMessages, setJobMessages] = useState<Record<number, string>>({})
+  const [ruleMode, setRuleMode] = useState<RuleMode>({ type: 'list' })
+  const [activeDrag, setActiveDrag] = useState<DragRecord | null>(null)
   const [lockedDraft, setLockedDraft] = useState({ text: '', reason: '' })
   const [lockedEdits, setLockedEdits] = useState<Record<number, { text: string; reason: string }>>({})
   const [pinMessageId, setPinMessageId] = useState('')
@@ -519,18 +387,6 @@ export function BoardDock() {
     () => groupByStatus(rules, ['draft', 'active', 'archived'] as const, (rule) => normalizeRuleStatus(rule.status)),
     [rules]
   )
-  const groupedJobs = useMemo(() => {
-    const grouped = groupByStatus(
-      jobs,
-      ['open', 'done', 'archived'] as const,
-      (job) => normalizeJobStatus(job.status)
-    )
-    return {
-      archived: sortJobs(grouped.archived),
-      done: sortJobs(grouped.done),
-      open: sortJobs(grouped.open),
-    }
-  }, [jobs])
   const groupedLocked = useMemo(
     () =>
       groupByStatus(locked, ['active', 'archived'] as const, (item) =>
@@ -542,15 +398,18 @@ export function BoardDock() {
     () => groupByStatus(pins, ['todo', 'done'] as const, (pin) => normalizePinStatus(pin.status)),
     [pins]
   )
+  const activeDragRule = useMemo(
+    () => (activeDrag?.type === 'rule' ? rules.find((rule) => rule.id === activeDrag.id) : undefined),
+    [activeDrag, rules]
+  )
 
   const counts: Record<BoardTabId, number> = useMemo(
     () => ({
-      rules: groupedRules.active.length,
-      jobs: groupedJobs.open.length + groupedJobs.done.length,
-      locked: groupedLocked.active.length,
+      rules: groupedRules.active.length + groupedRules.draft.length,
+      decisions: groupedLocked.active.length,
       pins: groupedPins.todo.length,
     }),
-    [groupedJobs, groupedLocked, groupedPins, groupedRules]
+    [groupedLocked, groupedPins, groupedRules]
   )
 
   const loadBoard = useCallback(async () => {
@@ -560,19 +419,23 @@ export function BoardDock() {
       const capabilityResponse = await chattrJson<{ tabs: CapabilityTab[] }>(
         '/api/right-rail/capabilities'
       )
-      const nextCapabilities = capabilityResponse.tabs.filter((tab) => isBoardTabId(tab.id))
+      const nextCapabilities = capabilityResponse.tabs
+        .map((tab) =>
+          tab.category === 'locked'
+            ? { ...tab, id: 'decisions' as const, label: 'Decisions', surface: 'board' as const }
+            : tab
+        )
+        .filter((tab) => (tab.surface ?? 'board') === 'board' && isBoardTabId(tab.id))
       setCapabilities(nextCapabilities)
 
-      const allowed = new Set(nextCapabilities.map((tab) => tab.id))
-      const [nextRules, nextJobs, nextLocked, nextPins] = await Promise.all([
-        allowed.has('rules') ? chattrJson<RuleItem[]>('/api/rules') : Promise.resolve([]),
-        allowed.has('jobs') ? chattrJson<JobItem[]>('/api/jobs') : Promise.resolve([]),
-        allowed.has('locked') ? chattrJson<LockedItem[]>('/api/locked') : Promise.resolve([]),
-        allowed.has('pins') ? chattrJson<PinItem[]>('/api/pins') : Promise.resolve([]),
+      const allowedCategories = new Set(nextCapabilities.map((tab) => tab.category))
+      const [nextRules, nextLocked, nextPins] = await Promise.all([
+        allowedCategories.has('rules') ? chattrJson<RuleItem[]>('/api/rules') : Promise.resolve([]),
+        allowedCategories.has('locked') ? chattrJson<LockedItem[]>('/api/locked') : Promise.resolve([]),
+        allowedCategories.has('pins') ? chattrJson<PinItem[]>('/api/pins') : Promise.resolve([]),
       ])
 
       setRules(nextRules)
-      setJobs(nextJobs)
       setLocked(nextLocked)
       setPins(nextPins)
     } catch (loadError) {
@@ -609,20 +472,20 @@ export function BoardDock() {
   )
 
   const createRule = useCallback(
-    async (status: RuleLaneId) => {
-      const text = ruleDraft.text.trim()
+    async (textValue: string) => {
+      const text = textValue.trim()
       if (!text) {
         return
       }
-      await withSave(`create-rule-${status}`, async () => {
+      await withSave('create-rule-draft', async () => {
         await chattrJson<RuleItem>('/api/rules', {
-          body: JSON.stringify({ ...ruleDraft, status }),
+          body: JSON.stringify({ reason: '', status: 'draft', text }),
           method: 'POST',
         })
-        setRuleDraft({ text: '', reason: '' })
+        setRuleMode({ type: 'list' })
       })
     },
-    [ruleDraft, withSave]
+    [withSave]
   )
 
   const updateRule = useCallback(
@@ -632,7 +495,23 @@ export function BoardDock() {
           body: JSON.stringify(body),
           method: 'PATCH',
         })
-        setEditingRule(null)
+      })
+    },
+    [withSave]
+  )
+
+  const saveRuleEdit = useCallback(
+    async (ruleId: number, textValue: string) => {
+      const text = textValue.trim()
+      if (!text) {
+        return
+      }
+      await withSave(`rule-${ruleId}-edit`, async () => {
+        await chattrJson<RuleItem>(`/api/rules/${ruleId}`, {
+          body: JSON.stringify({ text }),
+          method: 'PATCH',
+        })
+        setRuleMode({ type: 'list' })
       })
     },
     [withSave]
@@ -653,90 +532,6 @@ export function BoardDock() {
       })
     },
     [withSave]
-  )
-
-  const createJob = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault()
-      const title = jobDraft.title.trim()
-      if (!title) {
-        return
-      }
-      await withSave('create-job', async () => {
-        await chattrJson<JobItem>('/api/jobs', {
-          body: JSON.stringify({
-            assignee: jobDraft.assignee,
-            body: jobDraft.body,
-            created_by: 'user',
-            title,
-          }),
-          method: 'POST',
-        })
-        setJobDraft({ title: '', body: '', assignee: '' })
-      })
-    },
-    [jobDraft, withSave]
-  )
-
-  const updateJob = useCallback(
-    async (jobId: number, body: Record<string, unknown>, key = `job-${jobId}`) => {
-      await withSave(key, async () => {
-        await chattrJson<JobItem>(`/api/jobs/${jobId}`, {
-          body: JSON.stringify(body),
-          method: 'PATCH',
-        })
-      })
-    },
-    [withSave]
-  )
-
-  const setJobEdit = useCallback((jobId: number, value: { title: string; assignee: string }) => {
-    setJobEdits((current) => ({ ...current, [jobId]: value }))
-  }, [])
-
-  const saveJobEdit = useCallback(
-    (jobId: number, value: { title: string; assignee: string }) => {
-      void updateJob(jobId, value, `job-${jobId}-edit`)
-    },
-    [updateJob]
-  )
-
-  const deleteJob = useCallback(
-    async (jobId: number) => {
-      await withSave(`delete-job-${jobId}`, async () => {
-        await chattrJson(`/api/jobs/${jobId}?permanent=true`, { method: 'DELETE' })
-      })
-    },
-    [withSave]
-  )
-
-  const reorderJobs = useCallback(
-    async (status: JobLaneId, orderedIds: number[]) => {
-      await withSave(`reorder-jobs-${status}`, async () => {
-        await chattrJson('/api/jobs/reorder', {
-          body: JSON.stringify({ ordered_ids: orderedIds, status }),
-          method: 'POST',
-        })
-      })
-    },
-    [withSave]
-  )
-
-  const addJobMessage = useCallback(
-    async (jobId: number) => {
-      const text = (jobMessages[jobId] ?? '').trim()
-      if (!text) {
-        return
-      }
-      await withSave(`job-message-${jobId}`, async () => {
-        await chattrJson(`/api/jobs/${jobId}/messages`, {
-          body: JSON.stringify({ sender: 'user', text }),
-          method: 'POST',
-        })
-        setJobMessages((current) => ({ ...current, [jobId]: '' }))
-      })
-    },
-    [jobMessages, withSave]
   )
 
   const createLocked = useCallback(
@@ -814,8 +609,18 @@ export function BoardDock() {
     })
   }, [withSave])
 
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveDrag((event.active.data.current as DragRecord | undefined) ?? null)
+  }, [])
+
+  const handleDragCancel = useCallback(() => {
+    setActiveDrag(null)
+  }, [])
+
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
+      setActiveDrag(null)
+
       const activeData = event.active.data.current as DragRecord | undefined
       if (!activeData || !event.over) {
         return
@@ -845,46 +650,18 @@ export function BoardDock() {
         return
       }
 
-      if (activeData.type === 'job') {
-        if (overId === 'jobs:delete') {
-          if (activeData.status === 'archived') {
-            void deleteJob(activeData.id)
-          } else {
-            void updateJob(activeData.id, { status: 'archived' }, `job-${activeData.id}-archived`)
-          }
-          return
-        }
-
-        const targetStatus = overId.startsWith('jobs:')
-          ? (overId.slice('jobs:'.length) as JobLaneId)
-          : overData?.type === 'job'
-            ? overData.status
-            : null
-        if (!targetStatus) {
-          return
-        }
-
-        if (targetStatus !== activeData.status) {
-          void updateJob(activeData.id, { status: targetStatus }, `job-${activeData.id}-${targetStatus}`)
-          return
-        }
-
-        if (overData?.type === 'job' && overData.id !== activeData.id) {
-          const lane = groupedJobs[targetStatus]
-          const oldIndex = lane.findIndex((job) => job.id === activeData.id)
-          const newIndex = lane.findIndex((job) => job.id === overData.id)
-          if (oldIndex >= 0 && newIndex >= 0 && oldIndex !== newIndex) {
-            const next = arrayMove(lane, oldIndex, newIndex).map((job) => job.id)
-            void reorderJobs(targetStatus, next)
-          }
-        }
-      }
     },
-    [deleteJob, deleteRule, groupedJobs, reorderJobs, setRuleStatus, updateJob]
+    [deleteRule, setRuleStatus]
   )
 
   return (
-    <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd} sensors={sensors}>
+    <DndContext
+      collisionDetection={closestCenter}
+      onDragCancel={handleDragCancel}
+      onDragEnd={handleDragEnd}
+      onDragStart={handleDragStart}
+      sensors={sensors}
+    >
       <section className="flex h-full min-h-0 w-full min-w-0 overflow-hidden bg-card">
         <Tabs
           className="h-full min-h-0 w-full min-w-0 max-w-full gap-0 overflow-hidden bg-card"
@@ -931,201 +708,120 @@ export function BoardDock() {
 
           {isTabAvailable('rules') ? (
             <TabsContent value="rules" className="min-h-0 flex-1 overflow-hidden">
-              <ScrollArea className="h-full">
-                <div className="space-y-3 p-3">
-                  <BoardForm>
-                    <Textarea
-                      className="min-h-20 resize-none text-sm"
-                      onChange={(event) =>
-                        setRuleDraft((current) => ({ ...current, text: event.target.value }))
-                      }
-                      placeholder="Rule text"
-                      value={ruleDraft.text}
-                    />
-                    <Input
-                      className="mt-2 h-8 text-xs"
-                      onChange={(event) =>
-                        setRuleDraft((current) => ({ ...current, reason: event.target.value }))
-                      }
-                      placeholder="Reason"
-                      value={ruleDraft.reason}
-                    />
-                    <ButtonGroup className="mt-2 ml-auto">
-                      <Button
-                        className="h-7 px-2 text-xs"
-                        disabled={!ruleDraft.text.trim() || Boolean(saving)}
-                        onClick={() => void createRule('draft')}
-                        size="sm"
-                        type="button"
-                        variant="outline"
-                      >
-                        Save Draft
-                      </Button>
-                      <Button
-                        className="h-7 px-2 text-xs"
-                        disabled={!ruleDraft.text.trim() || Boolean(saving)}
-                        onClick={() => void createRule('active')}
-                        size="sm"
-                        type="button"
-                      >
-                        Activate
-                      </Button>
-                    </ButtonGroup>
-                  </BoardForm>
+              {ruleMode.type === 'list' ? (
+                <div className="flex h-full min-h-0 flex-col px-3 pb-3">
+                  <div className="min-h-0 flex-1 pt-3">
+                    <ScrollArea className="h-full">
+                      <div className="pr-1 pb-2">
+                        <BoardDropZone id={`rules:${activeRuleLane.id}`}>
+                          <BoardSection
+                            className="shadow-[0_10px_24px_-22px_hsl(var(--foreground)/0.65)]"
+                            collapsible={false}
+                            count={groupedRules[activeRuleLane.id].length}
+                            title={activeRuleLane.label}
+                          >
+                            {groupedRules[activeRuleLane.id].length === 0 ? (
+                              <EmptyState>No active.</EmptyState>
+                            ) : null}
+                            {groupedRules[activeRuleLane.id].map((rule) => (
+                              <RuleRow
+                                deleting={saving === `delete-rule-${rule.id}`}
+                                key={rule.id}
+                                onDelete={(ruleId) => void deleteRule(ruleId)}
+                                onEdit={(nextRule) =>
+                                  setRuleMode({ id: nextRule.id, text: nextRule.text, type: 'edit' })
+                                }
+                                onStatus={setRuleStatus}
+                                rule={rule}
+                                saving={Boolean(saving)}
+                              />
+                            ))}
+                          </BoardSection>
+                        </BoardDropZone>
+                      </div>
+                    </ScrollArea>
+                  </div>
 
-                  {rules.length === 0 ? <EmptyState>{boardTabs[0].empty}</EmptyState> : null}
-                  {ruleLanes.map((lane) => (
-                    <BoardDropZone id={`rules:${lane.id}`} key={lane.id}>
-                      <BoardSection
-                        count={groupedRules[lane.id].length}
-                        defaultOpen={lane.id !== 'archived'}
-                        description={lane.description}
-                        title={lane.label}
-                      >
-                        {groupedRules[lane.id].length === 0 ? (
-                          <EmptyState>No {lane.label.toLowerCase()}.</EmptyState>
-                        ) : null}
-                        {groupedRules[lane.id].map((rule) => (
-                          <RuleRow
-                            deleting={saving === `delete-rule-${rule.id}`}
-                            editing={editingRule}
-                            key={rule.id}
-                            onDelete={(ruleId) => void deleteRule(ruleId)}
-                            onEdit={(nextRule) =>
-                              setEditingRule({
-                                id: nextRule.id,
-                                reason: nextRule.reason ?? '',
-                                text: nextRule.text,
-                              })
-                            }
-                            onEditChange={setEditingRule}
-                            onSaveEdit={(ruleId, value) =>
-                              void updateRule(ruleId, {
-                                reason: value.reason,
-                                text: value.text,
-                              })
-                            }
-                            onStatus={setRuleStatus}
-                            rule={rule}
-                            saving={Boolean(saving)}
-                          />
-                        ))}
-                      </BoardSection>
-                    </BoardDropZone>
-                  ))}
-                  <BoardDropZone id="rules:delete">
-                    <div className="flex min-h-10 items-center justify-center gap-2 rounded-md border border-dashed border-destructive/50 bg-destructive/5 px-3 text-xs text-destructive">
-                      <IconTrash className="size-3.5" />
-                      Drop archived rules here to delete; other rules archive first.
-                    </div>
-                  </BoardDropZone>
-                </div>
-              </ScrollArea>
-            </TabsContent>
-          ) : null}
-
-          {isTabAvailable('jobs') ? (
-            <TabsContent value="jobs" className="min-h-0 flex-1 overflow-hidden">
-              <ScrollArea className="h-full">
-                <div className="space-y-3 p-3">
-                  <BoardForm onSubmit={(event) => void createJob(event)}>
-                    <Input
-                      className="h-8 text-xs"
-                      onChange={(event) =>
-                        setJobDraft((current) => ({ ...current, title: event.target.value }))
-                      }
-                      placeholder="Job title"
-                      value={jobDraft.title}
-                    />
-                    <Textarea
-                      className="mt-2 min-h-20 resize-none text-sm"
-                      onChange={(event) =>
-                        setJobDraft((current) => ({ ...current, body: event.target.value }))
-                      }
-                      placeholder="Body"
-                      value={jobDraft.body}
-                    />
-                    <ButtonGroup className="mt-2 w-full">
-                      <Input
-                        className="h-8 text-xs"
-                        onChange={(event) =>
-                          setJobDraft((current) => ({ ...current, assignee: event.target.value }))
-                        }
-                        placeholder="Assignee"
-                        value={jobDraft.assignee}
-                      />
-                      <Button
-                        className="h-8 px-3 text-xs"
-                        disabled={!jobDraft.title.trim() || Boolean(saving)}
-                        size="sm"
-                        type="submit"
-                      >
-                        Create
-                      </Button>
-                    </ButtonGroup>
-                  </BoardForm>
-
-                  {jobs.length === 0 ? <EmptyState>{boardTabs[1].empty}</EmptyState> : null}
-                  {jobLanes.map((lane) => {
-                    const items = groupedJobs[lane.id]
-                    return (
-                      <BoardDropZone id={`jobs:${lane.id}`} key={lane.id}>
+                  <div className="shrink-0 space-y-3 pt-3">
+                    {secondaryRuleLanes.map((lane) => (
+                      <BoardDropZone id={`rules:${lane.id}`} key={lane.id}>
                         <BoardSection
-                          count={items.length}
+                          count={groupedRules[lane.id].length}
                           defaultOpen={lane.id !== 'archived'}
-                          description={lane.description}
                           title={lane.label}
                         >
-                          {items.length === 0 ? (
-                            <EmptyState>No {lane.label.toLowerCase()} jobs.</EmptyState>
+                          {groupedRules[lane.id].length === 0 ? (
+                            <EmptyState>No {lane.label.toLowerCase()}.</EmptyState>
                           ) : null}
-                          <SortableContext
-                            items={items.map((job) => `job:${job.id}`)}
-                            strategy={verticalListSortingStrategy}
-                          >
-                            {items.map((job) => {
-                              const edit = jobEdits[job.id] ?? {
-                                assignee: job.assignee ?? '',
-                                title: job.title,
+                          {groupedRules[lane.id].map((rule) => (
+                            <RuleRow
+                              deleting={saving === `delete-rule-${rule.id}`}
+                              key={rule.id}
+                              onDelete={(ruleId) => void deleteRule(ruleId)}
+                              onEdit={(nextRule) =>
+                                setRuleMode({ id: nextRule.id, text: nextRule.text, type: 'edit' })
                               }
-                              return (
-                                <JobRow
-                                  draft={edit}
-                                  job={job}
-                                  key={job.id}
-                                  messageDraft={jobMessages[job.id] ?? ''}
-                                  onDelete={(jobId) => void deleteJob(jobId)}
-                                  onDraftChange={setJobEdit}
-                                  onMessage={(jobId) => void addJobMessage(jobId)}
-                                  onMessageChange={(jobId, value) =>
-                                    setJobMessages((current) => ({ ...current, [jobId]: value }))
-                                  }
-                                  onSave={saveJobEdit}
-                                  onStatus={(jobId, status) =>
-                                    void updateJob(jobId, { status }, `job-${jobId}-${status}`)
-                                  }
-                                  saving={Boolean(saving)}
-                                />
-                              )
-                            })}
-                          </SortableContext>
+                              onStatus={setRuleStatus}
+                              rule={rule}
+                              saving={Boolean(saving)}
+                            />
+                          ))}
                         </BoardSection>
                       </BoardDropZone>
-                    )
-                  })}
-                  <BoardDropZone id="jobs:delete">
-                    <div className="flex min-h-10 items-center justify-center gap-2 rounded-md border border-dashed border-destructive/50 bg-destructive/5 px-3 text-xs text-destructive">
-                      <IconTrash className="size-3.5" />
-                      Drop closed jobs here to delete; other jobs close first.
+                    ))}
+                    <div className="flex justify-end">
+                      <Button
+                        disabled={Boolean(saving)}
+                        onClick={() => setRuleMode({ text: '', type: 'create' })}
+                        size="sm"
+                        type="button"
+                      >
+                        <IconPlus className="size-4" />
+                        {rules.length > 0 ? 'Create rule' : 'Create first rule'}
+                      </Button>
                     </div>
-                  </BoardDropZone>
+                  </div>
                 </div>
-              </ScrollArea>
+              ) : (
+                <ScrollArea className="h-full">
+                  <div className="space-y-3 p-3">
+                  {ruleMode.type === 'create' ? (
+                    <RuleForm
+                      disabled={Boolean(saving)}
+                      onCancel={() => setRuleMode({ type: 'list' })}
+                      onChange={(text) =>
+                        setRuleMode((current) =>
+                          current.type === 'create' ? { ...current, text } : current
+                        )
+                      }
+                      onSave={() => void createRule(ruleMode.text)}
+                      title="Create rule"
+                      value={ruleMode.text}
+                    />
+                  ) : null}
+
+                  {ruleMode.type === 'edit' ? (
+                    <RuleForm
+                      disabled={Boolean(saving)}
+                      onCancel={() => setRuleMode({ type: 'list' })}
+                      onChange={(text) =>
+                        setRuleMode((current) =>
+                          current.type === 'edit' ? { ...current, text } : current
+                        )
+                      }
+                      onSave={() => void saveRuleEdit(ruleMode.id, ruleMode.text)}
+                      value={ruleMode.text}
+                    />
+                  ) : null}
+
+                  </div>
+                </ScrollArea>
+              )}
             </TabsContent>
           ) : null}
 
-          {isTabAvailable('locked') ? (
-            <TabsContent value="locked" className="min-h-0 flex-1 overflow-hidden">
+          {isTabAvailable('decisions') ? (
+            <TabsContent value="decisions" className="min-h-0 flex-1 overflow-hidden">
               <ScrollArea className="h-full">
                 <div className="space-y-3 p-3">
                   <BoardForm onSubmit={(event) => void createLocked(event)}>
@@ -1134,7 +830,7 @@ export function BoardDock() {
                       onChange={(event) =>
                         setLockedDraft((current) => ({ ...current, text: event.target.value }))
                       }
-                      placeholder="Locked coordination record"
+                      placeholder="Decision record"
                       value={lockedDraft.text}
                     />
                     <ButtonGroup className="mt-2 w-full">
@@ -1152,12 +848,12 @@ export function BoardDock() {
                         size="sm"
                         type="submit"
                       >
-                        Lock
+                        Save
                       </Button>
                     </ButtonGroup>
                   </BoardForm>
 
-                  {locked.length === 0 ? <EmptyState>{boardTabs[2].empty}</EmptyState> : null}
+                  {locked.length === 0 ? <EmptyState>{boardEmptyText('decisions')}</EmptyState> : null}
                   {lockedLanes.map((lane) => (
                     <BoardSection
                       count={groupedLocked[lane.id].length}
@@ -1220,7 +916,7 @@ export function BoardDock() {
                                       <IconTrash className="size-3.5" />
                                     </Button>
                                   </TooltipTrigger>
-                                  <TooltipContent>Delete locked record</TooltipContent>
+                                  <TooltipContent>Delete decision</TooltipContent>
                                 </Tooltip>
                               </ButtonGroup>
                             }
@@ -1307,7 +1003,7 @@ export function BoardDock() {
                     </div>
                   ) : null}
 
-                  {pins.length === 0 ? <EmptyState>{boardTabs[3].empty}</EmptyState> : null}
+                  {pins.length === 0 ? <EmptyState>{boardEmptyText('pins')}</EmptyState> : null}
                   {pinLanes.map((lane) => (
                     <BoardSection
                       count={groupedPins[lane.id].length}
@@ -1379,6 +1075,9 @@ export function BoardDock() {
           ) : null}
         </Tabs>
       </section>
+      <DragOverlay dropAnimation={null} zIndex={1000}>
+        <BoardDragPreview drag={activeDrag} rule={activeDragRule} />
+      </DragOverlay>
     </DndContext>
   )
 }

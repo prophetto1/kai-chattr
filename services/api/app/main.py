@@ -12,10 +12,11 @@ from pathlib import Path
 from fastapi import WebSocket, WebSocketDisconnect, UploadFile, File
 from fastapi.requests import Request
 from fastapi.responses import FileResponse, JSONResponse, Response
+from pydantic import ValidationError
 
 from app.stores.messages import MessageStore
 from app.stores.rules import RuleStore
-from app.stores.factory import create_rule_store
+from app.stores.factory import create_job_store, create_rule_store
 from app.stores.summaries import SummaryStore
 from app.stores.jobs import JobStore
 from app.stores.schedules import ScheduleStore, parse_schedule_spec
@@ -34,6 +35,19 @@ from app.context import runtime_context
 from app.factory import create_app, include_route_modules
 from app.runtime_contract import runtime_ports_payload
 from app.security import create_security_middleware
+from app.database import (
+    DatabaseConfigurationError,
+    check_database,
+    create_database_engine,
+    database_settings,
+)
+from app.schemas.board_workflows import (
+    BoardWorkflowCreateRequest,
+    BoardWorkflowMessageCreateRequest,
+    BoardWorkflowMessageResolveRequest,
+    BoardWorkflowReorderRequest,
+    BoardWorkflowUpdateRequest,
+)
 
 log = logging.getLogger(__name__)
 
@@ -366,7 +380,7 @@ def configure(cfg: dict, session_token: str = ""):
     if not jobs_path.exists() and legacy_activities.exists():
         legacy_activities.rename(jobs_path)
 
-    jobs = JobStore(str(jobs_path))
+    jobs = create_job_store(cfg, str(jobs_path))
     jobs.on_change(_on_job_change)
 
     locked = LockedStore(str(Path(data_dir) / "locked.json"))
@@ -1633,13 +1647,42 @@ async def get_status():
     return status
 
 
+def _database_readiness() -> tuple[str, bool]:
+    if not config:
+        return "unconfigured", False
+
+    try:
+        settings = database_settings(config)
+    except DatabaseConfigurationError:
+        mode = str(config.get("database", {}).get("mode", "file") or "file").strip().lower()
+        return mode, False
+
+    if settings.mode == "file":
+        return settings.mode, True
+    if settings.mode != "postgres":
+        return settings.mode, False
+
+    try:
+        engine = create_database_engine(settings.url or "")
+        try:
+            check_database(engine)
+        finally:
+            engine.dispose()
+    except Exception:
+        log.warning("Database readiness check failed.")
+        return settings.mode, False
+
+    return settings.mode, True
+
+
 async def healthz():
-    database_mode = config.get("database", {}).get("mode", "file") if config else "unconfigured"
+    database_mode, database_ready = _database_readiness()
     return JSONResponse({
-        "ok": True,
+        "ok": database_ready,
         "service": "kai-chattr-api",
         "database_mode": database_mode,
-    })
+        "database_ready": database_ready,
+    }, status_code=200 if database_ready else 503)
 
 
 def _runtime_display_host(request: Request) -> str:
@@ -1731,7 +1774,7 @@ async def get_mcp_tools():
 
 
 async def get_right_rail_capabilities():
-    """Return right-rail tabs backed by MCP read/write tool categories."""
+    """Return right-rail capabilities backed by MCP read/write tool categories."""
     from app.mcp import bridge as mcp_bridge
 
     manifest = mcp_bridge.tool_manifest()
@@ -1740,10 +1783,10 @@ async def get_right_rail_capabilities():
         by_category.setdefault(tool.get("category", ""), []).append(tool.get("name", ""))
 
     specs = [
-        {"id": "rules", "label": "Rules", "category": "rules"},
-        {"id": "jobs", "label": "Jobs", "category": "jobs"},
-        {"id": "locked", "label": "Locked", "category": "locked"},
-        {"id": "pins", "label": "Pinned", "category": "pins"},
+        {"id": "rules", "label": "Rules", "category": "rules", "surface": "board"},
+        {"id": "jobs", "label": "Jobs", "category": "jobs", "surface": "dock"},
+        {"id": "decisions", "label": "Decisions", "category": "locked", "surface": "board"},
+        {"id": "pins", "label": "Pinned", "category": "pins", "surface": "board"},
     ]
     tabs = []
     for spec in specs:
@@ -1951,46 +1994,51 @@ async def trigger_agent_silent(request: Request):
 
 async def create_job(request: Request):
     """Create a new job."""
-    body = await request.json()
-    title = body.get("title", "").strip()
-    if not title:
-        return JSONResponse({"error": "title required"}, status_code=400)
-    job_type = body.get("type", "job")
-    channel = body.get("channel", "general")
-    created_by = body.get("created_by", "user")
-    anchor_msg_id = body.get("anchor_msg_id")
-    assignee = body.get("assignee", "")
-    job_body = body.get("body", "")
+    try:
+        payload = BoardWorkflowCreateRequest.model_validate(await request.json())
+    except ValidationError as exc:
+        return JSONResponse({"error": "invalid request", "details": exc.errors()}, status_code=422)
+    except Exception:
+        return JSONResponse({"error": "invalid json"}, status_code=400)
     result = jobs.create(
-        title=title, job_type=job_type, channel=channel,
-        created_by=created_by, anchor_msg_id=anchor_msg_id,
-        assignee=assignee, body=job_body,
+        title=payload.title,
+        job_type=payload.type,
+        channel=payload.channel,
+        created_by=payload.created_by,
+        anchor_msg_id=payload.anchor_msg_id,
+        assignee=payload.assignee,
+        body=payload.body,
     )
     # Mark the proposal message as accepted so it persists across refresh
-    if anchor_msg_id:
-        anchor_msg = store.get_by_id(anchor_msg_id)
+    if payload.anchor_msg_id:
+        anchor_msg = store.get_by_id(payload.anchor_msg_id)
         if anchor_msg and anchor_msg.get("type") == "job_proposal":
             meta = dict(anchor_msg.get("metadata", {}))
             meta["status"] = "accepted"
-            updated_msg = store.update_message(anchor_msg_id, {"metadata": meta})
+            updated_msg = store.update_message(payload.anchor_msg_id, {"metadata": meta})
             if updated_msg:
                 await _broadcast(json.dumps({"type": "edit", "message": updated_msg}))
     # Post breadcrumb in main timeline with job_id for clickable link
-    store.add(created_by, f"Job created: {title}", msg_type="job_created",
-              channel=channel, metadata={"job_id": result["id"]})
+    store.add(payload.created_by, f"Job created: {payload.title}", msg_type="job_created",
+              channel=payload.channel, metadata={"job_id": result["id"]})
     return result
 
 
 async def update_job(job_id: int, request: Request):
     """Update a job's status, title, or assignee."""
-    body = await request.json()
+    try:
+        body = BoardWorkflowUpdateRequest.model_validate(await request.json())
+    except ValidationError as exc:
+        return JSONResponse({"error": "invalid request", "details": exc.errors()}, status_code=422)
+    except Exception:
+        return JSONResponse({"error": "invalid json"}, status_code=400)
     result = None
-    if "status" in body:
-        result = jobs.update_status(job_id, body["status"])
-    if "title" in body:
-        result = jobs.update_title(job_id, body["title"])
-    if "assignee" in body:
-        result = jobs.update_assignee(job_id, body["assignee"])
+    if body.status is not None:
+        result = jobs.update_status(job_id, body.status)
+    if body.title is not None:
+        result = jobs.update_title(job_id, body.title)
+    if body.assignee is not None:
+        result = jobs.update_assignee(job_id, body.assignee)
     if result is None:
         return JSONResponse({"error": "not found or invalid"}, status_code=404)
     return result
@@ -1998,12 +2046,13 @@ async def update_job(job_id: int, request: Request):
 
 async def reorder_jobs(request: Request):
     """Reorder jobs within a status group (globally, not per-channel)."""
-    body = await request.json()
-    status = body.get("status", "open")
-    ordered_ids = body.get("ordered_ids", [])
-    if not isinstance(ordered_ids, list) or len(ordered_ids) == 0:
-        return JSONResponse({"error": "ordered_ids required"}, status_code=400)
-    updated = jobs.reorder(status=status, ordered_ids=ordered_ids)
+    try:
+        body = BoardWorkflowReorderRequest.model_validate(await request.json())
+    except ValidationError as exc:
+        return JSONResponse({"error": "invalid request", "details": exc.errors()}, status_code=422)
+    except Exception:
+        return JSONResponse({"error": "invalid json"}, status_code=400)
+    updated = jobs.reorder(status=body.status, ordered_ids=body.ordered_ids)
     return {"ok": True, "updated": len(updated)}
 
 
@@ -2017,15 +2066,21 @@ async def get_job_messages(job_id: int):
 
 async def post_job_message(job_id: int, request: Request):
     """Post a message to a job."""
-    body = await request.json()
-    text = body.get("text", "").strip()
-    sender = body.get("sender", "user")
-    attachments = body.get("attachments", [])
-    if not text and not attachments:
+    try:
+        body = BoardWorkflowMessageCreateRequest.model_validate(await request.json())
+    except ValidationError as exc:
+        return JSONResponse({"error": "invalid request", "details": exc.errors()}, status_code=422)
+    except Exception:
+        return JSONResponse({"error": "invalid json"}, status_code=400)
+    if not body.text and not body.attachments:
         return JSONResponse({"error": "text or attachments required"}, status_code=400)
-    msg_type = body.get("type", "chat")
-    msg = jobs.add_message(job_id, sender, text,
-                           attachments=attachments, msg_type=msg_type)
+    msg = jobs.add_message(
+        job_id,
+        body.sender,
+        body.text,
+        attachments=body.attachments,
+        msg_type=body.type,
+    )
     if msg is None:
         return JSONResponse({"error": "job not found"}, status_code=404)
 
@@ -2033,7 +2088,7 @@ async def post_job_message(job_id: int, request: Request):
     job = jobs.get(job_id)
     if job:
         channel = job.get("channel", "general")
-        raw_targets = router.get_targets(sender, text, channel)
+        raw_targets = router.get_targets(body.sender, body.text, channel)
         targets = []
         for t in raw_targets:
             if registry:
@@ -2043,7 +2098,7 @@ async def post_job_message(job_id: int, request: Request):
         targets = list(dict.fromkeys(targets))
 
         from app.mcp import bridge as mcp_bridge
-        chat_msg = f"{sender}: {text}" if text else ""
+        chat_msg = f"{body.sender}: {body.text}" if body.text else ""
         for target in targets:
             if registry:
                 inst = registry.get_instance(target)
@@ -2066,17 +2121,19 @@ async def delete_job_message(job_id: int, msg_id: int):
 
 async def resolve_job_message(job_id: int, msg_index: int, request: Request):
     """Resolve a suggestion message (accept/dismiss)."""
-    body = await request.json()
-    resolution = body.get("resolution", "dismissed")
+    try:
+        body = BoardWorkflowMessageResolveRequest.model_validate(await request.json())
+    except ValidationError as exc:
+        return JSONResponse({"error": "invalid request", "details": exc.errors()}, status_code=422)
+    except Exception:
+        return JSONResponse({"error": "invalid json"}, status_code=400)
+    resolution = body.resolution
     job = jobs.get(job_id)
     if not job:
         return JSONResponse({"error": "not found"}, status_code=404)
-    msgs = job.get("messages", [])
-    if msg_index < 0 or msg_index >= len(msgs):
+    msg = jobs.resolve_message(job_id, msg_index, resolution)
+    if msg is None:
         return JSONResponse({"error": "invalid message index"}, status_code=400)
-    msg = msgs[msg_index]
-    msg["resolved"] = resolution
-    jobs._save()
 
     # If accepted, trigger the suggesting agent with context
     if resolution == "accepted" and msg.get("sender"):

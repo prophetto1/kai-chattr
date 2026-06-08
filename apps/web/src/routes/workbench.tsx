@@ -14,6 +14,7 @@ import {
   IconArrowLeft,
   IconArrowRight,
   IconBook,
+  IconBriefcase,
   IconCheck,
   IconCode,
   IconExternalLink,
@@ -109,8 +110,10 @@ import {
 } from '@/components/ai-elements/web-preview'
 import { BoardDock } from '@/components/workbench/BoardDock'
 import { DockWorkspace } from '@/components/workbench/DockWorkspace'
+import { JobsDock } from '@/components/workbench/JobsDock'
 import { WorkbenchCompactRail } from '@/components/workbench/WorkbenchCompactRail'
 import { WorkbenchSettingsDialog } from '@/components/workbench/WorkbenchSettingsDialog'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { useMonacoTheme } from '@/hooks/use-monaco-theme'
 import { Button } from '@/components/ui/button'
 import {
@@ -241,7 +244,7 @@ const defaultExpandedChangesPaths = new Set([
   'changes:docs/images',
 ])
 
-type DockTabId = 'board' | 'changes' | 'browser' | 'code' | 'docs' | 'terminal'
+type DockTabId = 'board' | 'jobs' | 'changes' | 'browser' | 'code' | 'docs' | 'terminal'
 type WorkbenchIcon = ComponentType<{
   size?: number | string
   stroke?: number
@@ -254,6 +257,7 @@ const dockTabs: Array<{
   icon: WorkbenchIcon
 }> = [
   { id: 'board', label: 'Board', icon: IconLayoutKanban },
+  { id: 'jobs', label: 'Jobs', icon: IconBriefcase },
   { id: 'changes', label: 'Changes', icon: IconGitCompare },
   { id: 'browser', label: 'Browser', icon: IconWorld },
   { id: 'code', label: 'Code', icon: IconCode },
@@ -1024,8 +1028,11 @@ function WorkbenchChatMessage({
 }
 
 export default function WorkbenchPage() {
+  const chatPanelRef = useRef<PanelImperativeHandle | null>(null)
   const rightDockRef = useRef<PanelImperativeHandle | null>(null)
+  const isMobile = useIsMobile()
   const [activeDockTab, setActiveDockTab] = useState<DockTabId>('board')
+  const [mobileDockOpen, setMobileDockOpen] = useState(true)
   const [chatMessages, setChatMessages] = useState(initialMessages)
   const [composerText, setComposerText] = useState('')
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -1040,17 +1047,26 @@ export default function WorkbenchPage() {
   )
 
   const closeRightDock = useCallback(() => {
+    if (isMobile) {
+      setMobileDockOpen(false)
+      return
+    }
+
     rightDockRef.current?.collapse()
-  }, [])
+  }, [isMobile])
 
   const openDockTab = useCallback((tab: DockTabId) => {
     setActiveDockTab(tab)
 
     const panel = rightDockRef.current
-    if (panel?.isCollapsed()) {
+    if (isMobile) {
+      setMobileDockOpen(true)
+      chatPanelRef.current?.collapse()
+      panel?.resize(100)
+    } else if (panel?.isCollapsed()) {
       panel.expand()
     }
-  }, [])
+  }, [isMobile])
 
   const handleDockTabChange = useCallback((value: string) => {
     openDockTab(value as DockTabId)
@@ -1166,8 +1182,24 @@ export default function WorkbenchPage() {
             </header>
 
             <div className="flex min-h-0 flex-1 overflow-hidden">
-              <ResizablePanelGroup direction="horizontal" className="min-w-0 flex-1">
-            <ResizablePanel id="chat" order={1} defaultSize="54%" minSize="32%">
+              <ResizablePanelGroup
+                className="min-w-0 flex-1"
+                direction="horizontal"
+                key={
+                  isMobile
+                    ? `mobile-workbench-panels-${mobileDockOpen ? 'dock' : 'chat'}`
+                    : 'desktop-workbench-panels'
+                }
+              >
+            <ResizablePanel
+              id="chat"
+              order={1}
+              collapsible={isMobile}
+              collapsedSize={0}
+              defaultSize={isMobile && mobileDockOpen ? 0 : 54}
+              minSize={isMobile ? 0 : 32}
+              panelRef={chatPanelRef}
+            >
               <div className="flex h-full flex-col bg-background">
                 <Conversation className="flex-1">
                   <ConversationContent className="mx-auto w-full max-w-2xl gap-5 px-4 py-4">
@@ -1282,19 +1314,29 @@ export default function WorkbenchPage() {
               id="dock"
               order={2}
               collapsible
-              collapsedSize="0%"
-              defaultSize="46%"
-              minSize="28%"
+              collapsedSize={0}
+              defaultSize={isMobile ? (mobileDockOpen ? 100 : 0) : 46}
+              minSize={isMobile ? (mobileDockOpen ? 72 : 0) : 28}
               panelRef={rightDockRef}
             >
               <div className="flex h-full min-h-0 flex-col bg-card">
                 <TabsContent value="board" className={dockWorkspaceContentClassName}>
                   <DockWorkspace
                     title="Board"
-                    path="Rules, Jobs, Locked, Pinned"
+                    path="Rules, Decisions, Pinned"
                     icon={IconLayoutKanban}
                     onClose={closeRightDock}
                     main={<BoardDock />}
+                  />
+                </TabsContent>
+
+                <TabsContent value="jobs" className={dockWorkspaceContentClassName}>
+                  <DockWorkspace
+                    title="Jobs"
+                    path="Open, Done, Closed"
+                    icon={IconBriefcase}
+                    onClose={closeRightDock}
+                    main={<JobsDock />}
                   />
                 </TabsContent>
 

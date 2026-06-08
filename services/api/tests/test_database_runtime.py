@@ -49,6 +49,25 @@ def test_alembic_scaffold_exists_for_services_api():
     versions = ROOT / "migrations" / "versions"
     assert versions.exists()
     assert any(path.name.endswith("_create_board_rules.py") for path in versions.iterdir())
+    assert any(path.name.endswith("_create_board_workflows.py") for path in versions.iterdir())
+
+
+def test_file_rule_store_counts_pending_proposed_rules(tmp_path):
+    from app.stores.rules import RuleStore
+
+    store = RuleStore(str(tmp_path / "rules.json"))
+    created = store.propose("Review proposed rules before drafting.", "codex")
+
+    assert created is not None
+    assert created["status"] == "pending"
+    assert store.count_proposed() == 1
+    assert store.count_draft() == 0
+
+    drafted = store.make_draft(created["id"])
+
+    assert drafted["status"] == "draft"
+    assert store.count_proposed() == 0
+    assert store.count_draft() == 1
 
 
 def test_sqlalchemy_rule_store_supports_rule_lifecycle(tmp_path):
@@ -64,9 +83,13 @@ def test_sqlalchemy_rule_store_supports_rule_lifecycle(tmp_path):
     assert created is not None
     assert created["id"] == 1
     assert created["status"] == "pending"
+    assert store.count_proposed() == 1
+    assert store.count_draft() == 0
 
     drafted = store.make_draft(created["id"])
     assert drafted["status"] == "draft"
+    assert store.count_proposed() == 0
+    assert store.count_draft() == 1
 
     activated = store.activate(created["id"])
     assert activated["status"] == "active"
@@ -102,3 +125,58 @@ def test_rule_store_factory_uses_sqlalchemy_when_database_configured(tmp_path):
     store = create_rule_store(config, str(tmp_path / "rules.json"))
 
     assert isinstance(store, SqlAlchemyRuleStore)
+
+
+def test_sqlalchemy_job_store_supports_workflow_lifecycle(tmp_path):
+    from app.stores.jobs_db import SqlAlchemyJobStore
+
+    store = SqlAlchemyJobStore(f"sqlite:///{tmp_path / 'jobs.db'}")
+
+    created = store.create(
+        title="Define the workflow schema",
+        job_type="workflow",
+        channel="general",
+        created_by="codex",
+        assignee="codex",
+        body="Persist Board jobs as workflows.",
+    )
+
+    assert created["id"] == 1
+    assert created["type"] == "workflow"
+    assert created["status"] == "open"
+    assert created["sort_order"] == 1
+    assert store.list_all(status="open")[0]["title"] == "Define the workflow schema"
+
+    msg = store.add_message(created["id"], "jon", "Please make it work.")
+    assert msg["id"] == 0
+    assert store.get_messages(created["id"])[0]["text"] == "Please make it work."
+
+    resolved = store.resolve_message(created["id"], 0, "accepted")
+    assert resolved["resolved"] == "accepted"
+
+    updated = store.update_status(created["id"], "done")
+    assert updated["status"] == "done"
+
+    deleted_msg = store.delete_message(created["id"], 0)
+    assert deleted_msg == {"job_id": created["id"], "message_id": 0}
+    assert store.get_messages(created["id"])[0]["deleted"] is True
+
+    deleted = store.delete(created["id"])
+    assert deleted["id"] == created["id"]
+    assert store.list_all() == []
+
+
+def test_job_store_factory_uses_sqlalchemy_when_database_configured(tmp_path):
+    from app.stores.factory import create_job_store
+    from app.stores.jobs_db import SqlAlchemyJobStore
+
+    config = {
+        "database": {
+            "mode": "postgres",
+            "url": f"sqlite:///{tmp_path / 'jobs.db'}",
+        }
+    }
+
+    store = create_job_store(config, str(tmp_path / "jobs.json"))
+
+    assert isinstance(store, SqlAlchemyJobStore)

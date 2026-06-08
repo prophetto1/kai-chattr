@@ -28,7 +28,16 @@ test('workbench loads through the kai-chattr runtime contract', async ({ page, r
   expect(body.tabs.map((tab: { id: string }) => tab.id)).toEqual([
     'rules',
     'jobs',
-    'locked',
+    'decisions',
     'pins',
   ])
+  expect(Object.fromEntries(body.tabs.map((tab: { id: string; surface: string }) => [
+    tab.id,
+    tab.surface,
+  ]))).toEqual({
+    rules: 'board',
+    jobs: 'dock',
+    decisions: 'board',
+    pins: 'board',
+  })
 })

@@ -70,6 +70,31 @@ class RuntimeArchitectureContractTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["ok"], True)
         self.assertIn("database_mode", response.json())
+        self.assertEqual(response.json()["database_ready"], True)
+
+    def test_healthz_reports_configured_database_readiness(self):
+        with tempfile.TemporaryDirectory() as data_dir:
+            chattr_test_configure(
+                data_dir,
+                extra_cfg={
+                    "database": {
+                        "mode": "postgres",
+                        "url": f"sqlite:///{Path(data_dir) / 'rules.db'}",
+                    },
+                },
+            )
+            client = TestClient(app_module.app)
+
+            try:
+                response = client.get("/healthz")
+            finally:
+                chattr_test_configure(self.tmp.name, session_token=self.token)
+
+        body = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(body["ok"], True)
+        self.assertEqual(body["database_mode"], "postgres")
+        self.assertEqual(body["database_ready"], True)
 
     def test_right_rail_capabilities_are_protected_and_available_when_authenticated(self):
         forbidden = self.client.get("/api/right-rail/capabilities")
@@ -80,8 +105,20 @@ class RuntimeArchitectureContractTests(unittest.TestCase):
             headers={"X-Session-Token": self.token},
         )
         self.assertEqual(authed.status_code, 200)
-        tab_ids = [tab["id"] for tab in authed.json()["tabs"]]
-        self.assertEqual(tab_ids, ["rules", "jobs", "locked", "pins"])
+        tabs = authed.json()["tabs"]
+        tab_ids = [tab["id"] for tab in tabs]
+        self.assertEqual(tab_ids, ["rules", "jobs", "decisions", "pins"])
+        self.assertEqual(
+            {tab["id"]: tab["surface"] for tab in tabs},
+            {
+                "rules": "board",
+                "jobs": "dock",
+                "decisions": "board",
+                "pins": "board",
+            },
+        )
+        decisions_tab = next(tab for tab in tabs if tab["id"] == "decisions")
+        self.assertEqual(decisions_tab["category"], "locked")
 
     def test_configured_origin_gets_cors_preflight_without_session_token(self):
         with tempfile.TemporaryDirectory() as data_dir:

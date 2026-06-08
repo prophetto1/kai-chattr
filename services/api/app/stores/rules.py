@@ -263,4 +263,5 @@ class RuleStore:
 
     # Legacy compat
     def count_proposed(self) -> int:
-        return self.count_draft()
+        with self._lock:
+            return sum(1 for r in self._rules if r.get("status") in ("pending", "proposed"))

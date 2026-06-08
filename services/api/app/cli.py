@@ -33,14 +33,6 @@ def _parse_args():
     )
     return parser.parse_args()
 
-
-def _session_token_from_env() -> str:
-    return (
-        os.environ.get("KAI_CHATTR_SESSION_TOKEN", "").strip()
-        or os.environ.get("CHATTR_SESSION_TOKEN", "").strip()
-    )
-
-
 def main():
     logging.basicConfig(
         level=logging.INFO,

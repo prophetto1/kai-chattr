@@ -43,13 +43,13 @@ export const BoardItemRow = forwardRef<HTMLDivElement, BoardItemRowProps>(
   ) => (
     <div
       className={cn(
-        'group rounded-md border border-border/60 bg-card px-2 py-1.5 shadow-xs transition-colors',
+        'group relative rounded-md border border-border/60 bg-card px-2 py-1.5 shadow-xs transition-colors',
         'hover:border-border hover:bg-accent/20',
-        isDragging ? 'opacity-60 shadow-md' : '',
+        isDragging ? 'z-[1000] opacity-90 shadow-xl ring-1 ring-ring/40' : '',
         className
       )}
       ref={ref}
-      style={style}
+      style={{ ...style, zIndex: isDragging ? 1000 : style?.zIndex }}
     >
       <div className="flex min-w-0 items-start gap-1.5">
         {dragHandleProps ? (

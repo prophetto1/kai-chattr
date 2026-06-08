@@ -234,7 +234,14 @@ def test_right_rail_capabilities_endpoint_is_mcp_backed(tmp_path):
     )
     assert res.status_code == 200
     tabs = res.json()["tabs"]
-    assert [tab["id"] for tab in tabs] == ["rules", "jobs", "locked", "pins"]
+    assert [tab["id"] for tab in tabs] == ["rules", "jobs", "decisions", "pins"]
+    assert {tab["id"]: tab["surface"] for tab in tabs} == {
+        "rules": "board",
+        "jobs": "dock",
+        "decisions": "board",
+        "pins": "board",
+    }
+    assert next(tab for tab in tabs if tab["id"] == "decisions")["category"] == "locked"
     assert "artifacts" not in {tab["id"] for tab in tabs}
     assert all(tab["tools"] for tab in tabs)
 

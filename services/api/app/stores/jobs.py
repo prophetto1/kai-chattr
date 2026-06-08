@@ -269,6 +269,28 @@ class JobStore:
         self._fire("message_delete", payload)
         return payload
 
+    def resolve_message(self, job_id: int, msg_index: int, resolution: str) -> dict | None:
+        """Mark a job-thread message as resolved."""
+        with self._lock:
+            for a in self._jobs:
+                if a["id"] != job_id:
+                    continue
+                msgs = a.get("messages", [])
+                if msg_index < 0 or msg_index >= len(msgs):
+                    return None
+                msg = msgs[msg_index]
+                msg["resolved"] = resolution.strip()[:32] or "dismissed"
+                msg["updated_at"] = time.time()
+                a["updated_at"] = time.time()
+                self._save()
+                result_msg = dict(msg)
+                result_msg["job_id"] = job_id
+                break
+            else:
+                return None
+        self._fire("message", {"job_id": job_id, "message": result_msg})
+        return result_msg
+
     def delete(self, job_id: int) -> dict | None:
         """Permanently delete a job."""
         with self._lock:

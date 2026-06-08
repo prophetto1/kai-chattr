@@ -1,9 +1,13 @@
-export type BoardTabId = 'rules' | 'jobs' | 'locked' | 'pins'
+export type BoardTabId = 'rules' | 'decisions' | 'pins'
+export type CapabilityId = BoardTabId | 'jobs' | 'locked'
+export type CapabilitySurface = 'board' | 'dock'
+export type CapabilityCategory = 'rules' | 'jobs' | 'locked' | 'pins'
 
 export type CapabilityTab = {
-  id: BoardTabId
+  id: CapabilityId
   label: string
-  category: string
+  category: CapabilityCategory
+  surface?: CapabilitySurface
   tools: string[]
 }
 
@@ -61,8 +65,7 @@ export type PinItem = {
 
 export const boardTabs: Array<{ id: BoardTabId; label: string; empty: string }> = [
   { id: 'rules', label: 'Rules', empty: 'No rules yet.' },
-  { id: 'jobs', label: 'Jobs', empty: 'No jobs yet.' },
-  { id: 'locked', label: 'Locked', empty: 'No locked records yet.' },
+  { id: 'decisions', label: 'Decisions', empty: 'No decisions yet.' },
   { id: 'pins', label: 'Pinned', empty: 'No pinned messages yet.' },
 ]
 
