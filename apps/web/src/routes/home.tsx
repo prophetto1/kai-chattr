@@ -322,7 +322,7 @@ export default function HomePage() {
         defaultExpanded={false}
         onBrand={() => navigate('/home')}
         onNewSession={() => createMutation.mutate({})}
-        onOpenSettings={() => navigate('/workbench')}
+        onOpenSettings={() => navigate('/settings')}
         onShowConversations={() => navigate('/home')}
       />
       <section className="flex min-w-0 flex-1 justify-center overflow-y-auto px-6 py-8">

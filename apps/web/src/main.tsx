@@ -22,6 +22,7 @@ import BoardRulesVisualPage from './routes/board-rules-visual'
 import LandingPage from './routes/landing'
 import LoginPage from './routes/login'
 import RegisterPage from './routes/register'
+import SettingsPage from './routes/settings'
 import WorkbenchPage from './routes/workbench'
 import './styles.css'
 
@@ -58,6 +59,7 @@ const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
   { path: '/home', element: <HomePage /> },
+  { path: '/settings', element: <SettingsPage />, errorElement: <WorkbenchRouteError /> },
   { path: '/workbench', element: <WorkbenchPage />, errorElement: <WorkbenchRouteError /> },
   { path: '/workbench/board-rules-visual', element: <BoardRulesVisualPage /> },
 ])

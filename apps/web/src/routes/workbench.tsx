@@ -113,7 +113,6 @@ import { BoardDock } from '@/components/workbench/BoardDock'
 import { DockWorkspace } from '@/components/workbench/DockWorkspace'
 import { JobsDock } from '@/components/workbench/JobsDock'
 import { WorkbenchCompactRail } from '@/components/workbench/WorkbenchCompactRail'
-import { WorkbenchSettingsDialog } from '@/components/workbench/WorkbenchSettingsDialog'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useMonacoTheme } from '@/hooks/use-monaco-theme'
 import { Button } from '@/components/ui/button'
@@ -1037,7 +1036,6 @@ export default function WorkbenchPage() {
   const [mobileDockOpen, setMobileDockOpen] = useState(true)
   const [chatMessages, setChatMessages] = useState(initialMessages)
   const [composerText, setComposerText] = useState('')
-  const [settingsOpen, setSettingsOpen] = useState(false)
   const [useWebSearch, setUseWebSearch] = useState(false)
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false)
   const [selectedModel, setSelectedModel] = useState<(typeof composerModels)[number]['id']>(
@@ -1128,12 +1126,6 @@ export default function WorkbenchPage() {
         onValueChange={handleDockTabChange}
         value={activeDockTab}
       >
-        <WorkbenchSettingsDialog
-          onOpenChange={setSettingsOpen}
-          open={settingsOpen}
-          trigger={null}
-        />
-
         <div className="flex min-h-0 flex-1 overflow-hidden">
           <WorkbenchCompactRail
             account={{
@@ -1143,12 +1135,12 @@ export default function WorkbenchPage() {
               status: 'online',
             }}
             activeItem="conversations"
-            onAccount={() => setSettingsOpen(true)}
-            onBilling={() => setSettingsOpen(true)}
+            onAccount={() => navigate('/settings')}
+            onBilling={() => navigate('/settings')}
             onBrand={() => navigate('/home')}
             onNewSession={handleNewSession}
-            onNotifications={() => setSettingsOpen(true)}
-            onOpenSettings={() => setSettingsOpen(true)}
+            onNotifications={() => navigate('/settings')}
+            onOpenSettings={() => navigate('/settings')}
           />
 
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
