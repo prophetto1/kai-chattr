@@ -25,7 +25,6 @@
         "TanStack Query",
         "Zustand",
         "Monaco",
-        "xterm.js",
         "Tiptap",
         "Tabler icons"
       ]
@@ -43,6 +42,12 @@
         "psycopg2 (Postgres driver)",
         "MCP Python SDK",
         "OpenTelemetry",
+        "OpenTelemetry Collector",
+        "OpenTelemetry OTLP exporter",
+        "OpenTelemetry FastAPI instrumentation",
+        "OpenTelemetry SQLAlchemy instrumentation",
+        "Jaeger",
+        "Logfire (SOPS-gated backend target)",
         "Ruff",
         "pytest"
       ]
@@ -56,6 +61,9 @@
       "uvicorn",
       "mcp",
       "opentelemetry-api",
+      "opentelemetry-exporter-otlp",
+      "opentelemetry-instrumentation-fastapi",
+      "opentelemetry-instrumentation-sqlalchemy",
       "opentelemetry-sdk",
       "alembic",
       "pydantic",
@@ -84,8 +92,6 @@
       "@tiptap/react",
       "@tiptap/starter-kit",
       "@vitejs/plugin-react",
-      "@xterm/addon-fit",
-      "@xterm/xterm",
       "ai",
       "ansi-to-react",
       "class-variance-authority",

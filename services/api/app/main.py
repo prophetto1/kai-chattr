@@ -31,11 +31,13 @@ from app.events import JsonlEventStream, RUNTIME_EVENT_SCHEMA_VERSION
 from app.routes.launchers import router as launcher_control_router
 from app.routes.home_start import router as home_start_router
 from app.stores.locked import LockedStore
-from app.observability import init_observability
+from app.observability import configure_observability, init_observability, observed_endpoint_catalog
 from app.context import runtime_context
 from app.factory import create_app, include_route_modules
+from app.pydantic_contracts import PydanticContractStatus, describe_pydantic_contract_status
 from app.runtime_contract import runtime_ports_payload
 from app.security import create_security_middleware
+from app.settings import get_settings as get_app_settings
 from app.database import (
     DatabaseConfigurationError,
     check_database,
@@ -314,6 +316,7 @@ app.include_router(create_terminal_router(TerminalApiState(
     get_registry=lambda: registry,
     resolve_authenticated_agent=_resolve_authenticated_agent,
     extract_agent_token=_extract_agent_token,
+    get_event_stream=lambda: runtime_event_stream,
 )))
 
 
@@ -390,7 +393,7 @@ def configure(cfg: dict, session_token: str = ""):
     # amendment. Idempotent: first call installs the global tracer + meter
     # providers; later calls (test classes with new TemporaryDirectory)
     # only re-point the JSON-lines export paths to the new data_dir.
-    init_observability(Path(data_dir))
+    init_observability(Path(data_dir), get_app_settings())
 
     # Runtime stream is tagged with chattr.runtime_event.v1 and kept distinct
     # from agent_events.jsonl. Desktop/Tauri host endpoints are excluded from
@@ -666,6 +669,11 @@ def set_event_loop(loop):
     global _event_loop
     _event_loop = loop
     _sync_runtime_context()
+
+
+@app.on_event("startup")
+async def _capture_runtime_event_loop():
+    set_event_loop(asyncio.get_running_loop())
 
 
 def _on_store_message(msg: dict):
@@ -1738,6 +1746,32 @@ async def healthz():
         "database_mode": database_mode,
         "database_ready": database_ready,
     }, status_code=200 if database_ready else 503)
+
+
+async def get_pydantic_contract_status() -> PydanticContractStatus:
+    return describe_pydantic_contract_status()
+
+
+async def get_observed_endpoints():
+    return observed_endpoint_catalog()
+
+
+async def get_observability_status():
+    settings = get_app_settings()
+    exporter = settings.otel_traces_exporter.strip().lower() or "jsonl"
+    otlp_endpoint = settings.otel_exporter_otlp_endpoint.strip()
+    logfire_enabled = bool(settings.logfire_enabled)
+    return {
+        "status": "active",
+        "service_name": settings.otel_service_name,
+        "otel_service_name": settings.otel_service_name,
+        "otel_traces_exporter": exporter,
+        "otel_exporter_otlp_endpoint": otlp_endpoint,
+        "otel_jaeger_ui_url": settings.otel_jaeger_ui_url.strip(),
+        "observability_stack": ["opentelemetry", "otel-collector", "jaeger", "logfire"],
+        "logfire_enabled": logfire_enabled,
+        "logfire_configured": logfire_enabled and bool(settings.logfire_token.strip()),
+    }
 
 
 def _runtime_display_host(request: Request) -> str:
@@ -3068,3 +3102,4 @@ def _include_main_route_modules() -> None:
 
 
 _include_main_route_modules()
+configure_observability(app, get_app_settings())

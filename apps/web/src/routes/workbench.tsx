@@ -1,17 +1,21 @@
 'use client'
 
 /*
- * JWC Workbench - first shell slice (mock data).
+ * JWC Workbench - runtime-connected shell slice.
  *
  * Full-bleed 3-pane IDE shell: slim header, left rail, center chat, and right
  * dock. UI controls are composed from shadcn/ui primitives and Vercel AI
- * Elements rather than local lookalikes.
+ * Elements rather than local lookalikes. The center chat uses kai-chattr's
+ * WebSocket runtime; secondary dock content remains fixture-backed until each
+ * slice is migrated.
  */
 
 import { type ComponentType, useCallback, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
+import { useQuery } from '@tanstack/react-query'
 import { DiffEditor, Editor } from '@monaco-editor/react'
 import {
+  IconActivityHeartbeat,
   IconArrowLeft,
   IconArrowRight,
   IconBook,
@@ -93,7 +97,6 @@ import {
   usePromptInputAttachments,
 } from '@/components/ai-elements/prompt-input'
 import { SpeechInput } from '@/components/ai-elements/speech-input'
-import { Terminal } from '@/components/ai-elements/terminal'
 import {
   Tool,
   ToolContent,
@@ -113,8 +116,16 @@ import { BoardDock } from '@/components/workbench/BoardDock'
 import { DockWorkspace } from '@/components/workbench/DockWorkspace'
 import { JobsDock } from '@/components/workbench/JobsDock'
 import { WorkbenchCompactRail } from '@/components/workbench/WorkbenchCompactRail'
+import { AgentTerminalPane } from '@/components/workbench/AgentTerminalPane'
+import { AgentLauncherDialog } from '@/components/workbench/launcher/AgentLauncherDialog'
+import { type ChattrRoomMessage, useChattrRoom } from '@/hooks/use-chattr-room'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useMonacoTheme } from '@/hooks/use-monaco-theme'
+import {
+  getObservabilityStatus,
+  type ObservabilityStatus,
+} from '@/lib/observability-api'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   ResizableHandle,
@@ -130,7 +141,9 @@ import {
 } from '@/components/ui/tooltip'
 
 type WorkbenchMessage = {
+  id?: number | string
   role: 'assistant' | 'user'
+  sender?: string
   text: string
   reasoning?: string
   sources?: Array<{ title: string; href: string }>
@@ -141,39 +154,7 @@ type WorkbenchMessage = {
   }
 }
 
-const initialMessages: WorkbenchMessage[] = [
-  {
-    role: 'assistant',
-    text: 'The content needs to be addressed in the audit.',
-    reasoning:
-      'Use the installed component catalogs as the source of truth. If a workbench surface maps to shadcn/ui or Vercel AI Elements, compose that source component instead of writing a local visual equivalent.',
-    sources: [
-      {
-        title: 'Vercel AI Elements catalog',
-        href: 'https://elements.ai-sdk.dev/',
-      },
-      {
-        title: 'shadcn/ui component catalog',
-        href: 'https://ui.shadcn.com/docs/components',
-      },
-    ],
-    tool: {
-      name: 'memory_search',
-      input: {
-        query: 'jwc-global workbench kai-chattr no handrolled shadcn ai elements',
-      },
-      output: {
-        rule: 'No handrolled substitutes when approved source components exist.',
-        scope: 'jwc-global and kai-chattr workbench surfaces',
-      },
-    },
-  },
-  { role: 'user', text: 'please proceed' },
-  {
-    role: 'assistant',
-    text: 'Done - steps 2 and 3 complete the authoritative plan. Verified the green checks plus the new canaries, then re-gated.',
-  },
-]
+const CHAT_CHANNEL = 'general'
 
 const composerModels = [
   {
@@ -244,7 +225,15 @@ const defaultExpandedChangesPaths = new Set([
   'changes:docs/images',
 ])
 
-type DockTabId = 'board' | 'jobs' | 'changes' | 'browser' | 'code' | 'docs' | 'terminal'
+type DockTabId =
+  | 'board'
+  | 'jobs'
+  | 'changes'
+  | 'browser'
+  | 'code'
+  | 'docs'
+  | 'observability'
+  | 'terminal'
 type WorkbenchIcon = ComponentType<{
   size?: number | string
   stroke?: number
@@ -262,13 +251,9 @@ const dockTabs: Array<{
   { id: 'browser', label: 'Browser', icon: IconWorld },
   { id: 'code', label: 'Code', icon: IconCode },
   { id: 'docs', label: 'Docs', icon: IconBook },
+  { id: 'observability', label: 'Observability', icon: IconActivityHeartbeat },
   { id: 'terminal', label: 'Terminal', icon: IconTerminal2 },
 ]
-
-const terminalOutput = `$ pnpm dev
-> Next.js 16.2.6 (turbopack)
-- Local: http://localhost:1717
-OK Ready in 1.2s`
 
 const browserLogs = [
   {
@@ -442,7 +427,7 @@ const docsPaneSource = `# Workbench Surface
 - Right dock tabs are shadcn Tabs in the shell header.
 - Docs tab owns the secondary docs file tree, not the primary app sidebar.
 - Code and document panes reserve the Monaco and Tiptap slots.
-- Terminal starts with AI Elements Terminal until xterm.js is attached.`
+- Terminal renders the read-only agent snapshot stream from /api/terminal.`
 
 const dockContentClassName =
   'm-0 min-h-0 flex-1 overflow-hidden data-[state=active]:flex data-[state=inactive]:hidden'
@@ -981,6 +966,15 @@ function BrowserPreviewPane() {
   )
 }
 
+function toWorkbenchMessage(message: ChattrRoomMessage): WorkbenchMessage {
+  return {
+    id: message.uid ?? message.id ?? `${message.sender}-${message.timestamp ?? message.text}`,
+    role: message.sender === 'user' ? 'user' : 'assistant',
+    sender: message.sender,
+    text: message.text,
+  }
+}
+
 function WorkbenchChatMessage({
   index,
   message,
@@ -1027,6 +1021,127 @@ function WorkbenchChatMessage({
   )
 }
 
+function ObservabilityStatusChip({
+  isError,
+  isLoading,
+  status,
+}: {
+  isError: boolean
+  isLoading: boolean
+  status?: ObservabilityStatus
+}) {
+  const exporter =
+    status?.otel_traces_exporter?.trim() ||
+    (isError ? 'unavailable' : isLoading ? 'loading' : 'unknown')
+  const serviceName = status?.otel_service_name?.trim() || status?.service_name?.trim() || 'kai-chattr-api'
+  const endpoint = status?.otel_exporter_otlp_endpoint?.trim()
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div
+          aria-label={`otel_traces_exporter ${exporter}`}
+          aria-live="polite"
+          className="hidden h-7 min-w-[214px] max-w-[286px] shrink-0 items-center gap-2 rounded-md border border-border/70 bg-muted/35 px-2.5 text-[11px] text-muted-foreground md:flex"
+          data-testid="otel-traces-exporter"
+        >
+          <IconActivityHeartbeat aria-hidden="true" className="size-3.5 shrink-0 text-emerald-500" />
+          <span className="shrink-0 font-medium text-foreground">otel_traces_exporter</span>
+          <span className="min-w-0 truncate rounded-sm bg-background/80 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
+            {exporter}
+          </span>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">
+        <div className="grid gap-1 text-xs">
+          <span>Service: {serviceName}</span>
+          <span>Exporter: {exporter}</span>
+          {endpoint ? <span>Endpoint: {endpoint}</span> : null}
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+function ObservabilityDockPanel({
+  isError,
+  isLoading,
+  status,
+}: {
+  isError: boolean
+  isLoading: boolean
+  status?: ObservabilityStatus
+}) {
+  const exporter =
+    status?.otel_traces_exporter?.trim() ||
+    (isError ? 'unavailable' : isLoading ? 'loading' : 'unknown')
+  const serviceName = status?.otel_service_name?.trim() || status?.service_name?.trim() || 'kai-chattr-api'
+  const endpoint = status?.otel_exporter_otlp_endpoint?.trim()
+  const jaegerUrl = status?.otel_jaeger_ui_url?.trim() || 'http://127.0.0.1:8886'
+  const logfireLabel = status?.logfire_configured
+    ? 'Configured'
+    : status?.logfire_enabled
+      ? 'Token missing'
+      : 'SOPS-gated'
+  const statusLabel = status?.status === 'active'
+    ? 'Running'
+    : isError
+      ? 'Unavailable'
+      : isLoading
+        ? 'Loading'
+        : 'Unknown'
+  const statusTone = status?.status === 'active' ? 'default' : 'outline'
+
+  return (
+    <div className="h-full overflow-auto bg-background p-3" data-testid="observability-dock-panel">
+      <div className="grid gap-4">
+        <div className="rounded-md border bg-background p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="grid gap-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-sm font-semibold tracking-normal text-foreground">Runtime telemetry</h2>
+                <Badge variant={statusTone}>{statusLabel}</Badge>
+                <Badge variant="outline">{exporter}</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {'Collector -> Jaeger + Logfire. Service '}
+                {serviceName}
+                {endpoint ? ` -> ${endpoint}` : ' -> OTLP endpoint not configured'}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <TelemetryMetric label="Service" value={serviceName} />
+            <TelemetryMetric label="otel_traces_exporter" value={exporter} />
+            <TelemetryMetric label="OTLP endpoint" value={endpoint || 'Not configured'} />
+            <TelemetryMetric label="Jaeger UI" value={jaegerUrl} />
+            <TelemetryMetric label="Logfire" value={logfireLabel} />
+          </div>
+        </div>
+
+        <div className="rounded-md border bg-background">
+          <div className="border-b px-4 py-3">
+            <h2 className="text-sm font-semibold tracking-normal text-foreground">Recent backend spans</h2>
+          </div>
+          <div className="px-4 py-8 text-sm text-muted-foreground">
+            Trace listing is reserved for the collector reader surface. Current exporter: {exporter}.
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TelemetryMetric(props: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border bg-muted/20 px-3 py-2">
+      <div className="text-xs font-medium text-muted-foreground">{props.label}</div>
+      <div className="mt-1 truncate text-sm font-semibold text-foreground">{props.value}</div>
+    </div>
+  )
+}
+
 export default function WorkbenchPage() {
   const navigate = useNavigate()
   const chatPanelRef = useRef<PanelImperativeHandle | null>(null)
@@ -1034,7 +1149,11 @@ export default function WorkbenchPage() {
   const isMobile = useIsMobile()
   const [activeDockTab, setActiveDockTab] = useState<DockTabId>('board')
   const [mobileDockOpen, setMobileDockOpen] = useState(true)
-  const [chatMessages, setChatMessages] = useState(initialMessages)
+  const { messages: roomMessages, sendMessage } = useChattrRoom({ channel: CHAT_CHANNEL })
+  const chatMessages = useMemo(
+    () => roomMessages.map(toWorkbenchMessage),
+    [roomMessages]
+  )
   const [composerText, setComposerText] = useState('')
   const [useWebSearch, setUseWebSearch] = useState(false)
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false)
@@ -1045,6 +1164,12 @@ export default function WorkbenchPage() {
     () => composerModels.find((model) => model.id === selectedModel) ?? composerModels[0],
     [selectedModel]
   )
+  const observabilityStatusQuery = useQuery({
+    queryKey: ['observability-status'],
+    queryFn: getObservabilityStatus,
+    refetchInterval: 15000,
+    staleTime: 5000,
+  })
 
   const closeRightDock = useCallback(() => {
     if (isMobile) {
@@ -1076,12 +1201,7 @@ export default function WorkbenchPage() {
     openDockTab(tab)
   }, [openDockTab])
 
-  const appendUserMessage = useCallback((text: string) => {
-    setChatMessages((current) => [...current, { role: 'user', text }])
-  }, [])
-
   const handleNewSession = useCallback(() => {
-    setChatMessages(initialMessages)
     setComposerText('')
   }, [])
 
@@ -1093,11 +1213,17 @@ export default function WorkbenchPage() {
       return
     }
 
-    appendUserMessage(
-      text || `Sent ${attachmentCount} attachment${attachmentCount === 1 ? '' : 's'}`
-    )
+    const sent = sendMessage({
+      attachments: message.files,
+      text: text || `Sent ${attachmentCount} attachment${attachmentCount === 1 ? '' : 's'}`,
+    })
+
+    if (!sent) {
+      throw new Error('Workbench chat WebSocket is not connected')
+    }
+
     setComposerText('')
-  }, [appendUserMessage])
+  }, [sendMessage])
 
   const handleComposerTextChange = useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -1149,6 +1275,12 @@ export default function WorkbenchPage() {
                 <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
                 <span className="truncate text-xs font-medium text-foreground">Workbench session</span>
               </div>
+              <ObservabilityStatusChip
+                isError={observabilityStatusQuery.isError}
+                isLoading={observabilityStatusQuery.isLoading}
+                status={observabilityStatusQuery.data}
+              />
+              <AgentLauncherDialog />
               <div className="ml-auto flex items-center gap-1">
                 <TabsList
                   variant="line"
@@ -1199,7 +1331,7 @@ export default function WorkbenchPage() {
                     {chatMessages.map((m, i) => (
                       <WorkbenchChatMessage
                         index={i}
-                        key={`${m.role}-${i}`}
+                        key={m.id ?? `${m.role}-${i}`}
                         message={m}
                       />
                     ))}
@@ -1371,13 +1503,29 @@ export default function WorkbenchPage() {
                         />
                       </TabsContent>
 
+                      <TabsContent value="observability" className={dockWorkspaceContentClassName}>
+                        <DockWorkspace
+                          title="Observability"
+                          path="OpenTelemetry status and traces"
+                          icon={IconActivityHeartbeat}
+                          onClose={closeRightDock}
+                          main={(
+                            <ObservabilityDockPanel
+                              isError={observabilityStatusQuery.isError}
+                              isLoading={observabilityStatusQuery.isLoading}
+                              status={observabilityStatusQuery.data}
+                            />
+                          )}
+                        />
+                      </TabsContent>
+
                       <TabsContent value="terminal" className={dockWorkspaceContentClassName}>
                         <DockWorkspace
                           title="Terminal"
-                          path="pnpm dev"
+                          path="codex terminal snapshot"
                           icon={IconTerminal2}
                           onClose={closeRightDock}
-                          main={<Terminal className="h-full rounded-none border-0" output={terminalOutput} />}
+                          main={<AgentTerminalPane agentName="codex" />}
                         />
                       </TabsContent>
                     </div>

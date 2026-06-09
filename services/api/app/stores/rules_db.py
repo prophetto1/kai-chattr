@@ -6,11 +6,11 @@ import threading
 import time
 import uuid
 
-from sqlalchemy import Float, Integer, String, Text, create_engine, func, select
+from sqlalchemy import Float, Integer, String, Text, func, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
-from app.database import normalize_database_url
+from app.database import create_database_engine, normalize_database_url
 from app.stores.rules import (
     MAX_ACTIVE_RULES,
     MAX_REASON_CHARS,
@@ -51,7 +51,7 @@ class SqlAlchemyRuleStore:
             url = normalize_database_url(database_url)
             if not url:
                 raise ValueError("database_url is required")
-            self._engine = create_engine(url, pool_pre_ping=True, future=True)
+            self._engine = create_database_engine(url)
         self._sessions = sessionmaker(
             bind=self._engine,
             autoflush=False,

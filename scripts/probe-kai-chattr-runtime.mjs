@@ -6,6 +6,7 @@ import {
 } from './lib/kai-chattr-dev-ports.mjs';
 
 const PROBE_TIMEOUT_MS = 5000;
+const REQUIRED_BOARD_TABS = ['rules', 'jobs', 'decisions', 'pins'];
 const token = (process.env.KAI_CHATTR_SESSION_TOKEN ?? '').trim();
 
 await probeJson(localApiUrl('/api/runtime/ports'), 200, assertRuntimePorts);
@@ -83,10 +84,14 @@ function assertBoardCapabilities(body, url) {
     fail(`${url} did not return a tabs array`);
   }
   const ids = new Set(tabs.map((tab) => tab.id));
-  for (const required of ['rules', 'jobs', 'locked', 'pins']) {
+  for (const required of REQUIRED_BOARD_TABS) {
     if (!ids.has(required)) {
       fail(`${url} did not include Board capability tab: ${required}`);
     }
+  }
+  const decisionsTab = tabs.find((tab) => tab.id === 'decisions');
+  if (decisionsTab?.category !== 'locked') {
+    fail(`${url} Board capability tab decisions was not backed by locked category`);
   }
 }
 

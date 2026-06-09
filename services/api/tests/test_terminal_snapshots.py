@@ -1,5 +1,6 @@
 """Tests for the in-memory terminal snapshot API."""
 
+import json
 import sys
 import tempfile
 import unittest
@@ -11,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from app.events import validate_payload  # noqa: E402
 from app import main as app  # noqa: E402
 
 
@@ -43,6 +45,9 @@ class TerminalSnapshotApiTests(unittest.TestCase):
     def setUp(self):
         with app.terminal_snapshots_lock:
             app.terminal_snapshots.clear()
+        runtime_events_path = Path(self.tmp.name) / "runtime_events.jsonl"
+        if runtime_events_path.exists():
+            runtime_events_path.unlink()
 
     def test_terminal_routes_remain_in_openapi(self):
         schema = self.client.get(
@@ -80,6 +85,25 @@ class TerminalSnapshotApiTests(unittest.TestCase):
         self.assertEqual(snapshot["name"], "codex")
         self.assertEqual(snapshot["text"], "line 1\nline 2")
         self.assertEqual(snapshot["captured_at"], 123.0)
+
+        runtime_events = [
+            json.loads(line)
+            for line in (Path(self.tmp.name) / "runtime_events.jsonl").read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        event_types = [event["event_type"] for event in runtime_events]
+        self.assertIn("terminal.snapshot.write", event_types)
+        self.assertIn("terminal.snapshot.read", event_types)
+        write_event = next(event for event in runtime_events if event["event_type"] == "terminal.snapshot.write")
+        self.assertEqual(write_event["actor"], "codex")
+        self.assertEqual(write_event["details"]["agent_name"], "codex")
+        self.assertEqual(write_event["details"]["line_count"], 2)
+        self.assertGreater(write_event["details"]["byte_count"], 0)
+        self.assertNotIn("text", write_event["details"])
+
+        validate_payload(write_event["event_type"], write_event["details"])
+        read_event = next(event for event in runtime_events if event["event_type"] == "terminal.snapshot.read")
+        validate_payload(read_event["event_type"], read_event["details"])
 
     def test_wrong_agent_token_cannot_post_for_other_instance(self):
         reg1 = self.client.post(

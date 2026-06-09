@@ -15,14 +15,13 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
-    create_engine,
     func,
     select,
 )
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship, selectinload, sessionmaker
 
-from app.database import normalize_database_url
+from app.database import create_database_engine, normalize_database_url
 from app.stores.rules_db import Base
 
 MAX_TITLE_CHARS = 120
@@ -91,7 +90,7 @@ class SqlAlchemyJobStore:
             url = normalize_database_url(database_url)
             if not url:
                 raise ValueError("database_url is required")
-            self._engine = create_engine(url, pool_pre_ping=True, future=True)
+            self._engine = create_database_engine(url)
         self._sessions = sessionmaker(
             bind=self._engine,
             autoflush=False,

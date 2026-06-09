@@ -9,6 +9,7 @@ from app.stores.home_start import HomeStartStore
 from app.stores.home_start_db import SqlAlchemyHomeStartStore
 from app.stores.jobs import JobStore
 from app.stores.jobs_db import SqlAlchemyJobStore
+from app.stores.routing_decisions_db import SqlAlchemyRoutingDecisionStore
 from app.stores.rules import RuleStore
 from app.stores.rules_db import SqlAlchemyRuleStore
 
@@ -40,4 +41,13 @@ def create_home_start_store(
         return HomeStartStore(file_path)
     if settings.mode == "postgres":
         return SqlAlchemyHomeStartStore(settings.url)
+    raise ValueError(f"Unsupported database.mode={settings.mode!r}")
+
+
+def create_routing_decision_store(config: dict[str, Any]) -> SqlAlchemyRoutingDecisionStore | None:
+    settings = database_settings(config)
+    if settings.mode == "file":
+        return None
+    if settings.mode == "postgres":
+        return SqlAlchemyRoutingDecisionStore(settings.url)
     raise ValueError(f"Unsupported database.mode={settings.mode!r}")

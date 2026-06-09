@@ -8,11 +8,11 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, create_engine, select
+from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Mapped, mapped_column, relationship, sessionmaker
 
-from app.database import normalize_database_url
+from app.database import create_database_engine, normalize_database_url
 from app.stores.home_start import _conversation_title
 from app.stores.rules_db import Base
 
@@ -94,7 +94,7 @@ class SqlAlchemyHomeStartStore:
             url = normalize_database_url(database_url)
             if not url:
                 raise ValueError("database_url is required")
-            self._engine = create_engine(url, pool_pre_ping=True, future=True)
+            self._engine = create_database_engine(url)
         self._sessions = sessionmaker(
             bind=self._engine,
             autoflush=False,

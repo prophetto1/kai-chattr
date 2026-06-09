@@ -179,6 +179,103 @@ def test_risky_profile_requires_confirmation_before_other_start_checks():
     assert "confirmation" in res.text.lower()
 
 
+def test_agent_preflight_requires_loopback_client():
+    client = make_client(client=("203.0.113.10", 50000))
+    res = client.get("/api/launchers/agent/preflight", headers=session_headers())
+
+    assert res.status_code == 403
+    assert "loopback" in res.text.lower()
+
+
+def test_agent_preflight_lists_visible_profiles_without_sensitive_fields(monkeypatch):
+    monkeypatch.setattr("app.launch.visible_agent_launcher.shutil.which", lambda command: f"C:/bin/{command}.exe")
+    client = make_client()
+
+    res = client.get("/api/launchers/agent/preflight", headers=session_headers())
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["runtime"] == {"api_port": 8840, "mcp_http_port": 8841, "mcp_sse_port": 8842}
+    claude = next(profile for profile in body["profiles"] if profile["profile_id"] == "agent.claude")
+    assert claude["base"] == "claude"
+    assert claude["ready"] is True
+    assert "argv" not in claude
+    assert "cwd" not in claude
+
+
+def test_agent_start_forbids_arbitrary_command_fields():
+    client = make_client()
+    res = client.post(
+        "/api/launchers/agent",
+        json={
+            "profile_id": "agent.claude",
+            "command": "powershell",
+            "env": {"TOKEN": "secret"},
+        },
+        headers=session_headers(),
+    )
+
+    assert res.status_code == 422
+
+
+def test_agent_start_rejects_unknown_profile():
+    client = make_client()
+    res = client.post(
+        "/api/launchers/agent",
+        json={"profile_id": "does-not-exist"},
+        headers=session_headers(),
+    )
+
+    assert res.status_code == 404
+
+
+def test_agent_start_requires_confirmation_for_risky_profiles(monkeypatch):
+    monkeypatch.setattr("app.launch.visible_agent_launcher.shutil.which", lambda command: f"C:/bin/{command}.exe")
+    client = make_client()
+
+    res = client.post(
+        "/api/launchers/agent",
+        json={"profile_id": "agent.codex.bypass"},
+        headers=session_headers(),
+    )
+
+    assert res.status_code == 403
+    assert "confirmation" in res.text.lower()
+
+
+def test_agent_start_spawns_visible_cli_profile(monkeypatch):
+    captured = {}
+
+    class FakeProcess:
+        pid = 34567
+
+    def fake_popen(argv, *, cwd, env, shell, creationflags):
+        captured["argv"] = argv
+        captured["cwd"] = cwd
+        captured["env"] = env
+        captured["shell"] = shell
+        captured["creationflags"] = creationflags
+        return FakeProcess()
+
+    monkeypatch.setattr("app.launch.visible_agent_launcher.shutil.which", lambda command: f"C:/bin/{command}.exe")
+    monkeypatch.setattr("app.launch.visible_agent_launcher.subprocess.Popen", fake_popen)
+    client = make_client()
+
+    res = client.post(
+        "/api/launchers/agent",
+        json={"profile_id": "agent.claude"},
+        headers=session_headers(),
+    )
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["accepted"] is True
+    assert body["profile_id"] == "agent.claude"
+    assert body["expected_base"] == "claude"
+    assert body["pid"] == 34567
+    assert captured["argv"] == ["uv", "run", "python", "wrapper.py", "claude"]
+
+
 def test_stop_is_deferred_without_process_model():
     client = make_client()
     res = client.post(

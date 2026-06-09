@@ -18,6 +18,12 @@ from app.launch.chattr_launcher import (
     list_profiles,
     start,
 )
+from app.launch.visible_agent_launcher import (
+    VisibleAgentLaunchError,
+    VisibleAgentPreflightError,
+    preflight_visible_cli_profiles,
+    start_visible_agent,
+)
 
 
 log = logging.getLogger(__name__)
@@ -73,6 +79,39 @@ class LauncherStartResponse(BaseModel):
     pid: int | None = None
 
 
+class AgentLauncherChecks(BaseModel):
+    uv: bool
+    wrapper: bool
+    provider_cli: bool
+
+
+class AgentLauncherProfileResponse(BaseModel):
+    profile_id: str
+    kind: str
+    description: str
+    base: str
+    label: str
+    visible_terminal: bool
+    requires_explicit_confirmation: bool
+    ready: bool
+    blocked_reason: str | None
+    checks: AgentLauncherChecks
+
+
+class AgentLauncherPreflightResponse(BaseModel):
+    runtime: dict[str, int]
+    profiles: list[AgentLauncherProfileResponse]
+
+
+class AgentLauncherStartResponse(BaseModel):
+    profile_id: str
+    accepted: bool
+    detail: str
+    pid: int | None = None
+    expected_base: str
+    registration_deadline_ms: int
+
+
 def _client_host(request: Request) -> str:
     return request.client.host if request.client else ""
 
@@ -109,6 +148,18 @@ def _raise_profile_error(exc: Exception) -> None:
     if isinstance(exc, UnknownProfileError):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     if isinstance(exc, InvalidProfileIdError):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+
+def _raise_agent_launcher_error(exc: Exception) -> None:
+    if isinstance(exc, UnknownProfileError):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    if isinstance(exc, InvalidProfileIdError):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    if isinstance(exc, VisibleAgentPreflightError):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    if isinstance(exc, VisibleAgentLaunchError):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
@@ -213,6 +264,106 @@ def dry_run_launcher(req: LauncherDryRunRequest, request: Request) -> LauncherDr
         reason="dry-run returned server-built argv",
     )
     return response
+
+
+@router.get("/agent/preflight", response_model=AgentLauncherPreflightResponse)
+def preflight_agent_launchers(request: Request) -> AgentLauncherPreflightResponse:
+    if not _is_loopback(request):
+        reason = "Agent launcher preflight requires a loopback client."
+        _log_launcher_event(
+            "chattr.launcher.agent_preflight_rejected",
+            request=request,
+            profile_id="*",
+            action="agent-preflight",
+            accepted=False,
+            reason=reason,
+        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=reason)
+
+    payload = preflight_visible_cli_profiles()
+    _log_launcher_event(
+        "chattr.launcher.agent_preflight_checked",
+        request=request,
+        profile_id="*",
+        action="agent-preflight",
+        accepted=True,
+        reason=f"{len(payload['profiles'])} profiles checked",
+    )
+    return AgentLauncherPreflightResponse.model_validate(payload)
+
+
+@router.post("/agent", response_model=AgentLauncherStartResponse)
+def start_agent_launcher(req: LauncherStartRequest, request: Request) -> AgentLauncherStartResponse:
+    try:
+        command = build_command(req.profile_id)
+    except (UnknownProfileError, InvalidProfileIdError) as exc:
+        _raise_profile_error(exc)
+
+    _log_launcher_event(
+        "chattr.launcher.agent_start_requested",
+        request=request,
+        profile_id=command.profile_id,
+        action="agent-start",
+        accepted=False,
+        reason="agent start request received",
+    )
+
+    if not _is_loopback(request):
+        reason = "Agent launcher start requires a loopback client."
+        _log_launcher_event(
+            "chattr.launcher.agent_start_rejected",
+            request=request,
+            profile_id=command.profile_id,
+            action="agent-start",
+            accepted=False,
+            reason=reason,
+        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=reason)
+
+    if command.requires_explicit_confirmation and not req.confirm_risky:
+        reason = f"Profile {command.profile_id} requires explicit confirmation before start."
+        _log_launcher_event(
+            "chattr.launcher.agent_start_rejected",
+            request=request,
+            profile_id=command.profile_id,
+            action="agent-start",
+            accepted=False,
+            reason=reason,
+        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=reason)
+
+    try:
+        result = start_visible_agent(command.profile_id)
+    except (UnknownProfileError, InvalidProfileIdError, VisibleAgentLaunchError) as exc:
+        _log_launcher_event(
+            "chattr.launcher.agent_start_rejected",
+            request=request,
+            profile_id=command.profile_id,
+            action="agent-start",
+            accepted=False,
+            reason=str(exc),
+        )
+        _raise_agent_launcher_error(exc)
+    except LauncherError as exc:
+        _log_launcher_event(
+            "chattr.launcher.agent_start_failed",
+            request=request,
+            profile_id=command.profile_id,
+            action="agent-start",
+            accepted=False,
+            reason=str(exc),
+        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+    _log_launcher_event(
+        "chattr.launcher.agent_start_succeeded",
+        request=request,
+        profile_id=result["profile_id"],
+        action="agent-start",
+        accepted=True,
+        reason=result["detail"],
+    )
+    return AgentLauncherStartResponse.model_validate(result)
 
 
 @router.post("/start", response_model=LauncherStartResponse)

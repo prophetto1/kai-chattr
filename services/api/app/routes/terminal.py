@@ -16,6 +16,7 @@ class TerminalApiState:
     get_registry: Callable[[], Any]
     resolve_authenticated_agent: Callable[[Request], dict | None]
     extract_agent_token: Callable[[Request], str]
+    get_event_stream: Callable[[], Any | None]
 
 
 def _trim_terminal_text(text: str) -> str:
@@ -28,6 +29,34 @@ def _trim_terminal_text(text: str) -> str:
     if len(text) > 50000:
         text = text[-50000:]
     return text
+
+
+def _terminal_snapshot_age_ms(snapshot: dict | None) -> int:
+    if not snapshot:
+        return 0
+    try:
+        received_at = float(snapshot.get("received_at") or 0)
+    except (TypeError, ValueError):
+        return 0
+    if received_at <= 0:
+        return 0
+    return max(0, int((time.time() - received_at) * 1000))
+
+
+def _append_runtime_event(state: TerminalApiState, event_type: str, *, actor: str, details: dict) -> None:
+    stream = state.get_event_stream()
+    if stream is None:
+        return
+    try:
+        stream.append({
+            "event_type": event_type,
+            "source": "terminal-api",
+            "actor": actor,
+            "details": details,
+        })
+    except Exception:
+        # Terminal telemetry must not break wrapper snapshot delivery or UI reads.
+        return
 
 
 def create_terminal_router(state: TerminalApiState) -> APIRouter:
@@ -69,6 +98,18 @@ def create_terminal_router(state: TerminalApiState) -> APIRouter:
         }
         with state.snapshots_lock:
             state.snapshots[canonical_name] = snapshot
+        _append_runtime_event(
+            state,
+            "terminal.snapshot.write",
+            actor=canonical_name,
+            details={
+                "agent_name": canonical_name,
+                "byte_count": len(snapshot["text"].encode("utf-8")),
+                "line_count": len(snapshot["text"].splitlines()),
+                "has_dimensions": isinstance(snapshot.get("rows"), int)
+                and isinstance(snapshot.get("cols"), int),
+            },
+        )
         return JSONResponse({"ok": True, "name": canonical_name})
 
     @router.get("/api/terminal/{agent_name}")
@@ -79,6 +120,16 @@ def create_terminal_router(state: TerminalApiState) -> APIRouter:
             snapshot = state.snapshots.get(canonical_name)
             if snapshot:
                 snapshot = dict(snapshot)
+        _append_runtime_event(
+            state,
+            "terminal.snapshot.read",
+            actor="browser",
+            details={
+                "agent_name": canonical_name,
+                "has_snapshot": snapshot is not None,
+                "snapshot_age_ms": _terminal_snapshot_age_ms(snapshot),
+            },
+        )
         return JSONResponse({
             "ok": True,
             "name": canonical_name,

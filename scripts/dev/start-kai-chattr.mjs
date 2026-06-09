@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { KAI_CHATTR_PORTS } from '../lib/kai-chattr-dev-ports.mjs';
+import { KAI_CHATTR_PORTS, localOtelHttpTracesUrl } from '../lib/kai-chattr-dev-ports.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const apiRoot = path.join(repoRoot, 'services', 'api');
@@ -24,6 +24,13 @@ const childEnv = {
   ...process.env,
   KAI_CHATTR_SESSION_TOKEN: sessionToken,
   VITE_KAI_CHATTR_SESSION_TOKEN: sessionToken,
+  LOGFIRE_ENABLED:
+    (process.env.LOGFIRE_ENABLED ?? '').trim() ||
+    ((process.env.LOGFIRE_TOKEN ?? '').trim() ? 'true' : 'false'),
+  OTEL_TRACES_EXPORTER: (process.env.OTEL_TRACES_EXPORTER ?? '').trim() || 'otlp',
+  OTEL_EXPORTER_OTLP_ENDPOINT:
+    (process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? '').trim() || localOtelHttpTracesUrl(),
+  OTEL_SERVICE_NAME: (process.env.OTEL_SERVICE_NAME ?? '').trim() || 'kai-chattr-api',
 };
 
 const api = startChild('api', 'uv', ['run', 'python', '-m', 'app.cli'], apiRoot, childEnv);

@@ -9,6 +9,22 @@ test('workbench loads through the kai-chattr runtime contract', async ({ page, r
   await page.goto('/workbench')
   await expect(page.getByText('Board API error')).toHaveCount(0)
 
+  const observabilityStatus = await request.get('/observability/status')
+  expect(observabilityStatus.status()).toBe(200)
+  const observability = await observabilityStatus.json()
+  await expect(page.getByTestId('otel-traces-exporter')).toBeVisible()
+  await expect(page.getByTestId('otel-traces-exporter')).toContainText('otel_traces_exporter')
+  await expect(page.getByTestId('otel-traces-exporter')).toContainText(
+    observability.otel_traces_exporter
+  )
+  await page.getByLabel('Observability').click()
+  await expect(page.getByTestId('observability-dock-panel')).toBeVisible()
+  await expect(page.getByTestId('observability-dock-panel')).toContainText('Runtime telemetry')
+  await expect(page.getByTestId('observability-dock-panel')).toContainText('Recent backend spans')
+  await expect(page.getByTestId('observability-dock-panel')).toContainText(
+    observability.otel_traces_exporter
+  )
+
   const runtimePorts = await request.get('/api/runtime/ports')
   expect(runtimePorts.status()).toBe(200)
   const ports = await runtimePorts.json()
@@ -40,4 +56,71 @@ test('workbench loads through the kai-chattr runtime contract', async ({ page, r
     decisions: 'board',
     pins: 'board',
   })
+
+  const registeredAgent = await request.post('/api/register', {
+    data: { base: 'codex' },
+  })
+  expect(registeredAgent.status()).toBe(200)
+  const registeredAgentBody = await registeredAgent.json()
+  const agentName = registeredAgentBody.name as string
+  const agentToken = registeredAgentBody.token as string
+  const terminalText = `terminal-runtime-${Date.now()}\n$ echo kai-chattr-terminal`
+  const terminalSnapshot = await request.post(`/api/terminal/${agentName}`, {
+    data: {
+      cols: 96,
+      rows: 28,
+      text: terminalText,
+    },
+    headers: { Authorization: `Bearer ${agentToken}` },
+  })
+  expect(terminalSnapshot.status()).toBe(200)
+
+  await page.getByLabel('Terminal').click()
+  await expect(page.getByTestId('terminal-output')).toBeVisible()
+  await expect(page.getByTestId('terminal-status')).not.toContainText('No snapshot')
+  await expect(page.getByTestId('terminal-snapshot-text')).toContainText(terminalText)
+
+  const uniqueText = `@${agentName} runtime-composer-${Date.now()}`
+  await page
+    .getByPlaceholder('Run task with Claude — type / for commands')
+    .fill(uniqueText)
+  await page.keyboard.press('Enter')
+
+  await expect.poll(async () => {
+    const messages = await request.get('/api/messages?limit=25&channel=general', {
+      headers: { 'X-Session-Token': token },
+    })
+    expect(messages.status()).toBe(200)
+    const payload = await messages.json()
+    return payload.some((message: { text?: string; sender?: string; channel?: string }) =>
+      message.text === uniqueText &&
+      message.sender === 'user' &&
+      message.channel === 'general'
+    )
+  }).toBe(true)
+  await expect(page.getByText(uniqueText)).toBeVisible()
+
+  await expect.poll(async () => {
+    const queue = await request.get(`/api/poll/${agentName}`, {
+      headers: { Authorization: `Bearer ${agentToken}` },
+    })
+    expect(queue.status()).toBe(200)
+    const payload = await queue.json()
+    return (payload.entries as Array<{ sender?: string; text?: string; channel?: string }>).some(
+      (entry) =>
+        entry.sender === 'user' &&
+        entry.text === `user: ${uniqueText}` &&
+        entry.channel === 'general'
+    )
+  }).toBe(true)
+
+  const agentReply = `runtime-agent-reply-${Date.now()}`
+  const sentReply = await request.post('/api/send', {
+    data: { text: agentReply, channel: 'general' },
+    headers: { Authorization: `Bearer ${agentToken}` },
+  })
+  expect(sentReply.status()).toBe(200)
+  const sentReplyBody = await sentReply.json()
+  expect(sentReplyBody.sender).toBe(agentName)
+  await expect(page.getByText(agentReply)).toBeVisible()
 })

@@ -5,13 +5,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import create_engine, text
+import sqlalchemy
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 
 
 DATABASE_URL_ENV = "KAI_CHATTR_DATABASE_URL"
 MIGRATION_DATABASE_URL_ENV = "KAI_CHATTR_MIGRATION_DATABASE_URL"
+_SQLALCHEMY_INSTRUMENTED = False
 
 
 class DatabaseConfigurationError(RuntimeError):
@@ -49,11 +52,20 @@ def create_database_engine(config: dict[str, Any] | str) -> Engine:
     url = normalize_database_url(config) if isinstance(config, str) else database_settings(config).url
     if not url:
         raise DatabaseConfigurationError(f"{DATABASE_URL_ENV} is not configured")
-    return create_engine(url, pool_pre_ping=True, future=True)
+    configure_sqlalchemy_instrumentation()
+    return sqlalchemy.create_engine(url, pool_pre_ping=True, future=True)
 
 
 def create_session_factory(config: dict[str, Any] | str) -> sessionmaker:
     return sessionmaker(bind=create_database_engine(config), autoflush=False, expire_on_commit=False)
+
+
+def configure_sqlalchemy_instrumentation() -> None:
+    global _SQLALCHEMY_INSTRUMENTED
+    if _SQLALCHEMY_INSTRUMENTED:
+        return
+    SQLAlchemyInstrumentor().instrument()
+    _SQLALCHEMY_INSTRUMENTED = True
 
 
 def check_database(engine: Engine) -> bool:

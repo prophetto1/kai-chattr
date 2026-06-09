@@ -47,6 +47,8 @@ class RuntimeArchitectureContractTests(unittest.TestCase):
             if getattr(route, "path", None)
         }
         self.assertIn("/healthz", paths)
+        self.assertIn("/schemas/pydantic/status", paths)
+        self.assertIn("/observability/status", paths)
         self.assertIn("/api/runtime/ports", paths)
         self.assertIn("/api/status", paths)
         self.assertIn("/api/right-rail/capabilities", paths)

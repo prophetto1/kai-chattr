@@ -50,6 +50,7 @@ def test_alembic_scaffold_exists_for_services_api():
     assert versions.exists()
     assert any(path.name.endswith("_create_board_rules.py") for path in versions.iterdir())
     assert any(path.name.endswith("_create_board_workflows.py") for path in versions.iterdir())
+    assert any(path.name.endswith("_create_routing_decisions.py") for path in versions.iterdir())
 
 
 def test_file_rule_store_counts_pending_proposed_rules(tmp_path):
@@ -109,6 +110,51 @@ def test_sqlalchemy_rule_store_supports_rule_lifecycle(tmp_path):
     deleted = store.delete(created["id"])
     assert deleted["id"] == created["id"]
     assert store.list_all() == []
+
+
+def test_create_database_engine_configures_sqlalchemy_instrumentation_once(monkeypatch):
+    from app import database
+
+    calls: list[str] = []
+
+    class RecordingInstrumentor:
+        def instrument(self) -> None:
+            calls.append("instrument")
+
+    monkeypatch.setattr(database, "SQLAlchemyInstrumentor", RecordingInstrumentor)
+    monkeypatch.setattr(database, "_SQLALCHEMY_INSTRUMENTED", False)
+
+    first = database.create_database_engine("sqlite:///:memory:")
+    second = database.create_database_engine("sqlite:///:memory:")
+    try:
+        assert calls == ["instrument"]
+    finally:
+        first.dispose()
+        second.dispose()
+
+
+def test_sqlalchemy_stores_use_observable_database_engine_factory(tmp_path, monkeypatch):
+    from app.stores import home_start_db, jobs_db, routing_decisions_db, rules_db
+
+    calls: list[str] = []
+    original = rules_db.create_database_engine
+
+    def recording_factory(url: str):
+        calls.append(url)
+        return original(url)
+
+    for module in (home_start_db, jobs_db, routing_decisions_db, rules_db):
+        monkeypatch.setattr(module, "create_database_engine", recording_factory)
+
+    db_path = tmp_path / "observable.db"
+    url = f"sqlite:///{db_path}"
+
+    rules_db.SqlAlchemyRuleStore(url)
+    jobs_db.SqlAlchemyJobStore(url)
+    routing_decisions_db.SqlAlchemyRoutingDecisionStore(url)
+    home_start_db.SqlAlchemyHomeStartStore(url)
+
+    assert calls == [url, url, url, url]
 
 
 def test_rule_store_factory_uses_sqlalchemy_when_database_configured(tmp_path):

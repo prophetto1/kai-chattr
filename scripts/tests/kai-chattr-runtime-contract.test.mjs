@@ -14,8 +14,11 @@ test('canonical kai-chattr runtime ports are locked', () => {
     api: 8840,
     mcpHttp: 8841,
     mcpSse: 8842,
+    otelGrpc: 8837,
+    otelHttp: 8838,
+    jaegerUi: 8886,
   });
-  assert.equal(PORT_REGISTRY.length, 4);
+  assert.equal(PORT_REGISTRY.length, 7);
 });
 
 test('root package exposes runtime contract scripts', () => {
@@ -24,6 +27,13 @@ test('root package exposes runtime contract scripts', () => {
 
   assert.equal(scripts.dev, 'node scripts/dev/start-kai-chattr.mjs');
   assert.equal(scripts['runtime:probe'], 'node scripts/probe-kai-chattr-runtime.mjs');
+  assert.equal(scripts['observability:local'], 'sops exec-env secrets/dev/auth.yaml "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/run-observability-local.ps1"');
+  assert.equal(scripts['observability:local:recreate'], 'sops exec-env secrets/dev/auth.yaml "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/run-observability-local.ps1 -Recreate"');
+  assert.equal(scripts['observability:local:stop'], 'powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/stop-observability-local.ps1');
+  assert.equal(scripts['observability:canaries'], 'node scripts/observability-local-canaries.mjs');
+  assert.equal(scripts['check:npm-deps'], 'node governance/scripts/check-deps.mjs');
+  assert.equal(scripts['check:python-deps'], 'python governance/scripts/check-python-deps.py');
+  assert.equal(scripts['check:deps'], 'pnpm run check:npm-deps && pnpm run check:python-deps');
   assert.equal(scripts['test:runtime-contract'], 'node --test scripts/tests/kai-chattr-runtime-contract.test.mjs');
   assert.equal(scripts['test:port-drift-contract'], 'node --test scripts/tests/kai-chattr-port-drift-contract.test.mjs');
   assert.equal(scripts['test:no-api-session-contract'], 'node --test scripts/tests/kai-chattr-no-api-session-contract.test.mjs');
@@ -47,11 +57,16 @@ test('runtime files required by the contract exist', () => {
   for (const rel of [
     'scripts/dev/start-kai-chattr.mjs',
     'scripts/dev/verify-runtime.mjs',
+    'scripts/dev/run-observability-local.ps1',
+    'scripts/dev/stop-observability-local.ps1',
+    'scripts/observability-local-canaries.mjs',
     'scripts/probe-kai-chattr-runtime.mjs',
     'scripts/tests/kai-chattr-runtime-contract.test.mjs',
     'scripts/tests/kai-chattr-port-drift-contract.test.mjs',
     'scripts/tests/kai-chattr-no-api-session-contract.test.mjs',
     'scripts/tests/kai-chattr-no-supabase-contract.test.mjs',
+    'governance/scripts/check-python-deps.py',
+    'ops/otel/collector.local.yaml',
     'scripts/dev/check-db-from-env.ps1',
     'scripts/dev/database-env.ps1',
     'scripts/dev/run-alembic-from-env.ps1',
@@ -59,12 +74,18 @@ test('runtime files required by the contract exist', () => {
     'scripts/deploy/sync-fly-secrets.ps1',
     'scripts/deploy/sync-fly-secrets-from-sops.ps1',
     'apps/web/functions/api/[[path]].js',
+    'apps/web/functions/observability/[[path]].js',
     'apps/web/public/_routes.json',
     '.github/workflows/deploy-api.yml',
     '.github/workflows/deploy-web.yml',
     'services/api/app/runtime_contract.py',
+    'services/api/app/pydantic_contracts.py',
+    'services/api/app/stores/routing_decisions_db.py',
     'services/api/app/factory.py',
     'services/api/app/asgi.py',
+    'services/api/tests/test_observability_contract.py',
+    'services/api/tests/test_pydantic_contracts.py',
+    'services/api/tests/test_routing_decisions_db.py',
     'services/api/tests/test_runtime_contract.py',
     'services/api/Dockerfile',
     'services/api/fly.dev.toml',
@@ -72,9 +93,19 @@ test('runtime files required by the contract exist', () => {
     'services/api/alembic.ini',
     'services/api/migrations/env.py',
     'services/api/migrations/versions/20260607_0001_create_board_rules.py',
+    'services/api/migrations/versions/20260609_0004_create_routing_decisions.py',
   ]) {
     assert.equal(fs.existsSync(path.join(repoRoot, rel)), true, `Missing ${rel}`);
   }
+});
+
+test('runtime probe uses decisions as the Board tab id and locks it to the locked category', () => {
+  const probe = fs.readFileSync(path.join(repoRoot, 'scripts/probe-kai-chattr-runtime.mjs'), 'utf8');
+
+  assert.match(probe, /const REQUIRED_BOARD_TABS = \['rules', 'jobs', 'decisions', 'pins'\];/);
+  assert.match(probe, /const decisionsTab = tabs\.find\(\(tab\) => tab\.id === 'decisions'\);/);
+  assert.match(probe, /decisionsTab\?\.category !== 'locked'/);
+  assert.doesNotMatch(probe, /for \(const required of \['rules', 'jobs', 'locked', 'pins'\]\)/);
 });
 
 test('deploy workflows map branches without browser-exposed session tokens', () => {
@@ -96,6 +127,7 @@ test('deploy workflows map branches without browser-exposed session tokens', () 
 test('web API client and Pages Function keep hosted API auth server-side', () => {
   const apiClient = fs.readFileSync(path.join(repoRoot, 'apps/web/src/lib/chattr-api.ts'), 'utf8');
   const apiProxy = fs.readFileSync(path.join(repoRoot, 'apps/web/functions/api/[[path]].js'), 'utf8');
+  const observabilityProxy = fs.readFileSync(path.join(repoRoot, 'apps/web/functions/observability/[[path]].js'), 'utf8');
   const routes = JSON.parse(fs.readFileSync(path.join(repoRoot, 'apps/web/public/_routes.json'), 'utf8'));
 
   assert.match(apiClient, /VITE_KAI_CHATTR_API_ORIGIN/);
@@ -103,9 +135,10 @@ test('web API client and Pages Function keep hosted API auth server-side', () =>
   assert.match(apiClient, /fetch\(chattrApiUrl\(path\)/);
   assert.match(apiProxy, /KAI_CHATTR_SESSION_TOKEN/);
   assert.match(apiProxy, /headers\.set\('X-Session-Token', token\)/);
+  assert.match(observabilityProxy, /api\/\[\[path\]\]\.js/);
   assert.deepEqual(routes, {
     version: 1,
-    include: ['/api/*'],
+    include: ['/api/*', '/observability/*'],
     exclude: [],
   });
 });

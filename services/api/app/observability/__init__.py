@@ -2,6 +2,10 @@
 
 from .runtime import (
     ForbiddenAttributeError,
+    OTLPSpanExporter,
+    _build_span_exporter,
+    _build_span_processor,
+    configure_observability,
     events_dropped_counter,
     events_ingest_counter,
     events_ingest_duration_ms,
@@ -9,7 +13,9 @@ from .runtime import (
     force_flush,
     get_meter,
     get_tracer,
+    identify_endpoint,
     init_observability,
+    observed_endpoint_catalog,
     runtime_session_logger,
     set_export_paths,
     validate_attrs,
@@ -17,6 +23,10 @@ from .runtime import (
 
 __all__ = [
     "ForbiddenAttributeError",
+    "OTLPSpanExporter",
+    "_build_span_exporter",
+    "_build_span_processor",
+    "configure_observability",
     "events_dropped_counter",
     "events_ingest_counter",
     "events_ingest_duration_ms",
@@ -24,9 +34,10 @@ __all__ = [
     "force_flush",
     "get_meter",
     "get_tracer",
+    "identify_endpoint",
     "init_observability",
+    "observed_endpoint_catalog",
     "runtime_session_logger",
     "set_export_paths",
     "validate_attrs",
 ]
-

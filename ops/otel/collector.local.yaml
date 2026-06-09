@@ -1,0 +1,45 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:8837
+      http:
+        endpoint: 0.0.0.0:8838
+        cors:
+          allowed_origins:
+            - http://localhost:8800
+            - http://127.0.0.1:8800
+          allowed_headers:
+            - "*"
+          max_age: 7200
+
+processors:
+  batch: {}
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: dev
+        action: upsert
+
+exporters:
+  otlp/jaeger:
+    endpoint: kai-chattr-jaeger:8837
+    tls:
+      insecure: true
+  otlphttp/logfire:
+    endpoint: ${env:LOGFIRE_OTLP_ENDPOINT:-https://logfire-us.pydantic.dev}
+    headers:
+      Authorization: "Bearer ${env:LOGFIRE_TOKEN}"
+    compression: gzip
+
+service:
+  pipelines:
+    traces:
+      receivers:
+        - otlp
+      processors:
+        - resource
+        - batch
+      exporters:
+        - otlp/jaeger
+        - otlphttp/logfire

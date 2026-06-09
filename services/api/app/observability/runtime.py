@@ -18,9 +18,10 @@ Structured logs:
 - runtime.session.opened                    (logger chattr.runtime.session, level INFO)
 - runtime.session.closed                    (logger chattr.runtime.session, level INFO)
 
-Exporter: local JSON-lines files under chattr data_dir
-(data/otel_traces.jsonl, data/otel_metrics.jsonl). No collector deployed.
-Swap to OTLP via a future plan when cloud/dual-mode arrives.
+Exporter: tests and compatibility paths can still use local JSON-lines files
+under chattr data_dir (data/otel_traces.jsonl, data/otel_metrics.jsonl).
+Local dev now uses OTLP to the repo-owned OpenTelemetry Collector and Jaeger
+loop when launched through the root dev script.
 
 Test isolation: tracer/meter providers install once per process, but the
 export file paths are re-pointable via set_export_paths() so test classes
@@ -32,24 +33,40 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import threading
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
+from fastapi import FastAPI
+from fastapi.routing import APIRoute
 from opentelemetry import metrics, trace
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.metrics import Counter, Histogram, Meter
+from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import (
     MetricExporter,
     MetricExportResult,
     PeriodicExportingMetricReader,
 )
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
 from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
+    ConsoleSpanExporter,
+    SimpleSpanProcessor,
     SpanExporter,
     SpanExportResult,
 )
+from opentelemetry.trace import ProxyTracerProvider, Status, StatusCode
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
+
+from app.settings import Settings
 
 
 FORBIDDEN_ATTR_KEYS: frozenset[str] = frozenset(
@@ -75,6 +92,63 @@ FORBIDDEN_ATTR_KEYS: frozenset[str] = frozenset(
     }
 )
 
+ROUTE_TOKEN_PATTERN = re.compile(r"\{[^/{}]+\}")
+SAFE_METHODS = {"DELETE", "GET", "PATCH", "POST", "PUT"}
+IGNORED_FASTAPI_ROUTES = {
+    ("GET", "/docs"),
+    ("GET", "/docs/oauth2-redirect"),
+    ("GET", "/openapi.json"),
+    ("GET", "/redoc"),
+}
+_CATALOG_APP: FastAPI | None = None
+
+
+@dataclass(frozen=True)
+class ObservedEndpoint:
+    method: str
+    path: str
+    span_name: str
+    area: str
+    operation: str
+    purpose: str
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "area": self.area,
+            "method": self.method,
+            "operation": self.operation,
+            "path": self.path,
+            "purpose": self.purpose,
+            "span_name": self.span_name,
+        }
+
+
+class EndpointTelemetryMiddleware(BaseHTTPMiddleware):
+    async def dispatch(
+        self,
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
+        endpoint = identify_endpoint(request.method, request.url.path)
+        if endpoint is None:
+            return await call_next(request)
+
+        tracer = trace.get_tracer("kai_chattr.api")
+        with tracer.start_as_current_span(endpoint.span_name) as span:
+            _set_endpoint_span_attributes(span, endpoint)
+            try:
+                response = await call_next(request)
+            except Exception as exc:
+                span.record_exception(exc)
+                span.set_status(Status(StatusCode.ERROR, str(exc)))
+                raise
+
+            span.set_attribute("http.response.status_code", response.status_code)
+            span.set_attribute("kai_chattr.endpoint.result", _result_for_status(response.status_code))
+            if response.status_code >= 500:
+                span.set_status(Status(StatusCode.ERROR))
+            return response
+
 
 class ForbiddenAttributeError(ValueError):
     """Raised when an attribute key is on the locked forbidden list."""
@@ -94,6 +168,140 @@ def validate_attrs(attrs: Mapping[str, Any]) -> dict[str, Any]:
             )
         out[k] = v
     return out
+
+
+def configure_observability(app: FastAPI, settings: Settings) -> None:
+    global _CATALOG_APP
+    _CATALOG_APP = app
+    if getattr(app.state, "kai_chattr_observability_configured", False):
+        return
+
+    app.add_middleware(EndpointTelemetryMiddleware)
+    FastAPIInstrumentor.instrument_app(app, tracer_provider=trace.get_tracer_provider())
+    app.state.kai_chattr_observability_configured = True
+
+
+def observed_endpoint_catalog() -> list[dict[str, str]]:
+    if _CATALOG_APP is None:
+        return []
+    return [endpoint.to_dict() for endpoint in _observed_endpoints_for_app(_CATALOG_APP)]
+
+
+def identify_endpoint(method: str, path: str) -> ObservedEndpoint | None:
+    safe_method = method.upper()
+    if safe_method not in SAFE_METHODS or _CATALOG_APP is None:
+        return None
+
+    for endpoint in _observed_endpoints_for_app(_CATALOG_APP):
+        if endpoint.method == safe_method and _template_matches_path(endpoint.path, path):
+            return endpoint
+    return None
+
+
+def _observed_endpoints_for_app(app: FastAPI) -> list[ObservedEndpoint]:
+    endpoints: list[ObservedEndpoint] = []
+    for route in app.routes:
+        if not isinstance(route, APIRoute):
+            continue
+        for method in sorted(route.methods or set()):
+            if method not in SAFE_METHODS or (method, route.path) in IGNORED_FASTAPI_ROUTES:
+                continue
+            endpoints.append(_observed_endpoint_from_route(method, route.path))
+    return sorted(endpoints, key=lambda endpoint: (endpoint.path, endpoint.method))
+
+
+def _observed_endpoint_from_route(method: str, path: str) -> ObservedEndpoint:
+    area = _area_for_path(path)
+    operation = _operation_for_route(method, path)
+    noun = _noun_for_path(path)
+    return ObservedEndpoint(
+        method=method,
+        path=path,
+        span_name=f"kai_chattr.api.{noun}.{operation}",
+        area=area,
+        operation=operation,
+        purpose=f"{operation.title()} {path}.",
+    )
+
+
+def _area_for_path(path: str) -> str:
+    parts = _static_path_parts(path)
+    if not parts:
+        return "root"
+    if parts[0] == "api" and len(parts) > 1:
+        return parts[1]
+    return parts[0]
+
+
+def _noun_for_path(path: str) -> str:
+    parts = [
+        part.replace("-", "_")
+        for part in _static_path_parts(path)
+        if part not in {"api"}
+    ]
+    return ".".join(parts) if parts else "root"
+
+
+def _static_path_parts(path: str) -> list[str]:
+    return [
+        part
+        for part in path.strip("/").split("/")
+        if part and not (part.startswith("{") and part.endswith("}"))
+    ]
+
+
+def _operation_for_route(method: str, path: str) -> str:
+    if method == "DELETE":
+        return "delete"
+    if method == "PATCH":
+        return "update"
+    if method == "POST":
+        lowered = path.lower()
+        if lowered.endswith("/restore"):
+            return "restore"
+        if lowered.endswith("/reorder"):
+            return "reorder"
+        if lowered.endswith("/toggle"):
+            return "toggle"
+        if lowered.endswith("/send"):
+            return "send"
+        return "create"
+    if method == "PUT":
+        return "save"
+    if method == "GET":
+        parts = _static_path_parts(path)
+        if path.endswith("/endpoints") or (parts and parts[-1].endswith("s")):
+            return "list"
+        return "read"
+    return method.lower()
+
+
+def _template_matches_path(template: str, path: str) -> bool:
+    parts: list[str] = []
+    cursor = 0
+    for match in ROUTE_TOKEN_PATTERN.finditer(template):
+        parts.append(re.escape(template[cursor:match.start()]))
+        parts.append("[^/]+")
+        cursor = match.end()
+    parts.append(re.escape(template[cursor:]))
+    regex = "^" + "".join(parts) + "$"
+    return re.match(regex, path) is not None
+
+
+def _set_endpoint_span_attributes(span: trace.Span, endpoint: ObservedEndpoint) -> None:
+    span.set_attribute("kai_chattr.endpoint.area", endpoint.area)
+    span.set_attribute("kai_chattr.endpoint.operation", endpoint.operation)
+    span.set_attribute("kai_chattr.endpoint.path_template", endpoint.path)
+    span.set_attribute("http.request.method", endpoint.method)
+    span.set_attribute("http.route", endpoint.path)
+
+
+def _result_for_status(status_code: int) -> str:
+    if status_code >= 500:
+        return "error"
+    if status_code >= 400:
+        return "client_error"
+    return "ok"
 
 
 # Path holders. Updated by set_export_paths(); read each export() so tests
@@ -252,7 +460,7 @@ _METER_PROVIDER: MeterProvider | None = None
 _TRACER_PROVIDER: TracerProvider | None = None
 
 
-def init_observability(data_dir: Path) -> None:
+def init_observability(data_dir: Path, settings: Settings | None = None) -> None:
     """Install global tracer + meter providers wired to the JSON-lines exporters.
 
     Idempotent. First call installs the providers; later calls only update
@@ -268,10 +476,19 @@ def init_observability(data_dir: Path) -> None:
         if _INITIALIZED:
             return
 
-        tracer_provider = TracerProvider()
-        span_processor = BatchSpanProcessor(_JsonlSpanExporter())
+        settings = settings or Settings()
+        tracer_provider = TracerProvider(
+            resource=Resource.create(
+                {
+                    "service.name": settings.otel_service_name,
+                    "service.namespace": "kai-chattr",
+                }
+            )
+        )
+        span_processor = _build_span_processor(settings)
         tracer_provider.add_span_processor(span_processor)
-        trace.set_tracer_provider(tracer_provider)
+        if isinstance(trace.get_tracer_provider(), ProxyTracerProvider):
+            trace.set_tracer_provider(tracer_provider)
         _TRACER_PROVIDER = tracer_provider
         _SPAN_PROCESSOR = span_processor
         _TRACER = trace.get_tracer("chattr.runtime")
@@ -304,6 +521,28 @@ def init_observability(data_dir: Path) -> None:
         )
 
         _INITIALIZED = True
+
+
+def _build_span_processor(settings: Settings) -> SpanProcessor:
+    exporter = _build_span_exporter(settings)
+    exporter_name = settings.otel_traces_exporter.strip().lower()
+    if exporter_name == "console":
+        return SimpleSpanProcessor(exporter)
+    return BatchSpanProcessor(exporter)
+
+
+def _build_span_exporter(settings: Settings) -> SpanExporter:
+    exporter = settings.otel_traces_exporter.strip().lower()
+    if exporter == "jsonl":
+        return _JsonlSpanExporter()
+    if exporter == "console":
+        return ConsoleSpanExporter()
+    if exporter == "otlp":
+        endpoint = settings.otel_exporter_otlp_endpoint.strip()
+        if endpoint:
+            return OTLPSpanExporter(endpoint=endpoint)
+        return OTLPSpanExporter()
+    raise RuntimeError(f"unsupported OTEL_TRACES_EXPORTER: {settings.otel_traces_exporter}")
 
 
 def get_tracer() -> trace.Tracer:
