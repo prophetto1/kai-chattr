@@ -132,24 +132,31 @@
   color-scheme: light;
 
   /* — Canonical semantic palette (shadcn) — */
-  --background: oklch(0.99 0 0);
-  --foreground: oklch(0.21 0 0);
+  --background: oklch(0.985 0.002 270);
+  --foreground: oklch(0.22 0.01 270);
   --card: oklch(1 0 0);
   --card-foreground: var(--foreground);
   --popover: oklch(1 0 0);
   --popover-foreground: var(--foreground);
-  --secondary: oklch(0.965 0 0);
+  --secondary: oklch(0.965 0.003 270);
   --secondary-foreground: var(--foreground);
-  --muted: oklch(0.965 0 0);
+  --muted: oklch(0.965 0.003 270);
   --muted-foreground: oklch(0.45 0 0);
-  --accent: oklch(0.95 0 0);
+  --accent: oklch(0.94 0.004 270);
   --accent-foreground: var(--foreground);
   --border: oklch(0 0 0 / 10%);
   --border-strong: oklch(0 0 0 / 16%);
   --input: oklch(0 0 0 / 12%);
   --primary: oklch(0.55 0.18 258);
   --primary-foreground: oklch(0.99 0 0);
-  --ring: oklch(0.55 0.18 258 / 45%);
+  --ring: oklch(0.55 0.18 258 / 40%);
+
+  /* — design-system additions · text-1=foreground, text-3=muted-foreground, danger=destructive — */
+  --text-2: oklch(0.40 0.012 270);
+  --text-4: oklch(0.62 0.01 270);
+  --border-hairline: oklch(0 0 0 / 6%);
+  --success: oklch(0.55 0.14 162);
+  --warning: oklch(0.62 0.13 70);
 
   /* — Sidebar — */
   --sidebar: hsl(0 0% 98%);
@@ -223,6 +230,13 @@
   --primary-foreground: oklch(0.98 0 0);
   --ring: oklch(0.62 0.17 258 / 55%);
 
+  /* — design-system additions — */
+  --text-2: oklch(0.78 0.006 270);
+  --text-4: oklch(0.55 0.012 270);
+  --border-hairline: oklch(1 0 0 / 6%);
+  --success: oklch(0.72 0.16 162);
+  --warning: oklch(0.80 0.15 80);
+
   /* — Sidebar — */
   --sidebar: oklch(0.205 0.004 270);
   --sidebar-foreground: var(--foreground);
@@ -295,6 +309,13 @@
   --primary-foreground: #1e1e2e;
   --ring: #cba6f7;
 
+  /* — design-system additions — */
+  --text-2: #bac2de;
+  --text-4: #9399b2;
+  --border-hairline: rgba(255, 255, 255, 0.06);
+  --success: #a6e3a1;
+  --warning: #f9e2af;
+
   /* — Sidebar — */
   --sidebar: #181825;
   --sidebar-foreground: var(--foreground);
@@ -366,6 +387,13 @@
   --primary: oklch(0.78 0.14 68);
   --primary-foreground: oklch(0.2 0.03 64);
   --ring: oklch(0.78 0.14 68 / 50%);
+
+  /* — design-system additions — */
+  --text-2: oklch(0.82 0.02 70);
+  --text-4: oklch(0.62 0.02 70);
+  --border-hairline: oklch(0.9 0.04 70 / 7%);
+  --success: oklch(0.72 0.15 150);
+  --warning: oklch(0.82 0.14 80);
 
   /* — Sidebar — */
   --sidebar: oklch(0.205 0.009 64);
