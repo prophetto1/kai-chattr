@@ -64,7 +64,7 @@ function OpenRepositoryCard({
   setSelectedRepository: (repository: RepositorySummary | null) => void
 }) {
   return (
-    <Card className="min-h-[236px] border-white/10 bg-card/80 py-0 shadow-sm">
+    <Card className="min-h-[236px] border-border bg-card/80 py-0 shadow-sm">
       <CardHeader className="gap-2 px-5 pt-5">
         <CardTitle aria-level={2} className="flex items-center gap-2 text-base" role="heading">
           <IconGitFork className="size-4" />
@@ -142,7 +142,7 @@ function NewConversationCard({
   onCreate: () => void
 }) {
   return (
-    <Card className="min-h-[236px] border-white/10 bg-card/80 py-0 shadow-sm">
+    <Card className="min-h-[236px] border-border bg-card/80 py-0 shadow-sm">
       <CardHeader className="gap-2 px-5 pt-5">
         <CardTitle aria-level={2} className="flex items-center gap-2 text-base" role="heading">
           <IconPlus className="size-4" />
@@ -176,7 +176,7 @@ function PlaceholderStartCard({
   title: string
 }) {
   return (
-    <Card className="min-h-[236px] border-white/10 bg-card/60 py-0 shadow-sm">
+    <Card className="min-h-[236px] border-border bg-card/60 py-0 shadow-sm">
       <CardHeader className="gap-2 px-5 pt-5">
         <CardTitle aria-level={2} className="flex items-center gap-2 text-base" role="heading">
           <Icon className="size-4" />
