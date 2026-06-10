@@ -30,7 +30,7 @@ export default defineConfig({
         target: apiTarget,
         changeOrigin: true,
       },
-      '/observability': {
+      '^/observability/(status|endpoints)': {
         target: apiTarget,
         changeOrigin: true,
       },

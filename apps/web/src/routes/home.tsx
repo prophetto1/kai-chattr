@@ -322,6 +322,7 @@ export default function HomePage() {
         defaultExpanded={false}
         onBrand={() => navigate('/home')}
         onNewSession={() => createMutation.mutate({})}
+        onOpenObservability={() => navigate('/observability')}
         onOpenSettings={() => navigate('/settings')}
         onShowConversations={() => navigate('/home')}
       />

@@ -21,6 +21,7 @@ import HomePage from './routes/home'
 import BoardRulesVisualPage from './routes/board-rules-visual'
 import LandingPage from './routes/landing'
 import LoginPage from './routes/login'
+import ObservabilityPage from './routes/observability'
 import RegisterPage from './routes/register'
 import SettingsPage from './routes/settings'
 import WorkbenchPage from './routes/workbench'
@@ -59,6 +60,7 @@ const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
   { path: '/home', element: <HomePage /> },
+  { path: '/observability', element: <ObservabilityPage />, errorElement: <WorkbenchRouteError /> },
   { path: '/settings', element: <SettingsPage />, errorElement: <WorkbenchRouteError /> },
   { path: '/workbench', element: <WorkbenchPage />, errorElement: <WorkbenchRouteError /> },
   { path: '/workbench/board-rules-visual', element: <BoardRulesVisualPage /> },

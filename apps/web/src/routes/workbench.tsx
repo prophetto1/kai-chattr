@@ -128,7 +128,6 @@ import {
   type ObservabilityStatus,
 } from '@/lib/observability-api'
 import { cn } from '@/lib/cn'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   ResizableHandle,
@@ -235,7 +234,6 @@ type DockTabId =
   | 'browser'
   | 'code'
   | 'docs'
-  | 'observability'
   | 'terminal'
 type WorkbenchIcon = ComponentType<{
   size?: number | string
@@ -254,7 +252,6 @@ const dockTabs: Array<{
   { id: 'browser', label: 'Browser', icon: IconWorld },
   { id: 'code', label: 'Code', icon: IconCode },
   { id: 'docs', label: 'Docs', icon: IconBook },
-  { id: 'observability', label: 'Observability', icon: IconActivityHeartbeat },
   { id: 'terminal', label: 'Terminal', icon: IconTerminal2 },
 ]
 
@@ -1078,85 +1075,6 @@ function ObservabilityStatusChip({
   )
 }
 
-function ObservabilityDockPanel({
-  isError,
-  isLoading,
-  status,
-}: {
-  isError: boolean
-  isLoading: boolean
-  status?: ObservabilityStatus
-}) {
-  const exporter =
-    status?.otel_traces_exporter?.trim() ||
-    (isError ? 'unavailable' : isLoading ? 'loading' : 'unknown')
-  const serviceName = status?.otel_service_name?.trim() || status?.service_name?.trim() || 'kai-chattr-api'
-  const endpoint = status?.otel_exporter_otlp_endpoint?.trim()
-  const jaegerUrl = status?.otel_jaeger_ui_url?.trim() || 'http://127.0.0.1:8886'
-  const logfireLabel = status?.logfire_configured
-    ? 'Configured'
-    : status?.logfire_enabled
-      ? 'Token missing'
-      : 'SOPS-gated'
-  const statusLabel = status?.status === 'active'
-    ? 'Running'
-    : isError
-      ? 'Unavailable'
-      : isLoading
-        ? 'Loading'
-        : 'Unknown'
-  const statusTone = status?.status === 'active' ? 'default' : 'outline'
-
-  return (
-    <div className="h-full overflow-auto bg-background p-3" data-testid="observability-dock-panel">
-      <div className="grid gap-4">
-        <div className="rounded-md border bg-background p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="grid gap-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-sm font-semibold tracking-normal text-foreground">Runtime telemetry</h2>
-                <Badge variant={statusTone}>{statusLabel}</Badge>
-                <Badge variant="outline">{exporter}</Badge>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {'Collector -> Jaeger + Logfire. Service '}
-                {serviceName}
-                {endpoint ? ` -> ${endpoint}` : ' -> OTLP endpoint not configured'}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <TelemetryMetric label="Service" value={serviceName} />
-            <TelemetryMetric label="otel_traces_exporter" value={exporter} />
-            <TelemetryMetric label="OTLP endpoint" value={endpoint || 'Not configured'} />
-            <TelemetryMetric label="Jaeger UI" value={jaegerUrl} />
-            <TelemetryMetric label="Logfire" value={logfireLabel} />
-          </div>
-        </div>
-
-        <div className="rounded-md border bg-background">
-          <div className="border-b px-4 py-3">
-            <h2 className="text-sm font-semibold tracking-normal text-foreground">Recent backend spans</h2>
-          </div>
-          <div className="px-4 py-8 text-sm text-muted-foreground">
-            Trace listing is reserved for the collector reader surface. Current exporter: {exporter}.
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function TelemetryMetric(props: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border bg-muted/20 px-3 py-2">
-      <div className="text-xs font-medium text-muted-foreground">{props.label}</div>
-      <div className="mt-1 truncate text-sm font-semibold text-foreground">{props.value}</div>
-    </div>
-  )
-}
-
 export default function WorkbenchPage() {
   const navigate = useNavigate()
   const chatPanelRef = useRef<PanelImperativeHandle | null>(null)
@@ -1278,6 +1196,7 @@ export default function WorkbenchPage() {
             onBrand={() => navigate('/home')}
             onNewSession={handleNewSession}
             onNotifications={() => navigate('/settings')}
+            onOpenObservability={() => navigate('/observability')}
             onOpenSettings={() => navigate('/settings')}
             utilities={({ expanded }) => (
               <>
@@ -1294,45 +1213,12 @@ export default function WorkbenchPage() {
         )}
       >
         <Tabs
-          className="jwc-workbench-shell flex min-h-0 flex-1 flex-col gap-[5px] overflow-hidden text-[13px] text-foreground antialiased"
+          className="jwc-workbench-shell flex min-h-0 flex-1 overflow-hidden text-[13px] text-foreground antialiased"
           onValueChange={handleDockTabChange}
+          orientation="vertical"
           value={activeDockTab}
         >
-          <Sheet className="h-10 shrink-0">
-            <header className="flex h-full shrink-0 items-center gap-2 px-3 text-foreground">
-              <div className="flex min-w-0 items-center gap-2">
-                <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
-                <span className="hidden truncate text-xs font-medium text-foreground sm:inline">
-                  Workbench session
-                </span>
-              </div>
-              <div className="ml-auto flex min-w-0 items-center justify-end overflow-hidden">
-                <TabsList
-                  variant="line"
-                  className="h-8 shrink-0 gap-0.5 rounded-none bg-transparent p-0 sm:gap-1"
-                >
-                  {dockTabs.map((tab) => {
-                    const DockIcon = tab.icon
-
-                    return (
-                      <TabsTrigger
-                        aria-label={tab.label}
-                        className="h-8 w-8 flex-none px-0 text-[var(--wb-tab-icon)] data-[state=active]:text-[var(--wb-tab-icon-active)] after:hidden active:scale-95 sm:w-auto sm:px-2.5"
-                        key={tab.id}
-                        onClick={() => handleDockTabClick(tab.id)}
-                        title={tab.label}
-                        value={tab.id}
-                      >
-                        <DockIcon className="size-[18px]" />
-                      </TabsTrigger>
-                    )
-                  })}
-                </TabsList>
-              </div>
-            </header>
-          </Sheet>
-
-          <div className="flex min-h-0 flex-1 overflow-hidden">
+          <div className="flex min-h-0 flex-1 gap-[5px] overflow-hidden">
               <ResizablePanelGroup
                 className="min-h-0 min-w-0 flex-1"
                 direction="horizontal"
@@ -1352,6 +1238,15 @@ export default function WorkbenchPage() {
                   panelRef={chatPanelRef}
                 >
                   <Sheet className={isMobile && mobileDockOpen ? 'hidden h-full' : 'h-full'}>
+                    <header className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-3 text-foreground">
+                      <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
+                      <span className="min-w-0 truncate text-xs font-medium text-foreground">
+                        Workbench session
+                      </span>
+                    </header>
+                    <ResizablePanelGroup className="min-h-0 flex-1" direction="vertical">
+                      <ResizablePanel id="chat-main" order={1} defaultSize={78} minSize={42}>
+                        <div className="flex h-full min-h-0 flex-col">
                 <Conversation className="flex-1">
                   <ConversationContent className="mx-auto w-full max-w-3xl gap-5 px-4 py-6">
                     {chatMessages.map((m, i) => (
@@ -1460,6 +1355,13 @@ export default function WorkbenchPage() {
                     </PromptInput>
                   </div>
                 </div>
+                        </div>
+                      </ResizablePanel>
+                      <ResizableHandle className="h-[5px] bg-transparent after:bg-transparent" />
+                      <ResizablePanel id="chat-console" order={2} defaultSize={22} minSize={14}>
+                        <AgentTerminalPane agentName="matt" />
+                      </ResizablePanel>
+                    </ResizablePanelGroup>
                   </Sheet>
                 </ResizablePanel>
 
@@ -1531,22 +1433,6 @@ export default function WorkbenchPage() {
                         />
                       </TabsContent>
 
-                      <TabsContent value="observability" className={dockWorkspaceContentClassName}>
-                        <DockWorkspace
-                          title="Observability"
-                          path="OpenTelemetry status and traces"
-                          icon={IconActivityHeartbeat}
-                          onClose={closeRightDock}
-                          main={(
-                            <ObservabilityDockPanel
-                              isError={observabilityStatusQuery.isError}
-                              isLoading={observabilityStatusQuery.isLoading}
-                              status={observabilityStatusQuery.data}
-                            />
-                          )}
-                        />
-                      </TabsContent>
-
                       <TabsContent value="terminal" className={dockWorkspaceContentClassName}>
                         <DockWorkspace
                           title="Terminal"
@@ -1559,6 +1445,30 @@ export default function WorkbenchPage() {
                   </Sheet>
                 </ResizablePanel>
               </ResizablePanelGroup>
+              <div className="-mr-[5px] flex h-full w-10 shrink-0 flex-col">
+                <TabsList
+                  aria-label="Workbench dock"
+                  className="flex h-full w-full flex-col justify-start gap-1 rounded-none bg-transparent px-1.5 pb-1.5 pt-[67px]"
+                  variant="line"
+                >
+                  {dockTabs.map((tab) => {
+                    const DockIcon = tab.icon
+
+                    return (
+                      <TabsTrigger
+                        aria-label={tab.label}
+                        className="h-8 w-8 flex-none justify-center rounded-[5px] px-0 text-[var(--wb-tab-icon)] data-[state=active]:bg-accent data-[state=active]:text-[var(--wb-tab-icon-active)] after:hidden active:scale-95"
+                        key={tab.id}
+                        onClick={() => handleDockTabClick(tab.id)}
+                        title={tab.label}
+                        value={tab.id}
+                      >
+                        <DockIcon className="size-[18px]" />
+                      </TabsTrigger>
+                    )
+                  })}
+                </TabsList>
+              </div>
             </div>
         </Tabs>
       </AppShell>

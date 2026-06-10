@@ -27,6 +27,10 @@ html {
   scrollbar-gutter: stable;
 }
 
+html:has(.jwc-workbench-shell) {
+  scrollbar-gutter: auto;
+}
+
 body {
   margin: 0;
   min-width: 320px;

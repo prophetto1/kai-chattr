@@ -510,6 +510,7 @@ export default function SettingsPage() {
           onBrand={() => navigate('/home')}
           onNewSession={() => navigate('/workbench')}
           onNotifications={() => navigate('/settings')}
+          onOpenObservability={() => navigate('/observability')}
           onOpenSettings={() => navigate('/settings')}
           onShowConversations={() => navigate('/home')}
         />

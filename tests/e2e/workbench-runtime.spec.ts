@@ -18,12 +18,12 @@ test('workbench loads through the kai-chattr runtime contract', async ({ page, r
     observability.otel_traces_exporter
   )
   await page.getByLabel('Observability').click()
-  await expect(page.getByTestId('observability-dock-panel')).toBeVisible()
-  await expect(page.getByTestId('observability-dock-panel')).toContainText('Runtime telemetry')
-  await expect(page.getByTestId('observability-dock-panel')).toContainText('Recent backend spans')
-  await expect(page.getByTestId('observability-dock-panel')).toContainText(
-    observability.otel_traces_exporter
-  )
+  await expect(page).toHaveURL(/\/observability$/)
+  await expect(page.getByRole('heading', { name: 'Observability' })).toBeVisible()
+  await expect(page.getByText('Runtime telemetry')).toBeVisible()
+  await expect(page.getByText('Recent backend spans')).toBeVisible()
+  await expect(page.getByText(observability.otel_traces_exporter).first()).toBeVisible()
+  await page.goto('/workbench')
 
   const runtimePorts = await request.get('/api/runtime/ports')
   expect(runtimePorts.status()).toBe(200)

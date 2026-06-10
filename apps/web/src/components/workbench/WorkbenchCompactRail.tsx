@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  IconActivityHeartbeat,
   IconBell,
   IconBrain,
   IconCircleCheck,
@@ -19,7 +20,7 @@ import {
   IconSettings2,
   IconSparkles,
 } from '@tabler/icons-react'
-import { type ComponentType, type CSSProperties, type ReactNode, useState } from 'react'
+import { type ComponentType, type CSSProperties, type ReactNode, useCallback, useState } from 'react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -54,6 +55,7 @@ type WorkbenchCompactRailItem =
   | 'search'
   | 'library'
   | 'integrations'
+  | 'observability'
   | 'agents'
   | 'registries'
   | 'self-learning'
@@ -95,6 +97,7 @@ type WorkbenchCompactRailProps = {
   onOpenAgents?: () => void
   onOpenIntegrations?: () => void
   onOpenLibrary?: () => void
+  onOpenObservability?: () => void
   onOpenProjects?: () => void
   onOpenRegistries?: () => void
   onOpenSearch?: () => void
@@ -132,6 +135,42 @@ const statusClassName = {
   offline: 'bg-muted-foreground',
   online: 'bg-emerald-400',
 } satisfies Record<NonNullable<WorkbenchCompactRailAccount['status']>, string>
+
+const railExpandedStorageKey = 'kai-chattr-workbench-rail-expanded-v1'
+
+function readPersistedRailExpanded(defaultExpanded: boolean) {
+  if (typeof window === 'undefined') {
+    return defaultExpanded
+  }
+
+  try {
+    const persisted = window.localStorage.getItem(railExpandedStorageKey)
+
+    if (persisted === 'true') {
+      return true
+    }
+
+    if (persisted === 'false') {
+      return false
+    }
+  } catch {
+    return defaultExpanded
+  }
+
+  return defaultExpanded
+}
+
+function writePersistedRailExpanded(expanded: boolean) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    window.localStorage.setItem(railExpandedStorageKey, String(expanded))
+  } catch {
+    // Ignore unavailable storage; the in-memory rail state still updates.
+  }
+}
 
 function RailItem({ active, expanded, icon: Icon, label, onClick }: RailItemProps) {
   const itemStyle = {
@@ -354,6 +393,7 @@ export function WorkbenchCompactRail({
   onOpenAgents,
   onOpenIntegrations,
   onOpenLibrary,
+  onOpenObservability,
   onOpenProjects,
   onOpenRegistries,
   onOpenSearch,
@@ -362,7 +402,11 @@ export function WorkbenchCompactRail({
   onShowConversations,
   onUpgrade,
 }: WorkbenchCompactRailProps) {
-  const [expanded, setExpanded] = useState(defaultExpanded)
+  const [expanded, setExpandedState] = useState(() => readPersistedRailExpanded(defaultExpanded))
+  const setExpanded = useCallback((nextExpanded: boolean) => {
+    setExpandedState(nextExpanded)
+    writePersistedRailExpanded(nextExpanded)
+  }, [])
   const accountStatus = account.status ?? 'online'
   const handleAccount = onAccount ?? onOpenSettings
   const handleBilling = onBilling ?? onOpenSettings
@@ -443,6 +487,15 @@ export function WorkbenchCompactRail({
               icon={IconPlugConnected}
               label="Integrations"
               onClick={handleIntegrations}
+            />
+          </RailMenuItem>
+          <RailMenuItem expanded={expanded}>
+            <RailItem
+              active={activeItem === 'observability'}
+              expanded={expanded}
+              icon={IconActivityHeartbeat}
+              label="Observability"
+              onClick={onOpenObservability}
             />
           </RailMenuItem>
           <RailMenuItem expanded={expanded}>
