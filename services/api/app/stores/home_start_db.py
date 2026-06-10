@@ -6,6 +6,7 @@ import json
 import threading
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, select
@@ -13,7 +14,13 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Mapped, mapped_column, relationship, sessionmaker
 
 from app.database import create_database_engine, normalize_database_url
-from app.stores.home_start import _conversation_title
+from app.stores.home_start import (
+    _conversation_title,
+    _discover_local_repositories,
+    _find_local_repository,
+    _list_local_branches,
+    _merge_repository_items,
+)
 from app.stores.rules_db import Base
 
 
@@ -87,7 +94,7 @@ class HomeSuggestedTask(Base):
 
 
 class SqlAlchemyHomeStartStore:
-    def __init__(self, database_url: str | Engine):
+    def __init__(self, database_url: str | Engine, local_repository_roots: list[str] | None = None):
         if isinstance(database_url, Engine):
             self._engine = database_url
         else:
@@ -103,20 +110,38 @@ class SqlAlchemyHomeStartStore:
         )
         if self._engine.url.get_backend_name() == "sqlite":
             Base.metadata.create_all(self._engine)
+        self._local_repository_roots = [
+            Path(root).expanduser().resolve()
+            for root in (local_repository_roots or [])
+        ]
         self._lock = threading.Lock()
 
     def list_repositories(self, query: str | None = None) -> dict:
         with self._lock, self._sessions() as session:
             stmt = select(HomeRepository).order_by(HomeRepository.updated_at.desc())
-            if query:
-                stmt = stmt.where(HomeRepository.full_name.ilike(f"%{query.strip()}%"))
             repositories = session.scalars(stmt).all()
+            items = [self._repository_dict(repository) for repository in repositories]
+            items = _merge_repository_items(
+                items,
+                _discover_local_repositories(self._local_repository_roots),
+            )
+            if query:
+                needle = query.strip().lower()
+                items = [
+                    item
+                    for item in items
+                    if needle in str(item.get("full_name", "")).lower()
+                ]
             return {
-                "items": [self._repository_dict(repository) for repository in repositories],
+                "items": items,
                 "next_page_id": None,
             }
 
     def list_branches(self, repository: str) -> dict:
+        local_repo = _find_local_repository(self._local_repository_roots, repository)
+        if local_repo is not None:
+            return {"items": _list_local_branches(local_repo), "next_page_id": None}
+
         with self._lock, self._sessions() as session:
             repo = session.scalar(
                 select(HomeRepository).where(HomeRepository.full_name == repository)

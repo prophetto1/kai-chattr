@@ -153,11 +153,11 @@ def load_config(root: Path | None = None) -> dict:
     """Load config.toml and merge config.local.toml if it exists.
 
     config.local.toml is gitignored and intended for user-specific agents
-    (e.g. local LLM endpoints) and optional [server] tweaks (e.g. bind host)
+    (e.g. local LLM endpoints) and optional [server]/[home] tweaks
     that shouldn't be committed.
     The [agents] section merges additively — local entries are added alongside
     (not replacing) the agents defined in config.toml.
-    The [server] section, if present, updates keys in the main [server] block.
+    The [server] and [home] sections, if present, update keys in the main blocks.
 
     CHATTR_* environment variables override values from config.toml
     (AGENTCHATTR_* aliases are still honored as fallback during migration).
@@ -188,6 +188,11 @@ def load_config(root: Path | None = None) -> dict:
         local_server = local.get("server")
         if isinstance(local_server, dict):
             config.setdefault("server", {}).update(local_server)
+
+        # Merge [home] — optional local repository roots and home-start settings.
+        local_home = local.get("home")
+        if isinstance(local_home, dict):
+            config.setdefault("home", {}).update(local_home)
 
     _apply_env_overrides(config)
 

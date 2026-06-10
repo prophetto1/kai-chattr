@@ -118,6 +118,8 @@ import { JobsDock } from '@/components/workbench/JobsDock'
 import { WorkbenchCompactRail } from '@/components/workbench/WorkbenchCompactRail'
 import { AgentTerminalPane } from '@/components/workbench/AgentTerminalPane'
 import { AgentLauncherDialog } from '@/components/workbench/launcher/AgentLauncherDialog'
+import { AppShell } from '@/components/layout/AppShell'
+import { Sheet } from '@/components/layout/Sheet'
 import { type ChattrRoomMessage, useChattrRoom } from '@/hooks/use-chattr-room'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useMonacoTheme } from '@/hooks/use-monaco-theme'
@@ -125,6 +127,7 @@ import {
   getObservabilityStatus,
   type ObservabilityStatus,
 } from '@/lib/observability-api'
+import { cn } from '@/lib/cn'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -1022,10 +1025,12 @@ function WorkbenchChatMessage({
 }
 
 function ObservabilityStatusChip({
+  compact = false,
   isError,
   isLoading,
   status,
 }: {
+  compact?: boolean
   isError: boolean
   isLoading: boolean
   status?: ObservabilityStatus
@@ -1042,17 +1047,27 @@ function ObservabilityStatusChip({
         <div
           aria-label={`otel_traces_exporter ${exporter}`}
           aria-live="polite"
-          className="hidden h-7 min-w-[214px] max-w-[286px] shrink-0 items-center gap-2 rounded-md border border-border/70 bg-muted/35 px-2.5 text-[11px] text-muted-foreground md:flex"
+          className={cn(
+            compact
+              ? 'flex size-9 shrink-0 items-center justify-center rounded-[5px] text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+              : 'flex h-7 w-full min-w-0 shrink-0 items-center gap-2 rounded-md border border-border/70 bg-muted/35 px-2.5 text-[11px] text-muted-foreground'
+          )}
           data-testid="otel-traces-exporter"
         >
           <IconActivityHeartbeat aria-hidden="true" className="size-3.5 shrink-0 text-emerald-500" />
-          <span className="shrink-0 font-medium text-foreground">otel_traces_exporter</span>
-          <span className="min-w-0 truncate rounded-sm bg-background/80 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
-            {exporter}
-          </span>
+          {compact ? (
+            <span className="sr-only">otel_traces_exporter {exporter}</span>
+          ) : (
+            <>
+              <span className="shrink-0 font-medium text-foreground">otel_traces_exporter</span>
+              <span className="min-w-0 truncate rounded-sm bg-background/80 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
+                {exporter}
+              </span>
+            </>
+          )}
         </div>
       </TooltipTrigger>
-      <TooltipContent side="bottom">
+      <TooltipContent side={compact ? 'right' : 'bottom'}>
         <div className="grid gap-1 text-xs">
           <span>Service: {serviceName}</span>
           <span>Exporter: {exporter}</span>
@@ -1148,7 +1163,7 @@ export default function WorkbenchPage() {
   const rightDockRef = useRef<PanelImperativeHandle | null>(null)
   const isMobile = useIsMobile()
   const [activeDockTab, setActiveDockTab] = useState<DockTabId>('board')
-  const [mobileDockOpen, setMobileDockOpen] = useState(true)
+  const [mobileDockOpen, setMobileDockOpen] = useState(false)
   const { messages: roomMessages, sendMessage } = useChattrRoom({ channel: CHAT_CHANNEL })
   const chatMessages = useMemo(
     () => roomMessages.map(toWorkbenchMessage),
@@ -1247,12 +1262,8 @@ export default function WorkbenchPage() {
 
   return (
     <TooltipProvider delayDuration={150}>
-      <Tabs
-        className="jwc-workbench-shell gap-0 overflow-hidden bg-background text-[13px] text-foreground antialiased"
-        onValueChange={handleDockTabChange}
-        value={activeDockTab}
-      >
-        <div className="flex min-h-0 flex-1 overflow-hidden">
+      <AppShell
+        rail={(
           <WorkbenchCompactRail
             account={{
               initials: 'J',
@@ -1261,30 +1272,44 @@ export default function WorkbenchPage() {
               status: 'online',
             }}
             activeItem="conversations"
+            defaultExpanded={false}
             onAccount={() => navigate('/settings')}
             onBilling={() => navigate('/settings')}
             onBrand={() => navigate('/home')}
             onNewSession={handleNewSession}
             onNotifications={() => navigate('/settings')}
             onOpenSettings={() => navigate('/settings')}
+            utilities={({ expanded }) => (
+              <>
+                <ObservabilityStatusChip
+                  compact={!expanded}
+                  isError={observabilityStatusQuery.isError}
+                  isLoading={observabilityStatusQuery.isLoading}
+                  status={observabilityStatusQuery.data}
+                />
+                <AgentLauncherDialog compact={!expanded} />
+              </>
+            )}
           />
-
-          <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
-            <header className="flex h-10 shrink-0 items-center gap-2 bg-background px-3 text-foreground">
+        )}
+      >
+        <Tabs
+          className="jwc-workbench-shell flex min-h-0 flex-1 flex-col gap-[5px] overflow-hidden text-[13px] text-foreground antialiased"
+          onValueChange={handleDockTabChange}
+          value={activeDockTab}
+        >
+          <Sheet className="h-10 shrink-0">
+            <header className="flex h-full shrink-0 items-center gap-2 px-3 text-foreground">
               <div className="flex min-w-0 items-center gap-2">
                 <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
-                <span className="truncate text-xs font-medium text-foreground">Workbench session</span>
+                <span className="hidden truncate text-xs font-medium text-foreground sm:inline">
+                  Workbench session
+                </span>
               </div>
-              <ObservabilityStatusChip
-                isError={observabilityStatusQuery.isError}
-                isLoading={observabilityStatusQuery.isLoading}
-                status={observabilityStatusQuery.data}
-              />
-              <AgentLauncherDialog />
-              <div className="ml-auto flex items-center gap-1">
+              <div className="ml-auto flex min-w-0 items-center justify-end overflow-hidden">
                 <TabsList
                   variant="line"
-                  className="h-8 gap-1 rounded-none bg-transparent p-0"
+                  className="h-8 shrink-0 gap-0.5 rounded-none bg-transparent p-0 sm:gap-1"
                 >
                   {dockTabs.map((tab) => {
                     const DockIcon = tab.icon
@@ -1292,7 +1317,7 @@ export default function WorkbenchPage() {
                     return (
                       <TabsTrigger
                         aria-label={tab.label}
-                        className="h-8 flex-none px-2.5 text-[var(--wb-tab-icon)] data-[state=active]:text-[var(--wb-tab-icon-active)] after:hidden active:scale-95"
+                        className="h-8 w-8 flex-none px-0 text-[var(--wb-tab-icon)] data-[state=active]:text-[var(--wb-tab-icon-active)] after:hidden active:scale-95 sm:w-auto sm:px-2.5"
                         key={tab.id}
                         onClick={() => handleDockTabClick(tab.id)}
                         title={tab.label}
@@ -1305,10 +1330,11 @@ export default function WorkbenchPage() {
                 </TabsList>
               </div>
             </header>
+          </Sheet>
 
-            <div className="flex min-h-0 flex-1 overflow-hidden">
+          <div className="flex min-h-0 flex-1 overflow-hidden">
               <ResizablePanelGroup
-                className="min-w-0 flex-1"
+                className="min-h-0 min-w-0 flex-1"
                 direction="horizontal"
                 key={
                   isMobile
@@ -1325,7 +1351,7 @@ export default function WorkbenchPage() {
                   minSize={isMobile ? 0 : 32}
                   panelRef={chatPanelRef}
                 >
-                  <div className="flex h-full flex-col bg-background">
+                  <Sheet className={isMobile && mobileDockOpen ? 'hidden h-full' : 'h-full'}>
                 <Conversation className="flex-1">
                   <ConversationContent className="mx-auto w-full max-w-3xl gap-5 px-4 py-6">
                     {chatMessages.map((m, i) => (
@@ -1339,8 +1365,9 @@ export default function WorkbenchPage() {
                   <ConversationScrollButton />
                 </Conversation>
                 <div className="shrink-0 px-4 pb-4 pt-1.5">
-                  <div className="mx-auto grid w-full max-w-3xl gap-2">
+                  <div className="mx-auto grid min-w-0 w-full max-w-3xl gap-2">
                     <PromptInput
+                      className="min-w-0 max-w-full [&_[data-slot=input-group]]:rounded-[24px] [&_[data-slot=input-group]]:border-border/70 [&_[data-slot=input-group]]:bg-background [&_[data-slot=input-group]]:shadow-[0_2px_5px_rgba(17,18,24,0.06),0_12px_30px_rgba(17,18,24,0.10)]"
                       globalDrop
                       multiple
                       onSubmit={handleComposerSubmit}
@@ -1350,14 +1377,14 @@ export default function WorkbenchPage() {
                       </PromptInputHeader>
                       <PromptInputBody>
                         <PromptInputTextarea
-                          className="min-h-[72px]"
+                          className="min-h-[58px] px-4 pt-4"
                           onChange={handleComposerTextChange}
                           placeholder="Run task with Claude — type / for commands"
                           value={composerText}
                         />
                       </PromptInputBody>
-                      <PromptInputFooter>
-                        <PromptInputTools>
+                      <PromptInputFooter className="flex-wrap px-4 pb-3">
+                        <PromptInputTools className="flex-wrap">
                           <PromptInputActionMenu>
                             <PromptInputActionMenuTrigger tooltip="Add context" />
                             <PromptInputActionMenuContent>
@@ -1377,7 +1404,7 @@ export default function WorkbenchPage() {
                             variant={useWebSearch ? 'default' : 'ghost'}
                           >
                             <IconWorldSearch className="size-4" />
-                            <span>Search</span>
+                            <span className="hidden sm:inline">Search</span>
                           </PromptInputButton>
                           <ModelSelector
                             onOpenChange={setModelSelectorOpen}
@@ -1386,7 +1413,9 @@ export default function WorkbenchPage() {
                             <ModelSelectorTrigger asChild>
                               <PromptInputButton tooltip="Select model">
                                 <ModelSelectorLogo provider={selectedModelData.chefSlug} />
-                                <ModelSelectorName>{selectedModelData.name}</ModelSelectorName>
+                                <ModelSelectorName className="hidden sm:inline">
+                                  {selectedModelData.name}
+                                </ModelSelectorName>
                               </PromptInputButton>
                             </ModelSelectorTrigger>
                             <ModelSelectorContent>
@@ -1431,10 +1460,10 @@ export default function WorkbenchPage() {
                     </PromptInput>
                   </div>
                 </div>
-                  </div>
+                  </Sheet>
                 </ResizablePanel>
 
-                <ResizableHandle className="bg-transparent" />
+                <ResizableHandle className="w-[5px] bg-transparent after:bg-transparent" />
 
                 <ResizablePanel
                   id="dock"
@@ -1445,8 +1474,7 @@ export default function WorkbenchPage() {
                   minSize={isMobile ? (mobileDockOpen ? 72 : 0) : 28}
                   panelRef={rightDockRef}
                 >
-                  <div className="h-full min-h-0 bg-background pb-[5px] pr-[5px]">
-                    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md bg-card">
+                  <Sheet className={isMobile && !mobileDockOpen ? 'hidden h-full' : 'h-full'}>
                       <TabsContent value="board" className={dockWorkspaceContentClassName}>
                         <DockWorkspace
                           title="Board"
@@ -1528,14 +1556,12 @@ export default function WorkbenchPage() {
                           main={<AgentTerminalPane agentName="codex" />}
                         />
                       </TabsContent>
-                    </div>
-                  </div>
+                  </Sheet>
                 </ResizablePanel>
               </ResizablePanelGroup>
             </div>
-          </div>
-        </div>
-      </Tabs>
+        </Tabs>
+      </AppShell>
     </TooltipProvider>
   )
 }

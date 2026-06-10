@@ -15,6 +15,8 @@ import {
   IconWorld,
 } from '@tabler/icons-react'
 
+import { AppShell } from '@/components/layout/AppShell'
+import { Sheet } from '@/components/layout/Sheet'
 import { useAppTheme } from '@/components/theme/AppThemeProvider'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -148,49 +150,51 @@ function StatusBadge({ status }: { status?: SettingsSection['status'] }) {
 
 function SettingsNavigation() {
   return (
-    <aside className="flex shrink-0 flex-col bg-muted/20 px-3 py-4 md:w-[270px] md:px-4 md:py-5">
-      <div className="mb-4 flex items-center gap-2 px-1">
-        <span className="flex size-7 items-center justify-center rounded-[6px] bg-card text-foreground shadow-sm ring-1 ring-border/40">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex items-center gap-2.5 border-b border-border px-3.5 py-3">
+        <span className="flex size-7 items-center justify-center rounded-[7px] bg-muted text-foreground ring-1 ring-border/50">
           <IconSettings2 className="size-4" />
         </span>
         <div className="min-w-0">
-          <h1 className="truncate text-sm font-semibold">Settings</h1>
-          <p className="truncate text-xs text-muted-foreground">Workspace controls</p>
+          <h1 className="truncate text-[13px] font-semibold leading-tight">Settings</h1>
+          <p className="truncate text-[11px] text-muted-foreground">Workspace controls</p>
         </div>
       </div>
 
-      <TabsList
-        aria-label="Settings sections"
-        className="h-auto w-full flex-col items-stretch justify-start gap-4 bg-transparent p-0"
-        variant="line"
-      >
-        {settingsGroups.map((group) => (
-          <div className="flex flex-col gap-1" key={group.label}>
-            <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-              {group.label}
+      <ScrollArea className="min-h-0 flex-1" viewportClassName="min-h-0">
+        <TabsList
+          aria-label="Settings sections"
+          className="h-auto w-full flex-col items-stretch justify-start gap-4 bg-transparent p-2.5"
+          variant="line"
+        >
+          {settingsGroups.map((group) => (
+            <div className="flex w-full flex-col gap-0.5" key={group.label}>
+              <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                {group.label}
+              </div>
+              {group.sectionIds.map((sectionId) => {
+                const section = sectionById.get(sectionId)
+                if (!section) return null
+
+                const SectionIcon = section.icon
+
+                return (
+                  <TabsTrigger
+                    className="h-auto min-h-9 justify-start gap-2.5 rounded-[7px] px-2.5 py-2 text-left text-[12.5px] after:hidden data-[state=active]:bg-accent data-[state=active]:font-medium data-[state=active]:shadow-none active:scale-[0.99]"
+                    key={section.id}
+                    value={section.id}
+                  >
+                    <SectionIcon className="size-[15px] text-muted-foreground" />
+                    <span className="truncate">{section.label}</span>
+                    <StatusBadge status={section.status} />
+                  </TabsTrigger>
+                )
+              })}
             </div>
-            {group.sectionIds.map((sectionId) => {
-              const section = sectionById.get(sectionId)
-              if (!section) return null
-
-              const SectionIcon = section.icon
-
-              return (
-                <TabsTrigger
-                  className="h-auto min-h-9 justify-start rounded-[6px] px-2 py-2 text-left text-xs after:hidden data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/35 active:scale-[0.99]"
-                  key={section.id}
-                  value={section.id}
-                >
-                  <SectionIcon className="size-4 text-muted-foreground" />
-                  <span className="truncate">{section.label}</span>
-                  <StatusBadge status={section.status} />
-                </TabsTrigger>
-              )
-            })}
-          </div>
-        ))}
-      </TabsList>
-    </aside>
+          ))}
+        </TabsList>
+      </ScrollArea>
+    </div>
   )
 }
 
@@ -198,13 +202,13 @@ function SettingsHeader({ section }: { section: SettingsSection }) {
   const SectionIcon = section.icon
 
   return (
-    <header className="flex min-h-14 shrink-0 items-center gap-3 bg-background px-5">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-[6px] bg-card shadow-sm ring-1 ring-border/35">
-        <SectionIcon className="size-4 text-muted-foreground" />
+    <header className="flex shrink-0 items-center gap-3 border-b border-border px-6 py-4">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-[9px] bg-muted ring-1 ring-border/50">
+        <SectionIcon className="size-[18px] text-muted-foreground" />
       </span>
       <div className="min-w-0">
-        <h2 className="truncate text-base font-semibold">{section.label}</h2>
-        <p className="truncate text-xs text-muted-foreground">{section.description}</p>
+        <h2 className="truncate text-[17px] font-semibold tracking-[-0.01em]">{section.label}</h2>
+        <p className="mt-0.5 truncate text-[12px] text-muted-foreground">{section.description}</p>
       </div>
     </header>
   )
@@ -220,17 +224,17 @@ function SettingsPanel({
   title: string
 }) {
   return (
-    <section className="rounded-[8px] bg-card/80 shadow-sm ring-1 ring-border/35">
-      <div className="px-5 py-4">
+    <section className="overflow-hidden rounded-[10px] border border-border bg-card">
+      <div className="px-5 py-3.5">
         {eyebrow ? (
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             {eyebrow}
           </p>
         ) : null}
         <h3 className="text-sm font-semibold">{title}</h3>
       </div>
-      <Separator className="bg-border/45" />
-      <div className="divide-y divide-border/45">{children}</div>
+      <Separator className="bg-border" />
+      <div className="divide-y divide-border">{children}</div>
     </section>
   )
 }
@@ -247,9 +251,9 @@ function SettingsRow({
   return (
     <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <Label className="text-sm font-medium">{label}</Label>
+        <Label className="text-[13px] font-medium">{label}</Label>
         {description ? (
-          <p className="mt-1 max-w-[560px] text-xs leading-5 text-muted-foreground">
+          <p className="mt-1 max-w-[46ch] text-[11.5px] leading-5 text-muted-foreground">
             {description}
           </p>
         ) : null}
@@ -286,7 +290,6 @@ function AppearanceSettings() {
     setTheme,
     themes,
   } = useAppTheme()
-  const selectedThemeIsAvailable = themes.some((theme) => theme.id === selectedTheme)
 
   return (
     <div className="grid gap-5">
@@ -298,9 +301,9 @@ function AppearanceSettings() {
           <Select
             disabled={themesLoading || themeSaving || themes.length === 0}
             onValueChange={setTheme}
-            value={selectedThemeIsAvailable ? selectedTheme : undefined}
+            value={selectedTheme}
           >
-            <SelectTrigger aria-label="Theme" className="w-full min-w-[220px] sm:w-[260px]">
+            <SelectTrigger aria-label="Theme" className="w-full min-w-[200px] sm:w-[240px]">
               <SelectValue placeholder={themesLoading ? 'Loading themes' : 'Select theme'} />
             </SelectTrigger>
             <SelectContent>
@@ -321,7 +324,7 @@ function AppearanceSettings() {
       </SettingsPanel>
 
       {themeError ? (
-        <div className="rounded-[8px] bg-destructive/10 px-4 py-3 text-sm text-destructive ring-1 ring-destructive/25">
+        <div className="rounded-[10px] border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           Theme settings unavailable.
         </div>
       ) : null}
@@ -484,33 +487,38 @@ export default function SettingsPage() {
   const navigate = useNavigate()
 
   return (
-    <main className="flex min-h-screen overflow-hidden bg-background text-foreground">
-      <WorkbenchCompactRail
-        account={{
-          initials: 'J',
-          label: 'Jon',
-          secondaryLabel: 'kai-chattr workspace',
-          status: 'online',
-        }}
-        activeItem="settings"
-        defaultExpanded={false}
-        onAccount={() => navigate('/settings')}
-        onBilling={() => navigate('/settings')}
-        onBrand={() => navigate('/home')}
-        onNewSession={() => navigate('/workbench')}
-        onNotifications={() => navigate('/settings')}
-        onOpenSettings={() => navigate('/settings')}
-        onShowConversations={() => navigate('/home')}
-      />
-
+    <AppShell
+      rail={
+        <WorkbenchCompactRail
+          account={{
+            initials: 'J',
+            label: 'Jon',
+            secondaryLabel: 'kai-chattr workspace',
+            status: 'online',
+          }}
+          activeItem="settings"
+          defaultExpanded={false}
+          onAccount={() => navigate('/settings')}
+          onBilling={() => navigate('/settings')}
+          onBrand={() => navigate('/home')}
+          onNewSession={() => navigate('/workbench')}
+          onNotifications={() => navigate('/settings')}
+          onOpenSettings={() => navigate('/settings')}
+          onShowConversations={() => navigate('/home')}
+        />
+      }
+    >
       <Tabs
-        className="min-w-0 flex-1 gap-0 overflow-hidden bg-background"
+        className="flex min-h-0 flex-1 flex-col gap-0"
         defaultValue="appearance"
         orientation="vertical"
       >
-        <section className="flex min-w-0 flex-1 flex-col overflow-hidden md:flex-row">
-          <SettingsNavigation />
-          <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
+        <section className="flex min-h-0 flex-1 flex-col gap-[5px] md:flex-row">
+          <Sheet className="max-h-[42vh] w-full shrink-0 md:max-h-none md:w-[244px]">
+            <SettingsNavigation />
+          </Sheet>
+
+          <Sheet className="min-h-0 min-w-0 flex-1">
             {settingsSections.map((section) => (
               <TabsContent
                 className="m-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden"
@@ -519,15 +527,15 @@ export default function SettingsPage() {
               >
                 <SettingsHeader section={section} />
                 <ScrollArea className="min-h-0 flex-1" viewportClassName="min-h-0">
-                  <div className="grid w-full max-w-[900px] gap-5 px-5 py-6">
+                  <div className="mx-auto grid w-full max-w-[680px] gap-5 px-6 py-7">
                     <SettingsContent sectionId={section.id} />
                   </div>
                 </ScrollArea>
               </TabsContent>
             ))}
-          </div>
+          </Sheet>
         </section>
       </Tabs>
-    </main>
+    </AppShell>
   )
 }

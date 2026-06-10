@@ -31,10 +31,10 @@
  * 1. PRIMITIVES — theme-independent (fonts, type scales, fixed accents, sizes)
  * ════════════════════════════════════════════════════════════════════════ */
 :root {
-  /* Blockdata docs fonts: Inter UI, Plus Jakarta Sans prose, JetBrains Mono code */
+  /* Sim-style app fonts: Inter/system UI for all product surfaces, JetBrains Mono code. */
   --bd-font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --bd-font-prose: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --bd-font-display: var(--bd-font-prose);
+  --bd-font-prose: var(--bd-font-ui);
+  --bd-font-display: var(--bd-font-ui);
   --bd-font-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas,
     monospace;
   --kai-font-display: var(--bd-font-prose);
@@ -132,24 +132,24 @@
   color-scheme: light;
 
   /* — Canonical semantic palette (shadcn) — */
-  --background: oklch(0.985 0.002 270);
-  --foreground: oklch(0.22 0.01 270);
-  --card: oklch(1 0 0);
+  --background: oklch(0.95 0.003 270);
+  --foreground: #202020;
+  --card: #ffffff;
   --card-foreground: var(--foreground);
-  --popover: oklch(1 0 0);
+  --popover: #ffffff;
   --popover-foreground: var(--foreground);
-  --secondary: oklch(0.965 0.003 270);
+  --secondary: #f3f3f3;
   --secondary-foreground: var(--foreground);
-  --muted: oklch(0.965 0.003 270);
-  --muted-foreground: oklch(0.45 0 0);
-  --accent: oklch(0.94 0.004 270);
+  --muted: #f5f5f5;
+  --muted-foreground: #666666;
+  --accent: #ececec;
   --accent-foreground: var(--foreground);
-  --border: oklch(0 0 0 / 10%);
-  --border-strong: oklch(0 0 0 / 16%);
-  --input: oklch(0 0 0 / 12%);
-  --primary: oklch(0.55 0.18 258);
-  --primary-foreground: oklch(0.99 0 0);
-  --ring: oklch(0.55 0.18 258 / 40%);
+  --border: #dedede;
+  --border-strong: #c9c9c9;
+  --input: #d8d8d8;
+  --primary: #20c878;
+  --primary-foreground: #ffffff;
+  --ring: color-mix(in oklab, var(--primary) 42%, transparent);
 
   /* — design-system additions · text-1=foreground, text-3=muted-foreground, danger=destructive — */
   --text-2: oklch(0.40 0.012 270);
@@ -159,46 +159,46 @@
   --warning: oklch(0.62 0.13 70);
 
   /* — Sidebar — */
-  --sidebar: hsl(0 0% 98%);
-  --sidebar-foreground: hsl(240 5.3% 26.1%);
-  --sidebar-primary: hsl(240 5.9% 10%);
-  --sidebar-primary-foreground: hsl(0 0% 98%);
-  --sidebar-accent: hsl(240 4.8% 95.9%);
-  --sidebar-accent-foreground: hsl(240 5.9% 10%);
-  --sidebar-border: hsl(220 13% 91%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  --sidebar: oklch(0.965 0.003 270);
+  --sidebar-foreground: #2b2b2b;
+  --sidebar-primary: #202020;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ececec;
+  --sidebar-accent-foreground: #1f1f1f;
+  --sidebar-border: #dedede;
+  --sidebar-ring: var(--ring);
 
   /* — Workbench dock-tab icon — */
-  --wb-tab-icon: oklch(0.30 0 0);
+  --wb-tab-icon: #303030;
   --wb-tab-icon-active: var(--primary);
 
   /* — Docs content palette (--bd-*): drives fumadocs prose & code — */
-  --brand: #2e6bff;
-  --brand-2: #1d55e8;
-  --brand-bg: rgba(46, 107, 255, 0.14);
-  --brand-text: #2e6bff;
+  --brand: #20c878;
+  --brand-2: #15a765;
+  --brand-bg: rgba(32, 200, 120, 0.14);
+  --brand-text: #13824f;
   --bd-brand: var(--brand);
-  --bd-heading: #1c1917;
+  --bd-heading: #202020;
   --bd-on-brand: #ffffff;
-  --bd-text: #1c1917;
-  --bd-text-muted: rgba(28, 25, 23, 0.48);
-  --bd-border: rgba(28, 25, 23, 0.1);
+  --bd-text: #202020;
+  --bd-text-muted: #666666;
+  --bd-border: #dedede;
   --bd-card: #ffffff;
-  --bd-background: #faf9f7;
-  --bd-muted: #f0eeed;
-  --bd-fd-background: #f7f4ef;
-  --bd-fd-muted: #f3f0ec;
-  --bd-fd-popover: #fefdfa;
-  --bd-fd-card: #fbf9f5;
-  --bd-fd-secondary: rgba(28, 25, 23, 0.04);
-  --bd-fd-accent: rgba(28, 25, 23, 0.035);
-  --bd-fd-ring: rgba(29, 85, 232, 0.28);
+  --bd-background: #f9f9f9;
+  --bd-muted: #f5f5f5;
+  --bd-fd-background: #f9f9f9;
+  --bd-fd-muted: #f5f5f5;
+  --bd-fd-popover: #ffffff;
+  --bd-fd-card: #ffffff;
+  --bd-fd-secondary: #f3f3f3;
+  --bd-fd-accent: #ececec;
+  --bd-fd-ring: color-mix(in oklab, var(--brand) 35%, transparent);
   --bd-fd-sidebar-muted: var(--bd-fd-muted);
   --bd-fd-sidebar-secondary: var(--bd-fd-secondary);
   --bd-code-text: var(--bd-text);
-  --bd-code-border: color-mix(in oklab, var(--bd-border) 78%, var(--bd-brand) 22%);
-  --bd-inline-code-bg: color-mix(in oklab, #f5ebe6 72%, #faf9f7 28%);
-  --bd-pre-bg: color-mix(in oklab, #ffffff 88%, #faf9f7 12%);
+  --bd-code-border: #d8d8d8;
+  --bd-inline-code-bg: #f1f1f1;
+  --bd-pre-bg: #ffffff;
   --shiki-light-bg: var(--bd-pre-bg);
   --shiki-dark-bg: var(--bd-pre-bg);
 }

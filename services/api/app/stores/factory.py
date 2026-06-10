@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from app.database import database_settings
@@ -12,6 +13,24 @@ from app.stores.jobs_db import SqlAlchemyJobStore
 from app.stores.routing_decisions_db import SqlAlchemyRoutingDecisionStore
 from app.stores.rules import RuleStore
 from app.stores.rules_db import SqlAlchemyRuleStore
+
+
+SERVICE_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _local_repository_roots(config: dict[str, Any]) -> list[str]:
+    raw_roots = config.get("home", {}).get("local_repository_roots", [])
+    if not isinstance(raw_roots, list):
+        return []
+    roots: list[str] = []
+    for raw_root in raw_roots:
+        if not isinstance(raw_root, str) or not raw_root.strip():
+            continue
+        root = Path(raw_root).expanduser()
+        if not root.is_absolute():
+            root = (SERVICE_ROOT / root).resolve()
+        roots.append(str(root))
+    return roots
 
 
 def create_rule_store(config: dict[str, Any], file_path: str) -> RuleStore | SqlAlchemyRuleStore:
@@ -37,10 +56,11 @@ def create_home_start_store(
     file_path: str,
 ) -> HomeStartStore | SqlAlchemyHomeStartStore:
     settings = database_settings(config)
+    local_roots = _local_repository_roots(config)
     if settings.mode == "file":
-        return HomeStartStore(file_path)
+        return HomeStartStore(file_path, local_repository_roots=local_roots)
     if settings.mode == "postgres":
-        return SqlAlchemyHomeStartStore(settings.url)
+        return SqlAlchemyHomeStartStore(settings.url, local_repository_roots=local_roots)
     raise ValueError(f"Unsupported database.mode={settings.mode!r}")
 
 

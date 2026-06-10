@@ -55,10 +55,7 @@ select {
 
 .jwc-workbench-shell {
   width: 100%;
-  height: 100vh;
-  height: 100dvh;
-  min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 0;
 }
 
 /* Register the Tailwind sidebar color utilities from the --sidebar* tokens

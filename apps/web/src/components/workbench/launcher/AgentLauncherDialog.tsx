@@ -35,13 +35,14 @@ import {
   type AgentLauncherProfile,
   type AgentLauncherStartResult,
 } from '@/lib/launcher-api'
+import { cn } from '@/lib/cn'
 
 type LaunchState = {
   result?: AgentLauncherStartResult
   error?: string
 }
 
-export function AgentLauncherDialog() {
+export function AgentLauncherDialog({ compact = false }: { compact?: boolean }) {
   const [open, setOpen] = useState(false)
   const [confirmedRisky, setConfirmedRisky] = useState<Record<string, boolean>>({})
   const [launchState, setLaunchState] = useState<Record<string, LaunchState>>({})
@@ -97,12 +98,16 @@ export function AgentLauncherDialog() {
           <DialogTrigger asChild>
             <Button
               aria-label="Launch agents"
-              className="h-7 gap-1.5 px-2 text-xs"
-              size="sm"
-              variant="outline"
+              className={cn(
+                compact
+                  ? 'size-9 rounded-[5px] p-0 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:scale-95'
+                  : 'h-7 gap-1.5 px-2 text-xs'
+              )}
+              size={compact ? 'icon' : 'sm'}
+              variant={compact ? 'ghost' : 'outline'}
             >
-              <IconRocket className="size-3.5" />
-              Agents
+              <IconRocket className={compact ? 'size-[18px]' : 'size-3.5'} />
+              {compact ? <span className="sr-only">Agents</span> : 'Agents'}
             </Button>
           </DialogTrigger>
         </TooltipTrigger>

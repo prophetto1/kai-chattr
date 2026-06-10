@@ -80,6 +80,7 @@ type WorkbenchCompactRailProps = {
   /** Sessions list — rendered under a "Sessions" heading when expanded. Wire your
    *  conversation data here; the rail does not fetch it. */
   sessions?: ReactNode
+  utilities?: (state: { expanded: boolean }) => ReactNode
   onAccount?: () => void
   onBilling?: () => void
   onBrand?: () => void
@@ -338,6 +339,7 @@ export function WorkbenchCompactRail({
   defaultExpanded = true,
   logo,
   sessions,
+  utilities,
   onAccount,
   onBilling,
   onBrand,
@@ -512,6 +514,11 @@ export function WorkbenchCompactRail({
           expanded ? 'px-2' : 'items-center px-0'
         )}
       >
+        {utilities ? (
+          <div className={cn('flex flex-col gap-1.5', expanded ? 'w-full' : 'items-center')}>
+            {utilities({ expanded })}
+          </div>
+        ) : null}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             {expanded ? (

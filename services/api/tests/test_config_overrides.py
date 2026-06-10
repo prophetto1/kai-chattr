@@ -7,6 +7,7 @@ same env vars produce the same config regardless of entry point.
 
 import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -118,6 +119,34 @@ class ConfigOverrideTests(unittest.TestCase):
         # Agent definitions must be untouched by path/port overrides
         self.assertIn("claude", config["agents"])
         self.assertEqual(config["agents"]["claude"]["command"], "claude")
+
+    def test_config_local_home_section_overrides_home_settings(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "config.toml").write_text(
+                """
+[server]
+port = 8840
+
+[home]
+local_repository_roots = ["../.."]
+""".strip(),
+                encoding="utf-8",
+            )
+            (root / "config.local.toml").write_text(
+                """
+[home]
+local_repository_roots = ["E:/workspace", "P:/workspace"]
+""".strip(),
+                encoding="utf-8",
+            )
+
+            config = config_loader.load_config(root)
+
+        self.assertEqual(
+            config["home"]["local_repository_roots"],
+            ["E:/workspace", "P:/workspace"],
+        )
 
 
 class CliOverrideExtractionTests(unittest.TestCase):
