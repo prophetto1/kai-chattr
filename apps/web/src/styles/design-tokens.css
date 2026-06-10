@@ -17,8 +17,8 @@
  * deduped, and completed for every theme. No token name was removed.
  *
  * WORKBENCH SURFACE ROLES (which token drives which area of the redesign):
- *   app background / chat scroll ...... --background
- *   left rail ......................... --sidebar (+ --sidebar-border)
+ *   shell rail + 5px underlay gaps .... --sidebar (+ --sidebar-border)
+ *   chat scroll / inner work areas .... --background
  *   dock + message / composer cards ... --card / --popover
  *   hover + lane separators ........... --accent / --border / --border-strong
  *   primary accent + active tab ....... --primary (+ --ring)

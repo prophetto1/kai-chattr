@@ -10,9 +10,9 @@ type AppShellProps = {
 
 export function AppShell({ rail, children, className }: AppShellProps) {
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-foreground">
+    <div className="flex h-screen overflow-hidden bg-sidebar text-foreground">
       {rail}
-      <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col gap-[5px] p-[5px] pl-0', className)}>
+      <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col gap-[5px] p-[5px]', className)}>
         {children}
       </div>
     </div>
