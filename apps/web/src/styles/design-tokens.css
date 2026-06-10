@@ -290,21 +290,21 @@
   color-scheme: dark;
 
   /* — Canonical semantic palette (shadcn), mapped from mocha — */
-  --background: #1e1e2e; /* base */
+  --background: #1a1a28;
   --foreground: #cdd6f4; /* text */
-  --card: #181825; /* mantle */
+  --card: #24243a;
   --card-foreground: var(--foreground);
-  --popover: #11111b; /* crust */
+  --popover: #15151f;
   --popover-foreground: var(--foreground);
-  --secondary: #313244; /* surface0 */
+  --secondary: #2b2b40;
   --secondary-foreground: var(--foreground);
-  --muted: #313244;
-  --muted-foreground: #a6adc8; /* subtext0 */
-  --accent: #45475a; /* surface1 */
+  --muted: #2b2b40;
+  --muted-foreground: #9ba0b5;
+  --accent: #313248;
   --accent-foreground: var(--foreground);
-  --border: #45475a;
+  --border: #3a3c51;
   --border-strong: #585b70;
-  --input: #585b70; /* surface2 */
+  --input: #3a3c51;
   --primary: #cba6f7; /* mauve */
   --primary-foreground: #1e1e2e;
   --ring: #cba6f7;
@@ -317,13 +317,13 @@
   --warning: #f9e2af;
 
   /* — Sidebar — */
-  --sidebar: #181825;
+  --sidebar: #1a1a28;
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: #cba6f7;
   --sidebar-primary-foreground: #1e1e2e;
-  --sidebar-accent: #45475a;
+  --sidebar-accent: #313248;
   --sidebar-accent-foreground: var(--foreground);
-  --sidebar-border: #45475a;
+  --sidebar-border: #3a3c51;
   --sidebar-ring: var(--ring);
 
   /* — Workbench dock-tab icon — */
@@ -339,20 +339,20 @@
   --bd-heading: #f5e0dc;
   --bd-on-brand: #1e1e2e;
   --bd-text: #cdd6f4;
-  --bd-text-muted: #a6adc8;
-  --bd-border: #45475a;
-  --bd-card: #181825;
-  --bd-background: #1e1e2e;
-  --bd-muted: #313244;
+  --bd-text-muted: #9ba0b5;
+  --bd-border: #3a3c51;
+  --bd-card: #24243a;
+  --bd-background: #1a1a28;
+  --bd-muted: #2b2b40;
   --bd-fd-background: var(--bd-background);
-  --bd-fd-muted: var(--bd-muted);
-  --bd-fd-popover: #11111b;
-  --bd-fd-card: var(--bd-card);
-  --bd-fd-secondary: #313244;
-  --bd-fd-accent: #45475a;
+  --bd-fd-muted: #2b2b40;
+  --bd-fd-popover: #15151f;
+  --bd-fd-card: #24243a;
+  --bd-fd-secondary: #2b2b40;
+  --bd-fd-accent: #313248;
   --bd-fd-ring: #cba6f7;
-  --bd-fd-sidebar-muted: #181825;
-  --bd-fd-sidebar-secondary: #1e1e2e;
+  --bd-fd-sidebar-muted: #1c1c2b;
+  --bd-fd-sidebar-secondary: #1a1a28;
   --bd-code-text: #f5e0dc;
   --bd-code-border: #585b70;
   --bd-inline-code-bg: rgba(203, 166, 247, 0.15);

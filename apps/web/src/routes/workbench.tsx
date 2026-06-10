@@ -25,6 +25,8 @@ import {
   IconExternalLink,
   IconFileText,
   IconGitCompare,
+  IconLayoutBottombarCollapse,
+  IconLayoutBottombarExpand,
   IconLayoutKanban,
   IconRefresh,
   IconTerminal2,
@@ -1021,6 +1023,16 @@ function WorkbenchChatMessage({
   )
 }
 
+function WorkbenchLowerPane() {
+  return (
+    <div
+      aria-hidden="true"
+      className="h-full bg-background"
+      data-testid="workbench-lower-pane"
+    />
+  )
+}
+
 function ObservabilityStatusChip({
   compact = false,
   isError,
@@ -1078,9 +1090,11 @@ function ObservabilityStatusChip({
 export default function WorkbenchPage() {
   const navigate = useNavigate()
   const chatPanelRef = useRef<PanelImperativeHandle | null>(null)
+  const lowerPaneRef = useRef<PanelImperativeHandle | null>(null)
   const rightDockRef = useRef<PanelImperativeHandle | null>(null)
   const isMobile = useIsMobile()
   const [activeDockTab, setActiveDockTab] = useState<DockTabId>('board')
+  const [lowerPaneOpen, setLowerPaneOpen] = useState(true)
   const [mobileDockOpen, setMobileDockOpen] = useState(false)
   const { messages: roomMessages, sendMessage } = useChattrRoom({ channel: CHAT_CHANNEL })
   const chatMessages = useMemo(
@@ -1137,6 +1151,19 @@ export default function WorkbenchPage() {
   const handleNewSession = useCallback(() => {
     setComposerText('')
   }, [])
+
+  const toggleLowerPane = useCallback(() => {
+    const panel = lowerPaneRef.current
+
+    if (lowerPaneOpen) {
+      panel?.collapse()
+      setLowerPaneOpen(false)
+      return
+    }
+
+    panel?.expand()
+    setLowerPaneOpen(true)
+  }, [lowerPaneOpen])
 
   const handleComposerSubmit = useCallback((message: PromptInputMessage) => {
     const text = message.text.trim()
@@ -1243,6 +1270,28 @@ export default function WorkbenchPage() {
                       <span className="min-w-0 truncate text-xs font-medium text-foreground">
                         Workbench session
                       </span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            aria-label={lowerPaneOpen ? 'Hide lower pane' : 'Show lower pane'}
+                            className="ml-auto size-8 rounded-[5px] text-muted-foreground hover:bg-accent hover:text-foreground active:scale-95"
+                            data-testid="workbench-lower-pane-toggle"
+                            onClick={toggleLowerPane}
+                            size="icon"
+                            type="button"
+                            variant="ghost"
+                          >
+                            {lowerPaneOpen ? (
+                              <IconLayoutBottombarCollapse className="size-4" />
+                            ) : (
+                              <IconLayoutBottombarExpand className="size-4" />
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          {lowerPaneOpen ? 'Hide lower pane' : 'Show lower pane'}
+                        </TooltipContent>
+                      </Tooltip>
                     </header>
                     <ResizablePanelGroup className="min-h-0 flex-1" direction="vertical">
                       <ResizablePanel id="chat-main" order={1} defaultSize={78} minSize={42}>
@@ -1357,9 +1406,22 @@ export default function WorkbenchPage() {
                 </div>
                         </div>
                       </ResizablePanel>
-                      <ResizableHandle className="h-[5px] bg-transparent after:bg-transparent" />
-                      <ResizablePanel id="chat-console" order={2} defaultSize={22} minSize={14}>
-                        <AgentTerminalPane agentName="matt" />
+                      <ResizableHandle
+                        className={cn(
+                          'h-[5px] bg-transparent after:bg-transparent',
+                          !lowerPaneOpen && 'hidden'
+                        )}
+                      />
+                      <ResizablePanel
+                        id="chat-lower"
+                        order={2}
+                        collapsible
+                        collapsedSize={0}
+                        defaultSize={22}
+                        minSize={14}
+                        panelRef={lowerPaneRef}
+                      >
+                        <WorkbenchLowerPane />
                       </ResizablePanel>
                     </ResizablePanelGroup>
                   </Sheet>

@@ -186,8 +186,7 @@ function ObservabilityNavigation() {
       <ScrollArea className="min-h-0 flex-1" viewportClassName="min-h-0">
         <TabsList
           aria-label="Observability sections"
-          className="h-auto w-full flex-col items-stretch justify-start gap-4 bg-transparent p-2.5"
-          variant="line"
+          className="flex h-auto w-full flex-col items-stretch justify-start gap-4 bg-transparent p-2.5"
         >
           {observabilityGroups.map((group) => (
             <div className="flex w-full flex-col gap-0.5" key={group.label}>
@@ -202,11 +201,11 @@ function ObservabilityNavigation() {
 
                 return (
                   <TabsTrigger
-                    className="h-auto min-h-9 justify-start gap-2.5 rounded-[7px] px-2.5 py-2 text-left text-[12.5px] after:hidden data-[state=active]:bg-accent data-[state=active]:font-medium data-[state=active]:shadow-none active:scale-[0.99]"
+                    className="kai-category-rail-trigger h-auto min-h-9 w-full justify-start gap-2.5 rounded-[7px] px-2.5 py-2 text-left data-[state=active]:bg-accent data-[state=active]:shadow-none active:scale-[0.99]"
                     key={section.id}
                     value={section.id}
                   >
-                    <SectionIcon className="size-[15px] text-muted-foreground" />
+                    <SectionIcon className="size-[15px] shrink-0 text-muted-foreground" />
                     <span className="truncate">{section.label}</span>
                     <SectionStatusBadge status={section.status} />
                   </TabsTrigger>
@@ -497,7 +496,7 @@ export default function ObservabilityPage() {
               >
                 <ObservabilityHeader section={section} />
                 <ScrollArea className="min-h-0 flex-1" viewportClassName="min-h-0">
-                  <div className="mx-auto grid w-full max-w-[760px] gap-5 px-6 py-7">
+                  <div className="mx-auto grid w-full max-w-[1000px] gap-5 px-6 py-7">
                     <ObservabilityContent model={model} sectionId={section.id} />
                   </div>
                 </ScrollArea>

@@ -1,25 +1,15 @@
 'use client'
 
-import { type ComponentType } from 'react'
+import { type ComponentType, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import {
-  IconBell,
-  IconCode,
-  IconCreditCard,
-  IconFileText,
-  IconFolderOpen,
   IconPalette,
-  IconRobot,
   IconSettings2,
-  IconTerminal2,
-  IconWorld,
 } from '@tabler/icons-react'
 
 import { AppShell } from '@/components/layout/AppShell'
 import { Sheet } from '@/components/layout/Sheet'
 import { useAppTheme } from '@/components/theme/AppThemeProvider'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
@@ -30,7 +20,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { WorkbenchCompactRail } from '@/components/workbench/WorkbenchCompactRail'
 import { cn } from '@/lib/cn'
@@ -46,89 +35,18 @@ type SettingsSection = {
   icon: SettingsIcon
   id: string
   label: string
-  status?: 'active' | 'planned'
 }
 
 const settingsSections = [
   {
-    id: 'agent',
-    label: 'Agent',
-    description: 'Defaults for agent identity, manifest-backed configuration, and memory scope.',
-    icon: IconRobot,
-    status: 'planned',
-  },
-  {
-    id: 'models',
-    label: 'Models',
-    description: 'Cloud model profiles, API-key backed providers, and low-cost defaults.',
-    icon: IconCode,
-    status: 'planned',
-  },
-  {
-    id: 'runtime',
-    label: 'Runtime',
-    description: 'Repository launch modes, local-folder access, and typed HTTP bridges.',
-    icon: IconTerminal2,
-    status: 'planned',
-  },
-  {
-    id: 'mcp',
-    label: 'MCP and tools',
-    description: 'Tool servers, permissions, and external capability connections.',
-    icon: IconWorld,
-    status: 'planned',
-  },
-  {
-    id: 'integrations',
-    label: 'Integrations',
-    description: 'GitHub, local repository, and workspace provider connections.',
-    icon: IconFolderOpen,
-    status: 'planned',
-  },
-  {
-    id: 'secrets',
-    label: 'Secrets',
-    description: 'API keys, runtime environment values, and provider credentials.',
-    icon: IconFileText,
-    status: 'planned',
-  },
-  {
     id: 'appearance',
     label: 'Appearance',
-    description: 'Theme and shell presentation preferences.',
+    description: 'Theme selection backed by the settings API.',
     icon: IconPalette,
-    status: 'active',
-  },
-  {
-    id: 'account',
-    label: 'Account',
-    description: 'User profile, billing, notifications, and workspace access.',
-    icon: IconCreditCard,
-    status: 'planned',
   },
 ] satisfies SettingsSection[]
 
 type SettingsSectionId = (typeof settingsSections)[number]['id']
-
-const settingsGroups: Array<{
-  label: string
-  sectionIds: SettingsSectionId[]
-}> = [
-  {
-    label: 'Workspace',
-    sectionIds: ['agent', 'models', 'runtime', 'mcp'],
-  },
-  {
-    label: 'Connections',
-    sectionIds: ['integrations', 'secrets'],
-  },
-  {
-    label: 'User',
-    sectionIds: ['appearance', 'account'],
-  },
-]
-
-const sectionById = new Map(settingsSections.map((section) => [section.id, section]))
 
 const settingsHeaderBaseClass =
   'flex shrink-0 items-center gap-2.5 border-b border-border py-3'
@@ -136,24 +54,6 @@ const settingsHeaderIconClass =
   'flex size-7 shrink-0 items-center justify-center rounded-[7px] bg-muted ring-1 ring-border/50'
 const settingsHeaderTitleClass = 'truncate text-[13px] font-semibold leading-tight'
 const settingsHeaderDescriptionClass = 'truncate text-[11px] text-muted-foreground'
-
-function StatusBadge({ status }: { status?: SettingsSection['status'] }) {
-  if (!status) return null
-
-  return (
-    <Badge
-      className={cn(
-        'ml-auto rounded-[5px] px-1.5 py-0 text-[10px] font-medium',
-        status === 'active'
-          ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
-          : 'border-border/50 bg-muted/50 text-muted-foreground'
-      )}
-      variant="outline"
-    >
-      {status === 'active' ? 'Active' : 'Planned'}
-    </Badge>
-  )
-}
 
 function SettingsNavigation() {
   return (
@@ -164,41 +64,29 @@ function SettingsNavigation() {
         </span>
         <div className="min-w-0">
           <h1 className={settingsHeaderTitleClass}>Settings</h1>
-          <p className={settingsHeaderDescriptionClass}>Workspace controls</p>
+          <p className={settingsHeaderDescriptionClass}>Current controls</p>
         </div>
       </div>
 
       <ScrollArea className="min-h-0 flex-1" viewportClassName="min-h-0">
         <TabsList
           aria-label="Settings sections"
-          className="h-auto w-full flex-col items-stretch justify-start gap-4 bg-transparent p-2.5"
-          variant="line"
+          className="flex h-auto w-full flex-col items-stretch justify-start gap-4 bg-transparent p-2.5"
         >
-          {settingsGroups.map((group) => (
-            <div className="flex w-full flex-col gap-0.5" key={group.label}>
-              <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                {group.label}
-              </div>
-              {group.sectionIds.map((sectionId) => {
-                const section = sectionById.get(sectionId)
-                if (!section) return null
+          {settingsSections.map((section) => {
+            const SectionIcon = section.icon
 
-                const SectionIcon = section.icon
-
-                return (
-                  <TabsTrigger
-                    className="h-auto min-h-9 justify-start gap-2.5 rounded-[7px] px-2.5 py-2 text-left text-[12.5px] after:hidden data-[state=active]:bg-accent data-[state=active]:font-medium data-[state=active]:shadow-none active:scale-[0.99]"
-                    key={section.id}
-                    value={section.id}
-                  >
-                    <SectionIcon className="size-[15px] text-muted-foreground" />
-                    <span className="truncate">{section.label}</span>
-                    <StatusBadge status={section.status} />
-                  </TabsTrigger>
-                )
-              })}
-            </div>
-          ))}
+            return (
+              <TabsTrigger
+                className="kai-category-rail-trigger h-auto min-h-9 w-full justify-start gap-2.5 rounded-[7px] px-2.5 py-2 text-left data-[state=active]:bg-accent data-[state=active]:shadow-none active:scale-[0.99]"
+                key={section.id}
+                value={section.id}
+              >
+                <SectionIcon className="size-[15px] shrink-0 text-muted-foreground" />
+                <span className="truncate">{section.label}</span>
+              </TabsTrigger>
+            )
+          })}
         </TabsList>
       </ScrollArea>
     </div>
@@ -223,21 +111,14 @@ function SettingsHeader({ section }: { section: SettingsSection }) {
 
 function SettingsPanel({
   children,
-  eyebrow,
   title,
 }: {
-  children: React.ReactNode
-  eyebrow?: string
+  children: ReactNode
   title: string
 }) {
   return (
     <section className="overflow-hidden rounded-[10px] border border-border bg-card">
       <div className="px-5 py-3.5">
-        {eyebrow ? (
-          <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            {eyebrow}
-          </p>
-        ) : null}
         <h3 className="text-sm font-semibold">{title}</h3>
       </div>
       <Separator className="bg-border" />
@@ -251,7 +132,7 @@ function SettingsRow({
   description,
   label,
 }: {
-  children: React.ReactNode
+  children: ReactNode
   description?: string
   label: string
 }) {
@@ -270,24 +151,6 @@ function SettingsRow({
   )
 }
 
-function PlaceholderControl({
-  actionLabel = 'Not wired yet',
-  description,
-  label,
-}: {
-  actionLabel?: string
-  description: string
-  label: string
-}) {
-  return (
-    <SettingsRow description={description} label={label}>
-      <Button disabled size="sm" type="button" variant="secondary">
-        {actionLabel}
-      </Button>
-    </SettingsRow>
-  )
-}
-
 function AppearanceSettings() {
   const {
     error: themeError,
@@ -300,10 +163,10 @@ function AppearanceSettings() {
 
   return (
     <div className="grid gap-5">
-      <SettingsPanel eyebrow="Application" title="Appearance">
+      <SettingsPanel title="Theme">
         <SettingsRow
-          description="Applies the selected token palette across the workbench shell and start surfaces."
-          label="Theme"
+          description="Applies the selected token palette across the app shell and workbench surfaces."
+          label="Color theme"
         >
           <Select
             disabled={themesLoading || themeSaving || themes.length === 0}
@@ -322,12 +185,6 @@ function AppearanceSettings() {
             </SelectContent>
           </Select>
         </SettingsRow>
-        <SettingsRow
-          description="Keep non-essential shell transitions subtle for dense work sessions."
-          label="Reduced motion"
-        >
-          <Switch aria-label="Reduced motion" checked={false} disabled />
-        </SettingsRow>
       </SettingsPanel>
 
       {themeError ? (
@@ -339,151 +196,8 @@ function AppearanceSettings() {
   )
 }
 
-function AgentSettings() {
-  return (
-    <SettingsPanel eyebrow="Agent configuration" title="Agent">
-      <PlaceholderControl
-        description="Choose the default agent profile used when starting from scratch."
-        label="Default agent"
-      />
-      <PlaceholderControl
-        description="Persist cloud agent configuration through a versioned JSON manifest."
-        label="Agent manifest"
-      />
-      <PlaceholderControl
-        description="Bind an agent to cloud memory or a local SQLite-backed runtime store."
-        label="Memory scope"
-      />
-    </SettingsPanel>
-  )
-}
-
-function ModelSettings() {
-  return (
-    <SettingsPanel eyebrow="Model access" title="Models">
-      <PlaceholderControl
-        description="Select the low-cost model profile used for cloud conversations."
-        label="Default cloud model"
-      />
-      <PlaceholderControl
-        description="Attach user-provided provider credentials without storing plaintext in source files."
-        label="Bring your own key"
-      />
-      <PlaceholderControl
-        description="Store named model profiles for agent and workspace defaults."
-        label="Provider profiles"
-      />
-    </SettingsPanel>
-  )
-}
-
-function RuntimeSettings() {
-  return (
-    <SettingsPanel eyebrow="Runtime connections" title="Runtime">
-      <PlaceholderControl
-        description="Open a remote GitHub repository and launch a cloud-backed workbench session."
-        label="Open repository"
-      />
-      <PlaceholderControl
-        description="Connect a local folder to a cloud model without moving the workspace into the cloud."
-        label="Open local repository"
-      />
-      <PlaceholderControl
-        description="Provision a typed HTTP bridge for local environment access and per-agent persistence."
-        label="Typed HTTP bridge"
-      />
-    </SettingsPanel>
-  )
-}
-
-function McpSettings() {
-  return (
-    <SettingsPanel eyebrow="Tooling" title="MCP and tools">
-      <PlaceholderControl
-        description="Register MCP servers for tools, resources, prompts, and local runtime bridges."
-        label="MCP servers"
-      />
-      <PlaceholderControl
-        description="Control whether tools require confirmation, run read-only, or can mutate workspace state."
-        label="Tool approvals"
-      />
-    </SettingsPanel>
-  )
-}
-
-function IntegrationsSettings() {
-  return (
-    <SettingsPanel eyebrow="Providers" title="Integrations">
-      <PlaceholderControl
-        description="Connect GitHub providers for repository search, branch lookup, and launch."
-        label="GitHub"
-      />
-      <PlaceholderControl
-        description="Register local folder access for desktop-style repository work."
-        label="Local folders"
-      />
-    </SettingsPanel>
-  )
-}
-
-function SecretsSettings() {
-  return (
-    <SettingsPanel eyebrow="Credentials" title="Secrets">
-      <PlaceholderControl
-        description="Store API keys through the backend secrets surface rather than plaintext files."
-        label="API keys"
-      />
-      <PlaceholderControl
-        description="Attach runtime environment values for tools and agent profiles."
-        label="Environment values"
-      />
-    </SettingsPanel>
-  )
-}
-
-function AccountSettings() {
-  return (
-    <SettingsPanel eyebrow="User" title="Account">
-      <SettingsRow
-        description="Account details will use the same dedicated settings route rather than modal overflow."
-        label="Profile"
-      >
-        <Button disabled size="sm" type="button" variant="secondary">
-          Not wired yet
-        </Button>
-      </SettingsRow>
-      <SettingsRow
-        description="Billing controls belong on this page once subscription state is connected."
-        label="Billing"
-      >
-        <IconCreditCard className="size-4 text-muted-foreground" />
-      </SettingsRow>
-      <SettingsRow
-        description="Notification defaults move here with account preferences."
-        label="Notifications"
-      >
-        <IconBell className="size-4 text-muted-foreground" />
-      </SettingsRow>
-    </SettingsPanel>
-  )
-}
-
 function SettingsContent({ sectionId }: { sectionId: SettingsSectionId }) {
   switch (sectionId) {
-    case 'agent':
-      return <AgentSettings />
-    case 'models':
-      return <ModelSettings />
-    case 'runtime':
-      return <RuntimeSettings />
-    case 'mcp':
-      return <McpSettings />
-    case 'integrations':
-      return <IntegrationsSettings />
-    case 'secrets':
-      return <SecretsSettings />
-    case 'account':
-      return <AccountSettings />
     case 'appearance':
     default:
       return <AppearanceSettings />
@@ -535,7 +249,7 @@ export default function SettingsPage() {
               >
                 <SettingsHeader section={section} />
                 <ScrollArea className="min-h-0 flex-1" viewportClassName="min-h-0">
-                  <div className="mx-auto grid w-full max-w-[680px] gap-5 px-6 py-7">
+                  <div className="mx-auto grid w-full max-w-[1000px] gap-5 px-6 py-7">
                     <SettingsContent sectionId={section.id} />
                   </div>
                 </ScrollArea>
