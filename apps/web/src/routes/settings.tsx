@@ -130,6 +130,13 @@ const settingsGroups: Array<{
 
 const sectionById = new Map(settingsSections.map((section) => [section.id, section]))
 
+const settingsHeaderBaseClass =
+  'flex shrink-0 items-center gap-2.5 border-b border-border py-3'
+const settingsHeaderIconClass =
+  'flex size-7 shrink-0 items-center justify-center rounded-[7px] bg-muted ring-1 ring-border/50'
+const settingsHeaderTitleClass = 'truncate text-[13px] font-semibold leading-tight'
+const settingsHeaderDescriptionClass = 'truncate text-[11px] text-muted-foreground'
+
 function StatusBadge({ status }: { status?: SettingsSection['status'] }) {
   if (!status) return null
 
@@ -151,13 +158,13 @@ function StatusBadge({ status }: { status?: SettingsSection['status'] }) {
 function SettingsNavigation() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-center gap-2.5 border-b border-border px-3.5 py-3">
-        <span className="flex size-7 items-center justify-center rounded-[7px] bg-muted text-foreground ring-1 ring-border/50">
+      <div className={cn(settingsHeaderBaseClass, 'px-3.5')}>
+        <span className={cn(settingsHeaderIconClass, 'text-foreground')}>
           <IconSettings2 className="size-4" />
         </span>
         <div className="min-w-0">
-          <h1 className="truncate text-[13px] font-semibold leading-tight">Settings</h1>
-          <p className="truncate text-[11px] text-muted-foreground">Workspace controls</p>
+          <h1 className={settingsHeaderTitleClass}>Settings</h1>
+          <p className={settingsHeaderDescriptionClass}>Workspace controls</p>
         </div>
       </div>
 
@@ -202,13 +209,13 @@ function SettingsHeader({ section }: { section: SettingsSection }) {
   const SectionIcon = section.icon
 
   return (
-    <header className="flex shrink-0 items-center gap-3 border-b border-border px-6 py-4">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-[9px] bg-muted ring-1 ring-border/50">
-        <SectionIcon className="size-[18px] text-muted-foreground" />
+    <header className={cn(settingsHeaderBaseClass, 'px-6')}>
+      <span className={settingsHeaderIconClass}>
+        <SectionIcon className="size-4 text-muted-foreground" />
       </span>
       <div className="min-w-0">
-        <h2 className="truncate text-[17px] font-semibold tracking-[-0.01em]">{section.label}</h2>
-        <p className="mt-0.5 truncate text-[12px] text-muted-foreground">{section.description}</p>
+        <h2 className={settingsHeaderTitleClass}>{section.label}</h2>
+        <p className={settingsHeaderDescriptionClass}>{section.description}</p>
       </div>
     </header>
   )
