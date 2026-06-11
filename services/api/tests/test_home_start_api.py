@@ -89,7 +89,7 @@ def test_create_conversation_persists_to_recent_conversations():
         created = response.json()
         assert created["conversation_id"]
         assert created["status"] == "ready"
-        assert created["url"] == f"/workbench?conversation_id={created['conversation_id']}"
+        assert created["url"] == f"/w/local/sessions/{created['conversation_id']}"
         assert created["conversation"]["selected_repository"] == "propreheto/kai-chattr"
         assert created["conversation"]["selected_branch"] == "main"
 

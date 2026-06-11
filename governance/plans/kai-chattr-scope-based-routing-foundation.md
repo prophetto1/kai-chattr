@@ -6,7 +6,7 @@
 
 **Tech Stack:** React Router in `apps/web`, FastAPI in `services/api`, Postgres for auth/workspace/chat persistence, SOPS for secret-bearing local access.
 
-**Status:** Direction locked - implementation plan required before code changes
+**Status:** Direction locked - first frontend/helper-route slice in progress
 **Author:** Codex for Jon
 **Date:** 2026-06-10
 
@@ -18,10 +18,12 @@ Future workers must not continue API, MCP, or frontend route work as if `/workbe
 
 ## Current State Checked
 
-- `apps/web/src/main.tsx` currently mounts `/workbench`, `/settings`, and `/observability` as top-level React routes.
+- `apps/web/src/main.tsx` now mounts canonical current-user settings under `/settings/user/:sectionId` and a workspace-session helper mount at `/w/:workspacePublicId/sessions/:sessionHash`.
+- `/settings` redirects to `/settings/user/account`.
+- Home-start conversation creation now returns `/w/local/sessions/{session_hash}` through the shared backend route helper.
 - `services/api` must not serve the frontend workbench; existing runtime parity docs already require API `/workbench` to return `404`.
-- Existing plans and tests still use `/workbench` as the current acceptance surface. Treat that as transitional acceptance, not canonical product architecture.
-- Existing code still contains helper links that point at `/workbench`, including start/session flows. Those must be migrated under a later scoped-route implementation plan.
+- Existing plans and tests still use `/workbench` for the transitional helper surface. Treat that as transitional acceptance, not canonical product architecture.
+- `/workbench` remains mounted as a helper route for compatibility and for create-new-session fallbacks that do not yet have a persisted scoped session.
 
 ## Locked Route Scope Decisions
 
@@ -132,14 +134,21 @@ Before adding or modifying a REST endpoint, WebSocket event, MCP tool, MCP resou
 
 ## Suggested First Implementation Slice
 
-The first implementation plan should be small:
+The first implementation slice is intentionally small:
 
-1. Add route constants for the scope patterns.
-2. Add placeholder user settings route `/settings/user/account`.
-3. Make the app Settings entry open Account.
-4. Add a persistence migration plan for auth/workspace/chat-session tables.
-5. Add a compatibility plan for existing `/workbench` links.
-6. Add tests proving `/workbench` is not treated as canonical in new navigation.
+1. Add route constants for the scope patterns. Implemented in `apps/web/src/lib/app-routes.ts`.
+2. Add placeholder user settings route `/settings/user/account`. Implemented by `apps/web/src/routes/settings.tsx`.
+3. Make the app Settings entry open Account. Implemented through `apps/web/src/components/layout/KaiAppRail.tsx`.
+4. Add the workspace-session browser route mount `/w/:workspacePublicId/sessions/:sessionHash`. Implemented in `apps/web/src/main.tsx`.
+5. Make home-start session creation return `/w/local/sessions/{session_hash}` instead of `/workbench?conversation_id=...`. Implemented in the file and SQLAlchemy home-start stores.
+6. Keep `/workbench` as a helper route only until auth, workspace selection, and persisted chat sessions are backed by Postgres.
+
+Pending follow-up work:
+
+1. Add the persistence migration plan and implementation for auth/workspace/chat-session tables.
+2. Replace the temporary `local` workspace identifier with authenticated workspace selection.
+3. Make all new session creation paths allocate server-generated opaque `session_hash` values from the canonical persistence layer.
+4. Add tests that reject new canonical navigation links to `/workbench`.
 
 ## Verification For Future Work
 

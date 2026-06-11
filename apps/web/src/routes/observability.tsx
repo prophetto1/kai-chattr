@@ -1,7 +1,6 @@
 'use client'
 
 import { type ComponentType, type ReactNode } from 'react'
-import { useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import {
   IconActivityHeartbeat,
@@ -13,13 +12,13 @@ import {
 } from '@tabler/icons-react'
 
 import { AppShell } from '@/components/layout/AppShell'
+import { KaiAppRail } from '@/components/layout/KaiAppRail'
 import { Sheet } from '@/components/layout/Sheet'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { WorkbenchCompactRail } from '@/components/workbench/WorkbenchCompactRail'
 import {
   getObservedEndpoints,
   getObservabilityStatus,
@@ -514,7 +513,6 @@ function ObservabilityContent({
 }
 
 export default function ObservabilityPage() {
-  const navigate = useNavigate()
   const observabilityStatusQuery = useQuery({
     queryKey: ['observability-status'],
     queryFn: getObservabilityStatus,
@@ -529,26 +527,7 @@ export default function ObservabilityPage() {
 
   return (
     <AppShell
-      rail={
-        <WorkbenchCompactRail
-          account={{
-            initials: 'J',
-            label: 'Jon',
-            secondaryLabel: 'kai-chattr workspace',
-            status: 'online',
-          }}
-          activeItem="observability"
-          defaultExpanded={false}
-          onAccount={() => navigate('/settings')}
-          onBilling={() => navigate('/settings')}
-          onBrand={() => navigate('/home')}
-          onNewSession={() => navigate('/workbench')}
-          onNotifications={() => navigate('/settings')}
-          onOpenObservability={() => navigate('/observability')}
-          onOpenSettings={() => navigate('/settings')}
-          onShowConversations={() => navigate('/home')}
-        />
-      }
+      rail={<KaiAppRail activeItem="observability" />}
     >
       <Tabs
         className="flex min-h-0 flex-1 flex-col gap-0"

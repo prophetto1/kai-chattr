@@ -31,7 +31,7 @@ async function mockHomeStartApi(page: Page) {
       json: {
         conversation_id: 'scratch-test-conversation',
         status: 'created',
-        url: '/workbench?conversation_id=scratch-test-conversation',
+        url: '/w/local/sessions/scratch-test-conversation',
         conversation: {
           id: 'scratch-test-conversation',
           title: 'Scratch conversation',
@@ -39,7 +39,7 @@ async function mockHomeStartApi(page: Page) {
           selected_branch: null,
           git_provider: null,
           status: 'active',
-          url: '/workbench?conversation_id=scratch-test-conversation',
+          url: '/w/local/sessions/scratch-test-conversation',
           created_at: '2026-06-08T00:00:00Z',
           updated_at: '2026-06-08T00:00:00Z',
         },
@@ -73,7 +73,7 @@ test('home start page renders OpenHands-derived launch surface', async ({ page }
   await expect(page.getByText('Home API error:')).toHaveCount(0)
 })
 
-test('home start page creates a scratch conversation and routes to workbench', async ({ page }) => {
+test('home start page creates a scratch conversation and routes to scoped session', async ({ page }) => {
   await mockHomeStartApi(page)
   await page.addInitScript((token) => {
     window.__CHATTR_SESSION_TOKEN__ = token
@@ -82,5 +82,5 @@ test('home start page creates a scratch conversation and routes to workbench', a
   await page.goto('/home')
 
   await page.getByRole('button', { name: 'New Conversation' }).click()
-  await page.waitForURL(/\/workbench\?conversation_id=/)
+  await page.waitForURL(/\/w\/local\/sessions\/scratch-test-conversation$/)
 })

@@ -1,16 +1,15 @@
 import {
-  IconBrandGithub,
   IconFolderOpen,
-  IconGitBranch,
   IconGitFork,
   IconPlus,
   IconRobot,
 } from '@tabler/icons-react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router'
 
-import { WorkbenchCompactRail } from '@/components/workbench/WorkbenchCompactRail'
+import { AppShell } from '@/components/layout/AppShell'
+import { KaiAppRail } from '@/components/layout/KaiAppRail'
+import { Sheet } from '@/components/layout/Sheet'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -33,14 +32,8 @@ import {
   listRepositories,
   listSuggestedTasks,
   type BranchSummary,
-  type ConversationSummary,
   type RepositorySummary,
-  type SuggestedTask,
 } from '@/lib/home-start-api'
-
-function EmptyText({ children }: { children: string }) {
-  return <p className="text-sm text-muted-foreground">{children}</p>
-}
 
 function OpenRepositoryCard({
   branches,
@@ -195,71 +188,7 @@ function PlaceholderStartCard({
   )
 }
 
-function RecentConversationsList({
-  conversations,
-}: {
-  conversations: ConversationSummary[]
-}) {
-  return (
-    <section className="min-w-0">
-      <h2 className="px-1 py-3 text-xs font-semibold">Recent Conversations</h2>
-      {conversations.length === 0 ? (
-        <EmptyText>No recent conversations</EmptyText>
-      ) : (
-        <div className="flex flex-col gap-1">
-          {conversations.slice(0, 3).map((conversation) => (
-            <a
-              className="rounded-lg px-3 py-2 text-left transition-colors hover:bg-accent"
-              href={conversation.url}
-              key={conversation.id}
-            >
-              <span className="block truncate text-sm font-medium">{conversation.title}</span>
-              <span className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                <IconBrandGithub className="size-3" />
-                {conversation.selected_repository ?? 'No Repository'}
-                {conversation.selected_branch ? (
-                  <>
-                    <IconGitBranch className="size-3" />
-                    {conversation.selected_branch}
-                  </>
-                ) : null}
-              </span>
-            </a>
-          ))}
-        </div>
-      )}
-    </section>
-  )
-}
-
-function SuggestedTasksList({ tasks }: { tasks: SuggestedTask[] }) {
-  return (
-    <section className="min-w-0">
-      <h2 className="px-1 py-3 text-xs font-semibold">Suggested Tasks</h2>
-      {tasks.length === 0 ? (
-        <EmptyText>No tasks available</EmptyText>
-      ) : (
-        <div className="flex flex-col gap-1">
-          {tasks.slice(0, 3).map((task) => (
-            <button
-              className="rounded-lg px-3 py-2 text-left transition-colors hover:bg-accent active:scale-[0.99]"
-              key={task.id}
-              type="button"
-            >
-              <span className="block truncate text-sm font-medium">{task.title}</span>
-              <span className="mt-1 block text-xs text-muted-foreground">
-                {task.repo ?? 'No repository'}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-    </section>
-  )
-}
-
 export default function HomePage() {
-  const navigate = useNavigate()
   const [selectedRepository, setSelectedRepository] = useState<RepositorySummary | null>(null)
   const [selectedBranch, setSelectedBranch] = useState('')
 
@@ -309,24 +238,29 @@ export default function HomePage() {
   )
   const creating = createMutation.isPending
 
+  const recentRailEntries = recentItems.slice(0, 3).map((conversation) => ({
+    id: String(conversation.id),
+    label: conversation.title,
+    onSelect: () => window.location.assign(conversation.url),
+  }))
+  const taskRailEntries = taskItems.slice(0, 3).map((task) => ({
+    id: String(task.id),
+    label: task.title,
+  }))
+
   return (
-    <main className="flex min-h-screen bg-background text-foreground">
-      <WorkbenchCompactRail
-        account={{
-          initials: 'J',
-          label: 'Jon',
-          secondaryLabel: 'kai-chattr workspace',
-          status: 'online',
-        }}
-        activeItem="new-session"
-        defaultExpanded={false}
-        onBrand={() => navigate('/home')}
-        onNewSession={() => createMutation.mutate({})}
-        onOpenObservability={() => navigate('/observability')}
-        onOpenSettings={() => navigate('/settings')}
-        onShowConversations={() => navigate('/home')}
-      />
-      <section className="flex min-w-0 flex-1 justify-center overflow-y-auto px-6 py-8">
+    <AppShell
+      rail={(
+        <KaiAppRail
+          activeItem="new-session"
+          onNewSession={() => createMutation.mutate({})}
+          recentEntries={recentRailEntries}
+          taskEntries={taskRailEntries}
+        />
+      )}
+    >
+      <Sheet className="min-h-0 min-w-0 flex-1">
+        <div className="flex min-h-0 min-w-0 flex-1 justify-center overflow-y-auto px-6 py-8">
         <div className="w-full max-w-[720px]">
           <h1 className="mt-16 text-center text-3xl font-semibold tracking-normal text-foreground">
             Let's Start Building!
@@ -375,12 +309,9 @@ export default function HomePage() {
             />
           </div>
 
-          <div className="mt-8 grid gap-8 md:grid-cols-2">
-            <RecentConversationsList conversations={recentItems} />
-            <SuggestedTasksList tasks={taskItems} />
-          </div>
         </div>
-      </section>
-    </main>
+        </div>
+      </Sheet>
+    </AppShell>
   )
 }

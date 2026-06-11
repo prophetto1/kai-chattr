@@ -14,6 +14,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Mapped, mapped_column, relationship, sessionmaker
 
 from app.database import create_database_engine, normalize_database_url
+from app.product_routes import workspace_session_url
 from app.stores.home_start import (
     _conversation_title,
     _discover_local_repositories,
@@ -199,7 +200,7 @@ class SqlAlchemyHomeStartStore:
                 selected_branch=selected_branch,
                 git_provider=git_provider,
                 status="ready",
-                url=f"/workbench?conversation_id={conversation_id}",
+                url=workspace_session_url(conversation_id),
                 suggested_task_json=json.dumps(suggested_task or {}),
                 initial_message=initial_message or "",
                 created_at=now,

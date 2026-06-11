@@ -10,6 +10,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from app.product_routes import workspace_session_url
+
 
 def _now_iso() -> str:
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
@@ -108,7 +110,7 @@ class HomeStartStore:
             "selected_branch": selected_branch,
             "git_provider": git_provider,
             "status": "ready",
-            "url": f"/workbench?conversation_id={conversation_id}",
+            "url": workspace_session_url(conversation_id),
             "created_at": now,
             "updated_at": now,
         }

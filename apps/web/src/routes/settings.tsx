@@ -1,13 +1,15 @@
 'use client'
 
 import { type ComponentType, type ReactNode } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 import {
   IconPalette,
   IconSettings2,
+  IconUserCircle,
 } from '@tabler/icons-react'
 
 import { AppShell } from '@/components/layout/AppShell'
+import { KaiAppRail } from '@/components/layout/KaiAppRail'
 import { Sheet } from '@/components/layout/Sheet'
 import { useAppTheme } from '@/components/theme/AppThemeProvider'
 import { Label } from '@/components/ui/label'
@@ -21,8 +23,8 @@ import {
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { WorkbenchCompactRail } from '@/components/workbench/WorkbenchCompactRail'
 import { cn } from '@/lib/cn'
+import { APP_ROUTES } from '@/lib/app-routes'
 
 type SettingsIcon = ComponentType<{
   size?: number | string
@@ -38,6 +40,12 @@ type SettingsSection = {
 }
 
 const settingsSections = [
+  {
+    id: 'account',
+    label: 'Account',
+    description: 'Current-user profile and login identity.',
+    icon: IconUserCircle,
+  },
   {
     id: 'appearance',
     label: 'Appearance',
@@ -151,6 +159,27 @@ function SettingsRow({
   )
 }
 
+function AccountSettings() {
+  return (
+    <div className="grid gap-5">
+      <SettingsPanel title="Profile">
+        <SettingsRow
+          description="Current-user settings are resolved from the browser session, not a user id in the URL."
+          label="Signed-in user"
+        >
+          <span className="text-[13px] font-medium text-muted-foreground">Jon</span>
+        </SettingsRow>
+        <SettingsRow
+          description="Workspace-specific settings will live under /w/{workspace}/settings/workspace/{section}."
+          label="Settings scope"
+        >
+          <span className="font-mono text-[12px] text-muted-foreground">/settings/user/account</span>
+        </SettingsRow>
+      </SettingsPanel>
+    </div>
+  )
+}
+
 function AppearanceSettings() {
   const {
     error: themeError,
@@ -198,6 +227,8 @@ function AppearanceSettings() {
 
 function SettingsContent({ sectionId }: { sectionId: SettingsSectionId }) {
   switch (sectionId) {
+    case 'account':
+      return <AccountSettings />
     case 'appearance':
     default:
       return <AppearanceSettings />
@@ -206,33 +237,26 @@ function SettingsContent({ sectionId }: { sectionId: SettingsSectionId }) {
 
 export default function SettingsPage() {
   const navigate = useNavigate()
+  const { sectionId } = useParams()
+  const selectedSectionId = settingsSections.some((section) => section.id === sectionId)
+    ? (sectionId as SettingsSectionId)
+    : 'account'
+  const settingsRouteBySection = {
+    account: APP_ROUTES.settings,
+    appearance: APP_ROUTES.settingsAppearance,
+  } satisfies Record<SettingsSectionId, string>
 
   return (
     <AppShell
-      rail={
-        <WorkbenchCompactRail
-          account={{
-            initials: 'J',
-            label: 'Jon',
-            secondaryLabel: 'kai-chattr workspace',
-            status: 'online',
-          }}
-          activeItem="settings"
-          defaultExpanded={false}
-          onAccount={() => navigate('/settings')}
-          onBilling={() => navigate('/settings')}
-          onBrand={() => navigate('/home')}
-          onNewSession={() => navigate('/workbench')}
-          onNotifications={() => navigate('/settings')}
-          onOpenObservability={() => navigate('/observability')}
-          onOpenSettings={() => navigate('/settings')}
-          onShowConversations={() => navigate('/home')}
-        />
-      }
+      rail={<KaiAppRail activeItem="settings" />}
     >
       <Tabs
         className="flex min-h-0 flex-1 flex-col gap-0"
-        defaultValue="appearance"
+        onValueChange={(nextValue) => {
+          const route = settingsRouteBySection[nextValue as SettingsSectionId]
+          if (route) navigate(route)
+        }}
+        value={selectedSectionId}
         orientation="vertical"
       >
         <section className="flex min-h-0 flex-1 flex-col gap-[5px] md:flex-row">

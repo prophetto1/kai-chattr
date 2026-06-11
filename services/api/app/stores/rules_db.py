@@ -8,7 +8,7 @@ import uuid
 
 from sqlalchemy import Float, Integer, String, Text, func, select
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
+from sqlalchemy.orm import Mapped, Session, mapped_column, sessionmaker
 
 from app.database import create_database_engine, normalize_database_url
 from app.stores.rules import (
@@ -16,10 +16,7 @@ from app.stores.rules import (
     MAX_REASON_CHARS,
     MAX_TEXT_CHARS,
 )
-
-
-class Base(DeclarativeBase):
-    pass
+from app.stores.base import Base
 
 
 class BoardRule(Base):

@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { createBrowserRouter, RouterProvider, useRouteError } from 'react-router'
+import { createBrowserRouter, Navigate, RouterProvider, useRouteError } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import '@fontsource/inter/400.css'
 import '@fontsource/inter/500.css'
@@ -25,6 +25,11 @@ import ObservabilityPage from './routes/observability'
 import RegisterPage from './routes/register'
 import SettingsPage from './routes/settings'
 import WorkbenchPage from './routes/workbench'
+import { ProductSectionPage } from './routes/product-section'
+import AgentsRosterPage from './routes/agents'
+import AgentDetailPage from './routes/agent-detail'
+import AgentCreatePage from './routes/agents-new'
+import { APP_ROUTES } from '@/lib/app-routes'
 import './styles.css'
 
 function WorkbenchRouteError() {
@@ -47,7 +52,7 @@ function WorkbenchRouteError() {
             Reload
           </Button>
           <Button asChild type="button" variant="outline">
-            <a href="/home">Go home</a>
+            <a href={APP_ROUTES.home}>Go home</a>
           </Button>
         </div>
       </section>
@@ -59,10 +64,24 @@ const router = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
-  { path: '/home', element: <HomePage /> },
-  { path: '/observability', element: <ObservabilityPage />, errorElement: <WorkbenchRouteError /> },
-  { path: '/settings', element: <SettingsPage />, errorElement: <WorkbenchRouteError /> },
-  { path: '/workbench', element: <WorkbenchPage />, errorElement: <WorkbenchRouteError /> },
+  { path: APP_ROUTES.home, element: <HomePage /> },
+  { path: APP_ROUTES.search, element: <ProductSectionPage activeItem="search" description="Current-user search across conversations and workspace-visible resources." route={APP_ROUTES.search} scope="current user" title="Search" />, errorElement: <WorkbenchRouteError /> },
+  { path: APP_ROUTES.integrations, element: <ProductSectionPage activeItem="integrations" description="Workspace integration catalog and connection setup surface." route={APP_ROUTES.integrations} scope="workspace" title="Integrations" />, errorElement: <WorkbenchRouteError /> },
+  { path: APP_ROUTES.agents, element: <AgentsRosterPage />, errorElement: <WorkbenchRouteError /> },
+  { path: APP_ROUTES.agentsNew, element: <AgentCreatePage />, errorElement: <WorkbenchRouteError /> },
+  { path: `${APP_ROUTES.agents}/:agentPublicId`, element: <AgentDetailPage />, errorElement: <WorkbenchRouteError /> },
+  { path: APP_ROUTES.library, element: <Navigate to={APP_ROUTES.libraryFileStores} replace /> },
+  { path: APP_ROUTES.libraryNew, element: <ProductSectionPage activeItem="library" description="Create a new library resource in the current workspace." route={APP_ROUTES.libraryNew} scope="workspace" title="New Library Resource" />, errorElement: <WorkbenchRouteError /> },
+  { path: APP_ROUTES.libraryFileStores, element: <ProductSectionPage activeItem="file-stores" description="Workspace file stores available to agents and chat sessions." route={APP_ROUTES.libraryFileStores} scope="workspace" title="File Stores" />, errorElement: <WorkbenchRouteError /> },
+  { path: APP_ROUTES.libraryKnowledgeBases, element: <ProductSectionPage activeItem="knowledge-bases" description="Workspace knowledge bases available to agents and chat sessions." route={APP_ROUTES.libraryKnowledgeBases} scope="workspace" title="Knowledge Bases" />, errorElement: <WorkbenchRouteError /> },
+  { path: APP_ROUTES.projects, element: <ProductSectionPage activeItem="projects" description="Workspace projects that organize repositories, agents, and sessions." route={APP_ROUTES.projects} scope="workspace" title="Projects" />, errorElement: <WorkbenchRouteError /> },
+  { path: APP_ROUTES.projectsNew, element: <ProductSectionPage activeItem="projects" description="Create a project in the current workspace." route={APP_ROUTES.projectsNew} scope="workspace" title="New Project" />, errorElement: <WorkbenchRouteError /> },
+  { path: APP_ROUTES.recent, element: <ProductSectionPage activeItem="conversations" description="Recent chats and workspace sessions for the current user." route={APP_ROUTES.recent} scope="current user" title="Recent" />, errorElement: <WorkbenchRouteError /> },
+  { path: APP_ROUTES.observability, element: <ObservabilityPage />, errorElement: <WorkbenchRouteError /> },
+  { path: '/settings', element: <Navigate to={APP_ROUTES.settings} replace /> },
+  { path: '/settings/user/:sectionId', element: <SettingsPage />, errorElement: <WorkbenchRouteError /> },
+  { path: APP_ROUTES.workbenchHelper, element: <WorkbenchPage />, errorElement: <WorkbenchRouteError /> },
+  { path: '/w/:workspacePublicId/sessions/:sessionHash', element: <WorkbenchPage />, errorElement: <WorkbenchRouteError /> },
   { path: '/workbench/board-rules-visual', element: <BoardRulesVisualPage /> },
 ])
 

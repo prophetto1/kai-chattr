@@ -3,12 +3,12 @@
 import {
   IconActivityHeartbeat,
   IconBell,
-  IconBrain,
-  IconCircleCheck,
+  IconChevronDown,
+  IconChevronRight,
   IconCreditCard,
-  IconDatabase,
   IconFolder,
   IconLibrary,
+  IconListCheck,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
   IconLogout,
@@ -50,17 +50,18 @@ import {
 } from '@/components/ui/sidebar'
 import { cn } from '@/lib/cn'
 
-type WorkbenchCompactRailItem =
+export type WorkbenchCompactRailItem =
   | 'new-session'
   | 'search'
   | 'library'
+  | 'file-stores'
+  | 'knowledge-bases'
   | 'integrations'
   | 'observability'
   | 'agents'
-  | 'registries'
-  | 'self-learning'
   | 'projects'
   | 'conversations'
+  | 'tasks'
   | 'settings'
 
 type WorkbenchCompactRailAccount = {
@@ -71,10 +72,20 @@ type WorkbenchCompactRailAccount = {
   status?: 'online' | 'idle' | 'offline'
 }
 
+export type WorkbenchCompactRailEntry = {
+  id: string
+  label: string
+  onSelect?: () => void
+}
+
 type WorkbenchCompactRailProps = {
   activeItem?: WorkbenchCompactRailItem
   account?: WorkbenchCompactRailAccount
   className?: string
+  /** Recent conversations — rendered as the collapsible children of the "Recent" menu. */
+  recentEntries?: WorkbenchCompactRailEntry[]
+  /** Suggested tasks — rendered as the collapsible children of the "Tasks" menu. */
+  taskEntries?: WorkbenchCompactRailEntry[]
   /** Open (expanded sidebar) by default; collapse toggles to the 60px icon rail. */
   defaultExpanded?: boolean
   /** Brand mark for the reserved top-left slot. Falls back to a lettermark. */
@@ -88,22 +99,23 @@ type WorkbenchCompactRailProps = {
   onBrand?: () => void
   onCreateAgent?: () => void
   onCreateChat?: () => void
+  onCreateLibrary?: () => void
   onCreateProject?: () => void
-  onCreateRegistry?: () => void
-  onCreateSelfLearning?: () => void
+  onCreateTask?: () => void
   onLogOut?: () => void
   onNewSession?: () => void
   onNotifications?: () => void
   onOpenAgents?: () => void
+  onOpenFileStores?: () => void
   onOpenIntegrations?: () => void
+  onOpenKnowledgeBases?: () => void
   onOpenLibrary?: () => void
   onOpenObservability?: () => void
   onOpenProjects?: () => void
-  onOpenRegistries?: () => void
   onOpenSearch?: () => void
-  onOpenSelfLearning?: () => void
   onOpenSettings?: () => void
   onShowConversations?: () => void
+  onShowTasks?: () => void
   onUpgrade?: () => void
 }
 
@@ -123,11 +135,14 @@ type RailSectionProps = {
 
 type RailPlaceholderSectionProps = {
   active?: boolean
+  children?: ReactNode
+  defaultOpen?: boolean
   expanded: boolean
   icon: ComponentType<{ className?: string }>
   label: string
   onAdd?: () => void
   onClick?: () => void
+  showDisclosure?: boolean
 }
 
 const statusClassName = {
@@ -248,12 +263,18 @@ function RailMenuItem({ children, expanded }: { children: ReactNode; expanded: b
 
 function RailPlaceholderSection({
   active,
+  children,
+  defaultOpen,
   expanded,
   icon: Icon,
   label,
   onAdd,
   onClick,
+  showDisclosure,
 }: RailPlaceholderSectionProps) {
+  const [open, setOpen] = useState(() => Boolean(defaultOpen))
+  const hasChildren = Boolean(children)
+  const showsDisclosure = hasChildren || showDisclosure
   const labelContent = (
     <>
       <Icon className="size-3.5 shrink-0" />
@@ -264,22 +285,50 @@ function RailPlaceholderSection({
   )
 
   if (!expanded) {
-    return null
+    return (
+      <RailItem
+        active={active}
+        expanded={expanded}
+        icon={Icon}
+        label={label}
+        onClick={onClick}
+      />
+    )
   }
 
   return (
     <SidebarGroup className="p-0">
       <SidebarGroupLabel className="h-8 rounded-[5px] px-2 text-[12px] font-medium normal-case tracking-normal text-sidebar-foreground/68">
-        {onClick ? (
+        {hasChildren ? (
           <button
-            className="flex min-w-0 flex-1 items-center gap-2 text-left active:scale-[0.99]"
+            aria-expanded={open}
+            className="flex min-w-0 flex-1 items-center gap-1.5 text-left active:scale-[0.99]"
+            onClick={() => setOpen((current) => !current)}
+            type="button"
+          >
+            {open ? (
+              <IconChevronDown className="size-3 shrink-0 text-sidebar-foreground/45" />
+            ) : (
+              <IconChevronRight className="size-3 shrink-0 text-sidebar-foreground/45" />
+            )}
+            {labelContent}
+          </button>
+        ) : onClick ? (
+          <button
+            className="flex min-w-0 flex-1 items-center gap-1.5 text-left active:scale-[0.99]"
             onClick={onClick}
             type="button"
           >
+            {showsDisclosure ? (
+              <IconChevronRight className="size-3 shrink-0 text-sidebar-foreground/45" />
+            ) : null}
             {labelContent}
           </button>
         ) : (
-          <span className="flex min-w-0 flex-1 items-center gap-2 text-left">
+          <span className="flex min-w-0 flex-1 items-center gap-1.5 text-left">
+            {showsDisclosure ? (
+              <IconChevronRight className="size-3 shrink-0 text-sidebar-foreground/45" />
+            ) : null}
             {labelContent}
           </span>
         )}
@@ -293,7 +342,45 @@ function RailPlaceholderSection({
       >
         <IconPlus className="size-3.5" />
       </SidebarGroupAction>
+      {hasChildren && open ? (
+        <SidebarGroupContent>
+          <SidebarMenu className="gap-0.5 pl-6 pr-1">{children}</SidebarMenu>
+        </SidebarGroupContent>
+      ) : null}
     </SidebarGroup>
+  )
+}
+
+function RailSubItem({
+  active,
+  expanded,
+  label,
+  onClick,
+}: {
+  active?: boolean
+  expanded: boolean
+  label: string
+  onClick?: () => void
+}) {
+  if (!expanded) {
+    return null
+  }
+
+  return (
+    <SidebarMenuItem>
+      <Button
+        aria-current={active ? 'page' : undefined}
+        className={cn(
+          'h-7 w-full justify-start rounded-[5px] px-2 text-[12px] font-medium active:scale-[0.99]',
+          active ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/62 hover:bg-sidebar-accent/55'
+        )}
+        onClick={onClick}
+        type="button"
+        variant="ghost"
+      >
+        <span className="truncate">{label}</span>
+      </Button>
+    </SidebarMenuItem>
   )
 }
 
@@ -377,29 +464,32 @@ export function WorkbenchCompactRail({
   className,
   defaultExpanded = true,
   logo,
+  recentEntries,
   sessions,
+  taskEntries,
   utilities,
   onAccount,
   onBilling,
   onBrand,
   onCreateAgent,
   onCreateChat,
+  onCreateLibrary,
   onCreateProject,
-  onCreateRegistry,
-  onCreateSelfLearning,
+  onCreateTask,
   onLogOut,
   onNewSession,
   onNotifications,
   onOpenAgents,
+  onOpenFileStores,
   onOpenIntegrations,
+  onOpenKnowledgeBases,
   onOpenLibrary,
   onOpenObservability,
   onOpenProjects,
-  onOpenRegistries,
   onOpenSearch,
-  onOpenSelfLearning,
   onOpenSettings,
   onShowConversations,
+  onShowTasks,
   onUpgrade,
 }: WorkbenchCompactRailProps) {
   const [expanded, setExpandedState] = useState(() => readPersistedRailExpanded(defaultExpanded))
@@ -408,10 +498,10 @@ export function WorkbenchCompactRail({
     writePersistedRailExpanded(nextExpanded)
   }, [])
   const accountStatus = account.status ?? 'online'
-  const handleAccount = onAccount ?? onOpenSettings
+  const handleSettings = onAccount ?? onOpenSettings
   const handleBilling = onBilling ?? onOpenSettings
-  const handleIntegrations = onOpenIntegrations ?? onOpenSettings
   const handleNotifications = onNotifications ?? onOpenSettings
+  const libraryActive = activeItem === 'library' || activeItem === 'file-stores' || activeItem === 'knowledge-bases'
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -473,68 +563,52 @@ export function WorkbenchCompactRail({
           </RailMenuItem>
           <RailMenuItem expanded={expanded}>
             <RailItem
-              active={activeItem === 'library'}
-              expanded={expanded}
-              icon={IconLibrary}
-              label="Library"
-              onClick={onOpenLibrary}
-            />
-          </RailMenuItem>
-          <RailMenuItem expanded={expanded}>
-            <RailItem
               active={activeItem === 'integrations'}
               expanded={expanded}
               icon={IconPlugConnected}
               label="Integrations"
-              onClick={handleIntegrations}
-            />
-          </RailMenuItem>
-          <RailMenuItem expanded={expanded}>
-            <RailItem
-              active={activeItem === 'observability'}
-              expanded={expanded}
-              icon={IconActivityHeartbeat}
-              label="Observability"
-              onClick={onOpenObservability}
-            />
-          </RailMenuItem>
-          <RailMenuItem expanded={expanded}>
-            <RailItem
-              active={activeItem === 'settings'}
-              expanded={expanded}
-              icon={IconSettings2}
-              label="Settings"
-              onClick={onOpenSettings}
+              onClick={onOpenIntegrations}
             />
           </RailMenuItem>
         </RailSection>
 
-        {expanded ? (
-          <div className="flex flex-col gap-2.5">
+        <RailSection expanded={expanded}>
+          <RailMenuItem expanded={expanded}>
             <RailPlaceholderSection
               active={activeItem === 'agents'}
               expanded={expanded}
               icon={IconRobot}
-              label="Agents"
+              label="My Agents"
               onAdd={onCreateAgent}
               onClick={onOpenAgents}
+              showDisclosure
             />
+          </RailMenuItem>
+          <RailMenuItem expanded={expanded}>
             <RailPlaceholderSection
-              active={activeItem === 'registries'}
+              active={libraryActive}
+              defaultOpen={libraryActive}
               expanded={expanded}
-              icon={IconDatabase}
-              label="Registries"
-              onAdd={onCreateRegistry}
-              onClick={onOpenRegistries}
-            />
-            <RailPlaceholderSection
-              active={activeItem === 'self-learning'}
-              expanded={expanded}
-              icon={IconBrain}
-              label="Self-Learning"
-              onAdd={onCreateSelfLearning}
-              onClick={onOpenSelfLearning}
-            />
+              icon={IconLibrary}
+              label="Library"
+              onAdd={onCreateLibrary}
+              onClick={onOpenLibrary}
+            >
+              <RailSubItem
+                active={activeItem === 'file-stores'}
+                expanded={expanded}
+                label="File Stores"
+                onClick={onOpenFileStores}
+              />
+              <RailSubItem
+                active={activeItem === 'knowledge-bases'}
+                expanded={expanded}
+                label="Knowledge Bases"
+                onClick={onOpenKnowledgeBases}
+              />
+            </RailPlaceholderSection>
+          </RailMenuItem>
+          <RailMenuItem expanded={expanded}>
             <RailPlaceholderSection
               active={activeItem === 'projects'}
               expanded={expanded}
@@ -542,20 +616,59 @@ export function WorkbenchCompactRail({
               label="Projects"
               onAdd={onCreateProject}
               onClick={onOpenProjects}
+              showDisclosure
             />
+          </RailMenuItem>
+          <RailMenuItem expanded={expanded}>
+            <RailPlaceholderSection
+              active={activeItem === 'tasks'}
+              defaultOpen={Boolean(taskEntries?.length)}
+              expanded={expanded}
+              icon={IconListCheck}
+              label="Tasks"
+              onAdd={onCreateTask}
+              onClick={onShowTasks}
+              showDisclosure
+            >
+              {taskEntries?.length
+                ? taskEntries.map((entry) => (
+                    <RailSubItem
+                      expanded={expanded}
+                      key={entry.id}
+                      label={entry.label}
+                      onClick={entry.onSelect}
+                    />
+                  ))
+                : null}
+            </RailPlaceholderSection>
+          </RailMenuItem>
+          <RailMenuItem expanded={expanded}>
             <RailPlaceholderSection
               active={activeItem === 'conversations'}
+              defaultOpen={Boolean(recentEntries?.length)}
               expanded={expanded}
               icon={IconMessages}
-              label="Chats"
+              label="Recent"
               onAdd={onCreateChat ?? onNewSession}
               onClick={onShowConversations}
-            />
-          </div>
-        ) : null}
+              showDisclosure
+            >
+              {recentEntries?.length
+                ? recentEntries.map((entry) => (
+                    <RailSubItem
+                      expanded={expanded}
+                      key={entry.id}
+                      label={entry.label}
+                      onClick={entry.onSelect}
+                    />
+                  ))
+                : null}
+            </RailPlaceholderSection>
+          </RailMenuItem>
+        </RailSection>
 
         {expanded && sessions ? (
-          <RailSection expanded={expanded} label="Chats">
+          <RailSection expanded={expanded} label="Recent">
             <SidebarMenuItem>{sessions}</SidebarMenuItem>
           </RailSection>
         ) : null}
@@ -572,6 +685,13 @@ export function WorkbenchCompactRail({
             {utilities({ expanded })}
           </div>
         ) : null}
+        <RailItem
+          active={activeItem === 'observability'}
+          expanded={expanded}
+          icon={IconActivityHeartbeat}
+          label="Observability"
+          onClick={onOpenObservability}
+        />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             {expanded ? (
@@ -647,9 +767,9 @@ export function WorkbenchCompactRail({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onSelect={handleAccount}>
-                <IconCircleCheck />
-                Account
+              <DropdownMenuItem onSelect={handleSettings}>
+                <IconSettings2 />
+                Settings
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={handleBilling}>
                 <IconCreditCard />

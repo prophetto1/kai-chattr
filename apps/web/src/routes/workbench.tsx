@@ -11,7 +11,6 @@
  */
 
 import { type ComponentType, useCallback, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { DiffEditor, Editor } from '@monaco-editor/react'
 import {
@@ -117,10 +116,10 @@ import {
 import { BoardDock } from '@/components/workbench/BoardDock'
 import { DockWorkspace } from '@/components/workbench/DockWorkspace'
 import { JobsDock } from '@/components/workbench/JobsDock'
-import { WorkbenchCompactRail } from '@/components/workbench/WorkbenchCompactRail'
 import { AgentTerminalPane } from '@/components/workbench/AgentTerminalPane'
 import { AgentLauncherDialog } from '@/components/workbench/launcher/AgentLauncherDialog'
 import { AppShell } from '@/components/layout/AppShell'
+import { KaiAppRail } from '@/components/layout/KaiAppRail'
 import { Sheet } from '@/components/layout/Sheet'
 import { type ChattrRoomMessage, useChattrRoom } from '@/hooks/use-chattr-room'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -1088,7 +1087,6 @@ function ObservabilityStatusChip({
 }
 
 export default function WorkbenchPage() {
-  const navigate = useNavigate()
   const chatPanelRef = useRef<PanelImperativeHandle | null>(null)
   const lowerPaneRef = useRef<PanelImperativeHandle | null>(null)
   const rightDockRef = useRef<PanelImperativeHandle | null>(null)
@@ -1209,22 +1207,9 @@ export default function WorkbenchPage() {
     <TooltipProvider delayDuration={150}>
       <AppShell
         rail={(
-          <WorkbenchCompactRail
-            account={{
-              initials: 'J',
-              label: 'Jon',
-              secondaryLabel: 'kai-chattr workspace',
-              status: 'online',
-            }}
+          <KaiAppRail
             activeItem="conversations"
-            defaultExpanded={false}
-            onAccount={() => navigate('/settings')}
-            onBilling={() => navigate('/settings')}
-            onBrand={() => navigate('/home')}
             onNewSession={handleNewSession}
-            onNotifications={() => navigate('/settings')}
-            onOpenObservability={() => navigate('/observability')}
-            onOpenSettings={() => navigate('/settings')}
             utilities={({ expanded }) => (
               <>
                 <ObservabilityStatusChip

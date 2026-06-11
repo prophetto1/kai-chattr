@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { APP_ROUTES } from '@/lib/app-routes'
 
 export default function LandingPage() {
   const navigate = useNavigate()
@@ -17,7 +18,7 @@ export default function LandingPage() {
           <Button variant="outline" onClick={() => navigate('/register')}>
             Register
           </Button>
-          <Button variant="ghost" onClick={() => navigate('/workbench')}>
+          <Button variant="ghost" onClick={() => navigate(APP_ROUTES.workbenchHelper)}>
             Workbench
           </Button>
         </CardContent>

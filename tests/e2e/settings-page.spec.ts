@@ -37,18 +37,16 @@ test('settings page renders as a dedicated OpenHands-derived settings surface', 
 
   await page.goto('/settings')
 
+  await expect(page).toHaveURL(/\/settings\/user\/account$/)
   await expect(page.getByLabel('Workbench shell rail')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
-  await expect(page.getByRole('tab', { name: /Agent/ })).toBeVisible()
-  await expect(page.getByRole('tab', { name: /Models/ })).toBeVisible()
-  await expect(page.getByRole('tab', { name: /Runtime/ })).toBeVisible()
-  await expect(page.getByRole('tab', { name: /MCP and tools/ })).toBeVisible()
+  await expect(page.getByRole('tab', { name: /Account/ })).toBeVisible()
   await expect(page.getByRole('tab', { name: /Appearance/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Account' }).first()).toBeVisible()
+
+  await page.getByRole('tab', { name: /Appearance/ }).click()
+  await expect(page).toHaveURL(/\/settings\/user\/appearance$/)
   await expect(page.getByRole('heading', { name: 'Appearance' }).first()).toBeVisible()
   await expect(page.getByRole('combobox', { name: 'Theme' })).toBeVisible()
   await expect(page.getByText('Theme settings unavailable.')).toHaveCount(0)
-
-  await page.getByRole('tab', { name: /Runtime/ }).click()
-  await expect(page.getByRole('heading', { name: 'Runtime' }).first()).toBeVisible()
-  await expect(page.getByText('Typed HTTP bridge', { exact: true })).toBeVisible()
 })
