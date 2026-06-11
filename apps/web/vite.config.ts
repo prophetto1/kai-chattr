@@ -34,6 +34,18 @@ export default defineConfig({
         target: apiTarget,
         changeOrigin: true,
       },
+      '/openapi.json': {
+        target: apiTarget,
+        changeOrigin: true,
+      },
+      '/docs': {
+        target: apiTarget,
+        changeOrigin: true,
+      },
+      '/redoc': {
+        target: apiTarget,
+        changeOrigin: true,
+      },
       '/uploads': {
         target: apiTarget,
         changeOrigin: true,

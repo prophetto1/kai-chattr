@@ -235,8 +235,7 @@ def set_agent_hat(agent: str, svg: str) -> str | None:
     svg = _sanitize_svg(svg)
     agent_hats[agent.lower()] = svg
     _save_hats()
-    if _event_loop:
-        asyncio.run_coroutine_threadsafe(broadcast_hats(), _event_loop)
+    _schedule_runtime_coroutine(broadcast_hats())
     return None
 
 
@@ -246,8 +245,7 @@ def clear_agent_hat(agent: str):
     if key in agent_hats:
         del agent_hats[key]
         _save_hats()
-        if _event_loop:
-            asyncio.run_coroutine_threadsafe(broadcast_hats(), _event_loop)
+        _schedule_runtime_coroutine(broadcast_hats())
 
 
 def _settings_path() -> Path:
@@ -550,13 +548,12 @@ def configure(cfg: dict, session_token: str = ""):
                             if renamed:
                                 mcp_bridge.migrate_identity(renamed["old"], renamed["new"])
                                 store.rename_sender(renamed["old"], renamed["new"])
-                                if _event_loop:
-                                    rename_event = json.dumps({
-                                        "type": "agent_renamed",
-                                        "old_name": renamed["old"],
-                                        "new_name": renamed["new"],
-                                    })
-                                    asyncio.run_coroutine_threadsafe(_broadcast(rename_event), _event_loop)
+                                rename_event = json.dumps({
+                                    "type": "agent_renamed",
+                                    "old_name": renamed["old"],
+                                    "new_name": renamed["new"],
+                                })
+                                _schedule_runtime_coroutine(_broadcast(rename_event))
                             store.add(name, f"{name} disconnected (timeout)", msg_type="leave", channel=_last_active_channel)
                             _posted_leave.add(name)
 
@@ -598,8 +595,8 @@ def configure(cfg: dict, session_token: str = ""):
                         _posted_leave.add(name)
                         store.add(name, f"{name} disconnected", msg_type="leave", channel=_last_active_channel)
 
-                if _known_online != currently_online and _event_loop:
-                    asyncio.run_coroutine_threadsafe(broadcast_status(), _event_loop)
+                if _known_online != currently_online:
+                    _schedule_runtime_coroutine(broadcast_status())
 
                 # Clear stale activity for agents that went offline
                 with mcp_bridge._presence_lock:
@@ -614,8 +611,7 @@ def configure(cfg: dict, session_token: str = ""):
                 if currently_active != _known_active or _known_online != currently_online:
                     _known_active.clear()
                     _known_active.update(currently_active)
-                    if _event_loop:
-                        asyncio.run_coroutine_threadsafe(broadcast_status(), _event_loop)
+                    _schedule_runtime_coroutine(broadcast_status())
                 _known_online.clear()
                 _known_online.update(currently_online)
             except Exception:
@@ -676,90 +672,64 @@ async def _capture_runtime_event_loop():
     set_event_loop(asyncio.get_running_loop())
 
 
+def _schedule_runtime_coroutine(coro) -> bool:
+    """Schedule a runtime broadcast without failing the request on stale loops."""
+    global _event_loop
+    loop = _event_loop
+    if loop is None or loop.is_closed():
+        coro.close()
+        if loop is not None and loop.is_closed():
+            _event_loop = None
+            _sync_runtime_context()
+        return False
+
+    try:
+        running_loop = asyncio.get_running_loop()
+    except RuntimeError:
+        running_loop = None
+
+    try:
+        if running_loop is loop:
+            asyncio.ensure_future(coro)
+        else:
+            asyncio.run_coroutine_threadsafe(coro, loop)
+    except RuntimeError:
+        coro.close()
+        if loop.is_closed():
+            _event_loop = None
+            _sync_runtime_context()
+        return False
+    return True
+
+
 def _on_store_message(msg: dict):
     """Called from any thread when a message is added to the store."""
-    if _event_loop is None:
-        return
-    try:
-        # If called from the event loop thread (e.g. WebSocket handler),
-        # schedule directly as a task
-        loop = asyncio.get_running_loop()
-        if loop is _event_loop:
-            asyncio.ensure_future(_handle_new_message(msg))
-            return
-    except RuntimeError:
-        pass  # No running loop â€” we're in a different thread (MCP)
-    asyncio.run_coroutine_threadsafe(_handle_new_message(msg), _event_loop)
+    _schedule_runtime_coroutine(_handle_new_message(msg))
 
 
 def _on_rule_change(action: str, rule: dict):
     """Called from any thread when a rule changes."""
-    if _event_loop is None:
-        return
-    try:
-        loop = asyncio.get_running_loop()
-        if loop is _event_loop:
-            asyncio.ensure_future(broadcast_rule(action, rule))
-            return
-    except RuntimeError:
-        pass
-    asyncio.run_coroutine_threadsafe(broadcast_rule(action, rule), _event_loop)
+    _schedule_runtime_coroutine(broadcast_rule(action, rule))
 
 
 def _on_todo_change(msg_id: int, status: str | None):
     """Called from any thread when a pinned/todo message changes."""
-    if _event_loop is None:
-        return
-    try:
-        loop = asyncio.get_running_loop()
-        if loop is _event_loop:
-            asyncio.ensure_future(broadcast_todo_update(msg_id, status))
-            return
-    except RuntimeError:
-        pass
-    asyncio.run_coroutine_threadsafe(broadcast_todo_update(msg_id, status), _event_loop)
+    _schedule_runtime_coroutine(broadcast_todo_update(msg_id, status))
 
 
 def _on_job_change(action: str, data: dict):
     """Called from any thread when a job changes."""
-    if _event_loop is None:
-        return
-    try:
-        loop = asyncio.get_running_loop()
-        if loop is _event_loop:
-            asyncio.ensure_future(broadcast_job(action, data))
-            return
-    except RuntimeError:
-        pass
-    asyncio.run_coroutine_threadsafe(broadcast_job(action, data), _event_loop)
+    _schedule_runtime_coroutine(broadcast_job(action, data))
 
 
 def _on_locked_change(action: str, data: dict):
     """Called from any thread when a locked right-rail item changes."""
-    if _event_loop is None:
-        return
-    try:
-        loop = asyncio.get_running_loop()
-        if loop is _event_loop:
-            asyncio.ensure_future(broadcast_locked(action, data))
-            return
-    except RuntimeError:
-        pass
-    asyncio.run_coroutine_threadsafe(broadcast_locked(action, data), _event_loop)
+    _schedule_runtime_coroutine(broadcast_locked(action, data))
 
 
 def _on_schedule_change(action: str, schedule: dict):
     """Called from any thread when a schedule changes."""
-    if _event_loop is None:
-        return
-    try:
-        loop = asyncio.get_running_loop()
-        if loop is _event_loop:
-            asyncio.ensure_future(broadcast_schedule(action, schedule))
-            return
-    except RuntimeError:
-        pass
-    asyncio.run_coroutine_threadsafe(broadcast_schedule(action, schedule), _event_loop)
+    _schedule_runtime_coroutine(broadcast_schedule(action, schedule))
 
 
 def _on_session_change(action: str, session: dict):
@@ -797,14 +767,7 @@ def _on_session_change(action: str, session: dict):
             metadata={"session_id": session.get("id"), "reason": reason},
         )
 
-    try:
-        loop = asyncio.get_running_loop()
-        if loop is _event_loop:
-            asyncio.ensure_future(broadcast_session(action, session))
-            return
-    except RuntimeError:
-        pass
-    asyncio.run_coroutine_threadsafe(broadcast_session(action, session), _event_loop)
+    _schedule_runtime_coroutine(broadcast_session(action, session))
 
 
 _draft_ref_re = _re.compile(r'\[([a-f0-9]{8})\]')
@@ -1139,9 +1102,8 @@ def _on_registry_change():
         all_names = list(set(base_names + instance_names))
         router.update_agents(all_names)
     # Broadcast to WebSocket clients
-    if _event_loop:
-        asyncio.run_coroutine_threadsafe(broadcast_agents(), _event_loop)
-        asyncio.run_coroutine_threadsafe(broadcast_status(), _event_loop)
+    _schedule_runtime_coroutine(broadcast_agents())
+    _schedule_runtime_coroutine(broadcast_status())
 
 
 # --- WebSocket ---
@@ -1811,8 +1773,7 @@ async def patch_settings(request: Request):
 
     room_settings["selected_theme"] = selected_theme
     _save_settings()
-    if _event_loop:
-        asyncio.run_coroutine_threadsafe(broadcast_settings(), _event_loop)
+    _schedule_runtime_coroutine(broadcast_settings())
     return room_settings
 
 
@@ -2585,15 +2546,14 @@ async def register_agent(request: Request):
         mcp_bridge.migrate_identity(renamed["old"], renamed["new"])
         _migrate_terminal_snapshot(renamed["old"], renamed["new"])
         store.rename_sender(renamed["old"], renamed["new"])
-        if _event_loop:
-            rename_event = json.dumps({
-                "type": "agent_renamed",
-                "old_name": renamed["old"],
-                "new_name": renamed["new"],
-            })
-            asyncio.run_coroutine_threadsafe(_broadcast(rename_event), _event_loop)
+        rename_event = json.dumps({
+            "type": "agent_renamed",
+            "old_name": renamed["old"],
+            "new_name": renamed["new"],
+        })
+        _schedule_runtime_coroutine(_broadcast(rename_event))
     # Broadcast pending_instance event so UI can show naming lightbox
-    if result.get("state") == "pending" and _event_loop:
+    if result.get("state") == "pending":
         pending_event = json.dumps({
             "type": "pending_instance",
             "name": result["name"],
@@ -2601,7 +2561,7 @@ async def register_agent(request: Request):
             "label": result.get("label", result["name"]),
             "color": result.get("color", "#888"),
         })
-        asyncio.run_coroutine_threadsafe(_broadcast(pending_event), _event_loop)
+        _schedule_runtime_coroutine(_broadcast(pending_event))
     return JSONResponse(result)
 
 
@@ -2629,13 +2589,12 @@ async def deregister_agent(name: str, request: Request):
         mcp_bridge.migrate_identity(renamed["old"], renamed["new"])
         _migrate_terminal_snapshot(renamed["old"], renamed["new"])
         store.rename_sender(renamed["old"], renamed["new"])
-        if _event_loop:
-            rename_event = json.dumps({
-                "type": "agent_renamed",
-                "old_name": renamed["old"],
-                "new_name": renamed["new"],
-            })
-            asyncio.run_coroutine_threadsafe(_broadcast(rename_event), _event_loop)
+        rename_event = json.dumps({
+            "type": "agent_renamed",
+            "old_name": renamed["old"],
+            "new_name": renamed["new"],
+        })
+        _schedule_runtime_coroutine(_broadcast(rename_event))
     return JSONResponse({"ok": True})
 
 

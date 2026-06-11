@@ -21,7 +21,9 @@ import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { WorkbenchCompactRail } from '@/components/workbench/WorkbenchCompactRail'
 import {
+  getObservedEndpoints,
   getObservabilityStatus,
+  type ObservedEndpoint,
   type ObservabilityStatus,
 } from '@/lib/observability-api'
 import { cn } from '@/lib/cn'
@@ -294,6 +296,14 @@ function TelemetryMetric({ label, value }: { label: string; value: string }) {
 }
 
 function ApiObservabilityPanel({ model }: { model: ObservabilityModel }) {
+  const endpointQuery = useQuery({
+    queryKey: ['observability-endpoints'],
+    queryFn: getObservedEndpoints,
+    refetchInterval: 30000,
+    staleTime: 10000,
+  })
+  const endpoints = endpointQuery.data ?? []
+
   return (
     <div className="grid gap-5">
       <ObservabilityPanel eyebrow="Runtime telemetry" title="API signal flow">
@@ -319,6 +329,69 @@ function ApiObservabilityPanel({ model }: { model: ObservabilityModel }) {
           label="Recent backend spans"
         />
       </ObservabilityPanel>
+
+      <ObservabilityPanel eyebrow="Endpoint contract" title="Runtime API definitions">
+        <div className="px-5 py-4">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <Badge variant="secondary">{endpoints.length} routes</Badge>
+            {endpointQuery.isError ? <Badge variant="outline">Unavailable</Badge> : null}
+          </div>
+          {endpointQuery.isError ? (
+            <p className="text-[11.5px] leading-5 text-destructive">
+              {endpointQuery.error instanceof Error ? endpointQuery.error.message : 'Endpoint catalog unavailable.'}
+            </p>
+          ) : (
+            <EndpointContractTable endpoints={endpoints} loading={endpointQuery.isLoading && !endpointQuery.data} />
+          )}
+        </div>
+      </ObservabilityPanel>
+    </div>
+  )
+}
+
+function EndpointContractTable({
+  endpoints,
+  loading,
+}: {
+  endpoints: ObservedEndpoint[]
+  loading: boolean
+}) {
+  if (loading) {
+    return <div className="text-[11.5px] text-muted-foreground">Loading endpoint contract...</div>
+  }
+
+  if (!endpoints.length) {
+    return <div className="text-[11.5px] text-muted-foreground">No endpoint definitions returned.</div>
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-[7px] border border-border">
+      <table className="min-w-[1040px] border-collapse text-left text-[11.5px]">
+        <thead className="bg-muted/30 text-muted-foreground">
+          <tr>
+            <th className="px-3 py-2 font-medium">Method</th>
+            <th className="px-3 py-2 font-medium">Path</th>
+            <th className="px-3 py-2 font-medium">Auth</th>
+            <th className="px-3 py-2 font-medium">Proxy</th>
+            <th className="px-3 py-2 font-medium">Surface</th>
+            <th className="px-3 py-2 font-medium">Span</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border">
+          {endpoints.map((endpoint) => (
+            <tr key={`${endpoint.method} ${endpoint.path}`}>
+              <td className="px-3 py-2">
+                <Badge variant="outline">{endpoint.method}</Badge>
+              </td>
+              <td className="px-3 py-2 font-mono text-foreground">{endpoint.path}</td>
+              <td className="px-3 py-2 text-muted-foreground">{endpoint.auth}</td>
+              <td className="px-3 py-2 text-muted-foreground">{endpoint.proxy}</td>
+              <td className="px-3 py-2 text-muted-foreground">{endpoint.surface}</td>
+              <td className="px-3 py-2 font-mono text-muted-foreground">{endpoint.span_name}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }

@@ -122,6 +122,17 @@ class RuntimeArchitectureContractTests(unittest.TestCase):
         decisions_tab = next(tab for tab in tabs if tab["id"] == "decisions")
         self.assertEqual(decisions_tab["category"], "locked")
 
+    def test_roles_api_requires_session_token_for_remote_style_requests(self):
+        forbidden = self.client.get("/api/roles")
+        self.assertEqual(forbidden.status_code, 403)
+
+        authed = self.client.get(
+            "/api/roles",
+            headers={"X-Session-Token": self.token},
+        )
+        self.assertEqual(authed.status_code, 200)
+        self.assertIsInstance(authed.json(), dict)
+
     def test_configured_origin_gets_cors_preflight_without_session_token(self):
         with tempfile.TemporaryDirectory() as data_dir:
             token = chattr_test_configure(

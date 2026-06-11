@@ -43,6 +43,8 @@ docs/images/scratch/
 
 # Local planning/reference docs and screenshots stay machine-local.
 docs/
+!apps/web/functions/docs/
+!apps/web/functions/docs/**
 
 # Python tooling caches & coverage
 .pytest_cache/

@@ -23,6 +23,12 @@ Current locked frontend rule:
   for UI primitives and Vercel AI Elements / AI SDK React source components for AI/workbench
   surfaces. Handrolled replacement primitives are not acceptable.
 
+## Current direction plans
+
+- `plans/kai-chattr-scope-based-routing-foundation.md` locks the scoped route direction:
+  current-user settings, workspace settings, and workspace-session workbench routes. `/workbench`
+  is transitional only, not the canonical product route.
+
 ## Validation
 
 - Validate with `node governance/scripts/check-contracts.mjs`.

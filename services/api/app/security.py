@@ -50,9 +50,14 @@ def create_security_middleware(
             # Uploads use random filenames and have path-traversal protection.
             # Frontend HTML and static assets are owned by apps/web, not this API.
             if path == "/healthz" or path == "/" or path.startswith(
-                ("/uploads/", "/api/roles", "/schemas/", "/observability/")
+                ("/uploads/", "/schemas/", "/observability/")
             ):
                 return await _with_cors(call_next, request, cors_origin)
+
+            if path == "/api/roles" or path.startswith("/api/roles/"):
+                client_ip = request.client.host if request.client else ""
+                if client_ip in ("127.0.0.1", "::1", "localhost") or resolve_authenticated_agent(request):
+                    return await _with_cors(call_next, request, cors_origin)
 
             if path.startswith(("/api/register", "/api/deregister/", "/api/heartbeat/", "/api/poll/")):
                 client_ip = request.client.host if request.client else ""

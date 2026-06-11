@@ -33,15 +33,12 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 import threading
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
 from fastapi import FastAPI
-from fastapi.routing import APIRoute
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -66,6 +63,11 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from app.endpoint_contract import (
+    EndpointDefinition,
+    endpoint_definitions_for_app,
+    identify_endpoint as identify_endpoint_definition,
+)
 from app.settings import Settings
 
 
@@ -92,35 +94,7 @@ FORBIDDEN_ATTR_KEYS: frozenset[str] = frozenset(
     }
 )
 
-ROUTE_TOKEN_PATTERN = re.compile(r"\{[^/{}]+\}")
-SAFE_METHODS = {"DELETE", "GET", "PATCH", "POST", "PUT"}
-IGNORED_FASTAPI_ROUTES = {
-    ("GET", "/docs"),
-    ("GET", "/docs/oauth2-redirect"),
-    ("GET", "/openapi.json"),
-    ("GET", "/redoc"),
-}
 _CATALOG_APP: FastAPI | None = None
-
-
-@dataclass(frozen=True)
-class ObservedEndpoint:
-    method: str
-    path: str
-    span_name: str
-    area: str
-    operation: str
-    purpose: str
-
-    def to_dict(self) -> dict[str, str]:
-        return {
-            "area": self.area,
-            "method": self.method,
-            "operation": self.operation,
-            "path": self.path,
-            "purpose": self.purpose,
-            "span_name": self.span_name,
-        }
 
 
 class EndpointTelemetryMiddleware(BaseHTTPMiddleware):
@@ -184,114 +158,29 @@ def configure_observability(app: FastAPI, settings: Settings) -> None:
 def observed_endpoint_catalog() -> list[dict[str, str]]:
     if _CATALOG_APP is None:
         return []
-    return [endpoint.to_dict() for endpoint in _observed_endpoints_for_app(_CATALOG_APP)]
+    return [
+        endpoint.to_observability_dict()
+        for endpoint in endpoint_definitions_for_app(_CATALOG_APP)
+    ]
 
 
-def identify_endpoint(method: str, path: str) -> ObservedEndpoint | None:
-    safe_method = method.upper()
-    if safe_method not in SAFE_METHODS or _CATALOG_APP is None:
+def identify_endpoint(method: str, path: str) -> EndpointDefinition | None:
+    if _CATALOG_APP is None:
         return None
-
-    for endpoint in _observed_endpoints_for_app(_CATALOG_APP):
-        if endpoint.method == safe_method and _template_matches_path(endpoint.path, path):
-            return endpoint
-    return None
-
-
-def _observed_endpoints_for_app(app: FastAPI) -> list[ObservedEndpoint]:
-    endpoints: list[ObservedEndpoint] = []
-    for route in app.routes:
-        if not isinstance(route, APIRoute):
-            continue
-        for method in sorted(route.methods or set()):
-            if method not in SAFE_METHODS or (method, route.path) in IGNORED_FASTAPI_ROUTES:
-                continue
-            endpoints.append(_observed_endpoint_from_route(method, route.path))
-    return sorted(endpoints, key=lambda endpoint: (endpoint.path, endpoint.method))
-
-
-def _observed_endpoint_from_route(method: str, path: str) -> ObservedEndpoint:
-    area = _area_for_path(path)
-    operation = _operation_for_route(method, path)
-    noun = _noun_for_path(path)
-    return ObservedEndpoint(
-        method=method,
-        path=path,
-        span_name=f"kai_chattr.api.{noun}.{operation}",
-        area=area,
-        operation=operation,
-        purpose=f"{operation.title()} {path}.",
+    return identify_endpoint_definition(
+        endpoint_definitions_for_app(_CATALOG_APP),
+        method,
+        path,
     )
 
 
-def _area_for_path(path: str) -> str:
-    parts = _static_path_parts(path)
-    if not parts:
-        return "root"
-    if parts[0] == "api" and len(parts) > 1:
-        return parts[1]
-    return parts[0]
-
-
-def _noun_for_path(path: str) -> str:
-    parts = [
-        part.replace("-", "_")
-        for part in _static_path_parts(path)
-        if part not in {"api"}
-    ]
-    return ".".join(parts) if parts else "root"
-
-
-def _static_path_parts(path: str) -> list[str]:
-    return [
-        part
-        for part in path.strip("/").split("/")
-        if part and not (part.startswith("{") and part.endswith("}"))
-    ]
-
-
-def _operation_for_route(method: str, path: str) -> str:
-    if method == "DELETE":
-        return "delete"
-    if method == "PATCH":
-        return "update"
-    if method == "POST":
-        lowered = path.lower()
-        if lowered.endswith("/restore"):
-            return "restore"
-        if lowered.endswith("/reorder"):
-            return "reorder"
-        if lowered.endswith("/toggle"):
-            return "toggle"
-        if lowered.endswith("/send"):
-            return "send"
-        return "create"
-    if method == "PUT":
-        return "save"
-    if method == "GET":
-        parts = _static_path_parts(path)
-        if path.endswith("/endpoints") or (parts and parts[-1].endswith("s")):
-            return "list"
-        return "read"
-    return method.lower()
-
-
-def _template_matches_path(template: str, path: str) -> bool:
-    parts: list[str] = []
-    cursor = 0
-    for match in ROUTE_TOKEN_PATTERN.finditer(template):
-        parts.append(re.escape(template[cursor:match.start()]))
-        parts.append("[^/]+")
-        cursor = match.end()
-    parts.append(re.escape(template[cursor:]))
-    regex = "^" + "".join(parts) + "$"
-    return re.match(regex, path) is not None
-
-
-def _set_endpoint_span_attributes(span: trace.Span, endpoint: ObservedEndpoint) -> None:
+def _set_endpoint_span_attributes(span: trace.Span, endpoint: EndpointDefinition) -> None:
     span.set_attribute("kai_chattr.endpoint.area", endpoint.area)
+    span.set_attribute("kai_chattr.endpoint.auth", endpoint.auth)
     span.set_attribute("kai_chattr.endpoint.operation", endpoint.operation)
     span.set_attribute("kai_chattr.endpoint.path_template", endpoint.path)
+    span.set_attribute("kai_chattr.endpoint.proxy", endpoint.proxy)
+    span.set_attribute("kai_chattr.endpoint.surface", endpoint.surface)
     span.set_attribute("http.request.method", endpoint.method)
     span.set_attribute("http.route", endpoint.path)
 

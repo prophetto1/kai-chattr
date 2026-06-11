@@ -75,10 +75,15 @@ test('runtime files required by the contract exist', () => {
     'scripts/deploy/sync-fly-secrets-from-sops.ps1',
     'apps/web/functions/api/[[path]].js',
     'apps/web/functions/observability/[[path]].js',
+    'apps/web/functions/uploads/[[path]].js',
+    'apps/web/functions/docs/[[path]].js',
+    'apps/web/functions/openapi.json.js',
+    'apps/web/functions/redoc.js',
     'apps/web/public/_routes.json',
     '.github/workflows/deploy-api.yml',
     '.github/workflows/deploy-web.yml',
     'services/api/app/runtime_contract.py',
+    'services/api/app/endpoint_contract.py',
     'services/api/app/pydantic_contracts.py',
     'services/api/app/stores/routing_decisions_db.py',
     'services/api/app/factory.py',
@@ -128,6 +133,11 @@ test('web API client and Pages Function keep hosted API auth server-side', () =>
   const apiClient = fs.readFileSync(path.join(repoRoot, 'apps/web/src/lib/chattr-api.ts'), 'utf8');
   const apiProxy = fs.readFileSync(path.join(repoRoot, 'apps/web/functions/api/[[path]].js'), 'utf8');
   const observabilityProxy = fs.readFileSync(path.join(repoRoot, 'apps/web/functions/observability/[[path]].js'), 'utf8');
+  const uploadsProxy = fs.readFileSync(path.join(repoRoot, 'apps/web/functions/uploads/[[path]].js'), 'utf8');
+  const docsProxy = fs.readFileSync(path.join(repoRoot, 'apps/web/functions/docs/[[path]].js'), 'utf8');
+  const openapiProxy = fs.readFileSync(path.join(repoRoot, 'apps/web/functions/openapi.json.js'), 'utf8');
+  const redocProxy = fs.readFileSync(path.join(repoRoot, 'apps/web/functions/redoc.js'), 'utf8');
+  const viteConfig = fs.readFileSync(path.join(repoRoot, 'apps/web/vite.config.ts'), 'utf8');
   const routes = JSON.parse(fs.readFileSync(path.join(repoRoot, 'apps/web/public/_routes.json'), 'utf8'));
 
   assert.match(apiClient, /VITE_KAI_CHATTR_API_ORIGIN/);
@@ -136,9 +146,19 @@ test('web API client and Pages Function keep hosted API auth server-side', () =>
   assert.match(apiProxy, /KAI_CHATTR_SESSION_TOKEN/);
   assert.match(apiProxy, /headers\.set\('X-Session-Token', token\)/);
   assert.match(observabilityProxy, /api\/\[\[path\]\]\.js/);
+  assert.match(uploadsProxy, /api\/\[\[path\]\]\.js/);
+  assert.match(docsProxy, /api\/\[\[path\]\]\.js/);
+  assert.match(openapiProxy, /api\/\[\[path\]\]\.js/);
+  assert.match(redocProxy, /api\/\[\[path\]\]\.js/);
+  assert.match(viteConfig, /'\/api'/);
+  assert.match(viteConfig, /\^\/observability\/\(status\|endpoints\)/);
+  assert.match(viteConfig, /'\/uploads'/);
+  assert.match(viteConfig, /'\/openapi\.json'/);
+  assert.match(viteConfig, /'\/docs'/);
+  assert.match(viteConfig, /'\/redoc'/);
   assert.deepEqual(routes, {
     version: 1,
-    include: ['/api/*', '/observability/*'],
+    include: ['/api/*', '/observability/*', '/uploads/*', '/openapi.json', '/docs', '/docs/*', '/redoc'],
     exclude: [],
   });
 });
