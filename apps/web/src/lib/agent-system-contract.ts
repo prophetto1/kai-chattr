@@ -6,7 +6,7 @@
  * these values; until then surfaces render declared fixtures typed by this file.
  */
 
-export type AgentLifecycleState = 'draft' | 'active' | 'suspended' | 'archived'
+export type AgentLifecycleState = 'draft' | 'active' | 'suspended' | 'archived' | 'deleted'
 export type AgentHome = 'local' | 'cloud'
 export type AgentStatus = 'online' | 'idle' | 'offline'
 export type TrustProfileName = 'private' | 'curated' | 'team' | 'custom'
@@ -166,3 +166,17 @@ export const AGENT_CONSOLE_TABS = [
 ] as const
 
 export type AgentConsoleTab = (typeof AGENT_CONSOLE_TABS)[number]
+
+/**
+ * Reserved v1.5 contract (entities.agentHomeMigration in final-schema-v4.json).
+ * No surface renders this yet; typed now so adding the migration UI later is
+ * not a contract break.
+ */
+export type AgentHomeMigrationStatus =
+  | 'reserved'
+  | 'pending'
+  | 'exporting'
+  | 'importing'
+  | 'verifying'
+  | 'complete'
+  | 'failed'

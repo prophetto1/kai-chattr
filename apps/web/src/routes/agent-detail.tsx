@@ -1,5 +1,19 @@
-import { IconArrowLeft, IconRefresh, IconTerminal2 } from '@tabler/icons-react'
-import { useState } from 'react'
+import {
+  IconActivityHeartbeat,
+  IconArrowLeft,
+  IconBrain,
+  IconDatabase,
+  IconFingerprint,
+  IconGitBranch,
+  IconLayoutDashboard,
+  IconRefresh,
+  IconServerCog,
+  IconShieldLock,
+  IconTerminal2,
+  IconTool,
+  IconWebhook,
+} from '@tabler/icons-react'
+import { type ComponentType, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 
 import { AppShell } from '@/components/layout/AppShell'
@@ -40,6 +54,26 @@ const TAB_LABELS: Record<AgentConsoleTab, string> = {
   access: 'Access & Trust',
   versions: 'Versions',
   activity: 'Activity',
+}
+
+const TAB_META: Record<
+  AgentConsoleTab,
+  {
+    accent: string
+    icon: ComponentType<{ className?: string }>
+    label: string
+  }
+> = {
+  overview: { accent: '#6ee7b7', icon: IconLayoutDashboard, label: 'Overview' },
+  identity: { accent: '#f9a8d4', icon: IconFingerprint, label: 'Identity' },
+  runtime: { accent: '#93c5fd', icon: IconServerCog, label: 'Runtime' },
+  model: { accent: '#c4b5fd', icon: IconBrain, label: 'Model' },
+  capabilities: { accent: '#fcd34d', icon: IconTool, label: 'Capabilities' },
+  invocations: { accent: '#67e8f9', icon: IconWebhook, label: 'Invocations' },
+  memory: { accent: '#86efac', icon: IconDatabase, label: 'Memory' },
+  access: { accent: '#fda4af', icon: IconShieldLock, label: 'Access' },
+  versions: { accent: '#fdba74', icon: IconGitBranch, label: 'Versions' },
+  activity: { accent: '#a5b4fc', icon: IconActivityHeartbeat, label: 'Activity' },
 }
 
 const STUB_TABS: Partial<Record<AgentConsoleTab, string>> = {
@@ -284,6 +318,10 @@ function RuntimeTab({ agent }: { agent: AgentDetail }) {
             </Button>
           ))}
           <span className="ml-1 text-[10.5px] text-muted-foreground/70">Slice 3</span>
+          <Button className="h-8 rounded-[5px] text-[12px]" disabled type="button" variant="outline">
+            Migrate home
+          </Button>
+          <span className="text-[10.5px] text-muted-foreground/70">v1.5 · reserved</span>
         </div>
       </SectionCard>
     </div>
@@ -296,6 +334,35 @@ function StubTab({ note }: { note: string }) {
       <p className="max-w-[44ch] px-6 text-center text-[11.5px] leading-5 text-muted-foreground">
         {note}
       </p>
+    </div>
+  )
+}
+
+function AgentConsoleTabs() {
+  return (
+    <div className="border-b border-border bg-background/70 px-5 py-2.5">
+      <TabsList
+        aria-label="Agent console sections"
+        className="!h-auto w-full justify-start gap-1 overflow-x-auto rounded-[10px] bg-muted/45 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] [scrollbar-width:none] lg:grid lg:grid-cols-10 [&::-webkit-scrollbar]:hidden"
+      >
+        {AGENT_CONSOLE_TABS.map((tabId) => {
+          const meta = TAB_META[tabId]
+          const Icon = meta.icon
+
+          return (
+            <TabsTrigger
+              aria-label={TAB_LABELS[tabId]}
+              className="group/agent-tab !h-[54px] min-w-[98px] flex-none flex-col gap-1 rounded-[8px] px-1.5 text-[10.5px] font-medium leading-none text-muted-foreground transition-[background-color,border-color,box-shadow,color,transform] duration-150 ease-out after:hidden active:scale-[0.98] data-[state=active]:border-border data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-[0_1px_2px_rgba(0,0,0,0.13),inset_0_-2px_0_var(--agent-tab-accent)] dark:data-[state=active]:bg-white/[0.055] lg:min-w-0"
+              key={tabId}
+              style={{ '--agent-tab-accent': meta.accent } as React.CSSProperties}
+              value={tabId}
+            >
+              <Icon className="size-4 text-muted-foreground/75 transition-[color,transform] duration-150 group-data-[state=active]/agent-tab:text-foreground" />
+              <span className="whitespace-nowrap">{meta.label}</span>
+            </TabsTrigger>
+          )
+        })}
+      </TabsList>
     </div>
   )
 }
@@ -376,19 +443,7 @@ export default function AgentDetailPage() {
             onValueChange={(value) => setTab(value as AgentConsoleTab)}
             value={tab}
           >
-            <div className="border-b border-border px-5">
-              <TabsList className="h-9 w-full justify-start gap-1 overflow-x-auto bg-transparent p-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {AGENT_CONSOLE_TABS.map((tabId) => (
-                  <TabsTrigger
-                    className="rounded-none border-b-2 border-transparent px-2.5 text-[11.5px] data-[state=active]:border-primary data-[state=active]:bg-transparent"
-                    key={tabId}
-                    value={tabId}
-                  >
-                    {TAB_LABELS[tabId]}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </div>
+            <AgentConsoleTabs />
 
             <ScrollArea className="min-h-0 flex-1" viewportClassName="min-h-0">
               <div className="mx-auto w-full max-w-[860px] px-5 py-5">

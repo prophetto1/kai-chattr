@@ -73,6 +73,7 @@ type WorkbenchCompactRailAccount = {
 }
 
 export type WorkbenchCompactRailEntry = {
+  accentColor?: string
   id: string
   label: string
   onSelect?: () => void
@@ -80,8 +81,13 @@ export type WorkbenchCompactRailEntry = {
 
 type WorkbenchCompactRailProps = {
   activeItem?: WorkbenchCompactRailItem
+  activeAgentId?: string
+  activeProjectId?: string
   account?: WorkbenchCompactRailAccount
+  /** Active user agents rendered as children under "My Agents". */
+  agentEntries?: WorkbenchCompactRailEntry[]
   className?: string
+  projectEntries?: WorkbenchCompactRailEntry[]
   /** Recent conversations — rendered as the collapsible children of the "Recent" menu. */
   recentEntries?: WorkbenchCompactRailEntry[]
   /** Suggested tasks — rendered as the collapsible children of the "Tasks" menu. */
@@ -300,36 +306,45 @@ function RailPlaceholderSection({
     <SidebarGroup className="p-0">
       <SidebarGroupLabel className="h-8 rounded-[5px] px-2 text-[12px] font-medium normal-case tracking-normal text-sidebar-foreground/68">
         {hasChildren ? (
-          <button
-            aria-expanded={open}
-            className="flex min-w-0 flex-1 items-center gap-1.5 text-left active:scale-[0.99]"
-            onClick={() => setOpen((current) => !current)}
-            type="button"
-          >
-            {open ? (
-              <IconChevronDown className="size-3 shrink-0 text-sidebar-foreground/45" />
-            ) : (
-              <IconChevronRight className="size-3 shrink-0 text-sidebar-foreground/45" />
-            )}
-            {labelContent}
-          </button>
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 pr-7">
+            <button
+              className="flex min-w-0 items-center gap-1.5 text-left active:scale-[0.99]"
+              onClick={onClick ?? (() => setOpen((current) => !current))}
+              type="button"
+            >
+              {labelContent}
+            </button>
+            <button
+              aria-expanded={open}
+              aria-label={`${open ? 'Collapse' : 'Expand'} ${label}`}
+              className="flex size-5 shrink-0 items-center justify-center rounded-[4px] text-sidebar-foreground/45 transition-[background-color,color,transform] duration-150 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:scale-[0.94]"
+              onClick={() => setOpen((current) => !current)}
+              type="button"
+            >
+              {open ? (
+                <IconChevronDown className="size-3" />
+              ) : (
+                <IconChevronRight className="size-3" />
+              )}
+            </button>
+          </div>
         ) : onClick ? (
           <button
-            className="flex min-w-0 flex-1 items-center gap-1.5 text-left active:scale-[0.99]"
+            className="flex min-w-0 flex-1 items-center gap-1.5 pr-7 text-left active:scale-[0.99]"
             onClick={onClick}
             type="button"
           >
+            {labelContent}
             {showsDisclosure ? (
               <IconChevronRight className="size-3 shrink-0 text-sidebar-foreground/45" />
             ) : null}
-            {labelContent}
           </button>
         ) : (
-          <span className="flex min-w-0 flex-1 items-center gap-1.5 text-left">
+          <span className="flex min-w-0 flex-1 items-center gap-1.5 pr-7 text-left">
+            {labelContent}
             {showsDisclosure ? (
               <IconChevronRight className="size-3 shrink-0 text-sidebar-foreground/45" />
             ) : null}
-            {labelContent}
           </span>
         )}
       </SidebarGroupLabel>
@@ -353,11 +368,13 @@ function RailPlaceholderSection({
 
 function RailSubItem({
   active,
+  accentColor,
   expanded,
   label,
   onClick,
 }: {
   active?: boolean
+  accentColor?: string
   expanded: boolean
   label: string
   onClick?: () => void
@@ -378,6 +395,13 @@ function RailSubItem({
         type="button"
         variant="ghost"
       >
+        {accentColor ? (
+          <span
+            aria-hidden="true"
+            className="size-1.5 shrink-0 rounded-full"
+            style={{ backgroundColor: accentColor }}
+          />
+        ) : null}
         <span className="truncate">{label}</span>
       </Button>
     </SidebarMenuItem>
@@ -455,15 +479,19 @@ function AccountAvatar({ account }: { account: WorkbenchCompactRailAccount }) {
 
 export function WorkbenchCompactRail({
   activeItem = 'conversations',
+  activeAgentId,
+  activeProjectId,
   account = {
     initials: 'J',
     label: 'Jon',
     secondaryLabel: 'Local workspace',
     status: 'online',
   },
+  agentEntries,
   className,
   defaultExpanded = true,
   logo,
+  projectEntries,
   recentEntries,
   sessions,
   taskEntries,
@@ -502,6 +530,8 @@ export function WorkbenchCompactRail({
   const handleBilling = onBilling ?? onOpenSettings
   const handleNotifications = onNotifications ?? onOpenSettings
   const libraryActive = activeItem === 'library' || activeItem === 'file-stores' || activeItem === 'knowledge-bases'
+  const agentsActive = activeItem === 'agents'
+  const projectsActive = activeItem === 'projects'
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -575,14 +605,28 @@ export function WorkbenchCompactRail({
         <RailSection expanded={expanded}>
           <RailMenuItem expanded={expanded}>
             <RailPlaceholderSection
-              active={activeItem === 'agents'}
+              active={agentsActive}
+              defaultOpen={agentsActive || Boolean(activeAgentId)}
               expanded={expanded}
               icon={IconRobot}
               label="My Agents"
               onAdd={onCreateAgent}
               onClick={onOpenAgents}
               showDisclosure
-            />
+            >
+              {agentEntries?.length
+                ? agentEntries.map((entry) => (
+                    <RailSubItem
+                      accentColor={entry.accentColor}
+                      active={activeAgentId === entry.id}
+                      expanded={expanded}
+                      key={entry.id}
+                      label={entry.label}
+                      onClick={entry.onSelect}
+                    />
+                  ))
+                : null}
+            </RailPlaceholderSection>
           </RailMenuItem>
           <RailMenuItem expanded={expanded}>
             <RailPlaceholderSection
@@ -610,14 +654,28 @@ export function WorkbenchCompactRail({
           </RailMenuItem>
           <RailMenuItem expanded={expanded}>
             <RailPlaceholderSection
-              active={activeItem === 'projects'}
+              active={projectsActive}
+              defaultOpen={projectsActive || Boolean(activeProjectId)}
               expanded={expanded}
               icon={IconFolder}
               label="Projects"
               onAdd={onCreateProject}
               onClick={onOpenProjects}
               showDisclosure
-            />
+            >
+              {projectEntries?.length
+                ? projectEntries.map((entry) => (
+                    <RailSubItem
+                      accentColor={entry.accentColor}
+                      active={activeProjectId === entry.id}
+                      expanded={expanded}
+                      key={entry.id}
+                      label={entry.label}
+                      onClick={entry.onSelect}
+                    />
+                  ))
+                : null}
+            </RailPlaceholderSection>
           </RailMenuItem>
           <RailMenuItem expanded={expanded}>
             <RailPlaceholderSection

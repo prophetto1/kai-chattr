@@ -20,6 +20,7 @@ const LIFECYCLE_LABELS: Record<AgentLifecycleState, string> = {
   active: 'Active',
   suspended: 'Suspended',
   archived: 'Archived',
+  deleted: 'Deleted',
 }
 
 export function StatusDot({ status }: { status: AgentStatus }) {
@@ -39,7 +40,7 @@ export function LifecycleBadge({ state }: { state: AgentLifecycleState }) {
       className={cn(
         'rounded-[5px] text-[10px]',
         state === 'suspended' ? 'border-amber-500/40 text-amber-500' : null,
-        state === 'archived' ? 'opacity-60' : null
+        state === 'archived' || state === 'deleted' ? 'opacity-60' : null
       )}
       variant={state === 'active' ? 'secondary' : 'outline'}
     >
