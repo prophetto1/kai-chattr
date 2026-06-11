@@ -31,6 +31,7 @@ from app.events import JsonlEventStream, RUNTIME_EVENT_SCHEMA_VERSION
 from app.routes.launchers import router as launcher_control_router
 from app.routes.home_start import router as home_start_router
 from app.stores.locked import LockedStore
+from app import workspace_files
 from app.observability import configure_observability, init_observability, observed_endpoint_catalog
 from app.context import runtime_context
 from app.factory import create_app, include_route_modules
@@ -2254,7 +2255,9 @@ async def create_locked(request: Request):
     if not text:
         return JSONResponse({"error": "text required"}, status_code=400)
     sender = (body.get("sender") or room_settings.get("username", "user")).strip()
-    result = locked.create(text, sender, body.get("reason") or "")
+    result = locked.create(
+        text, sender, body.get("reason") or "", details=body.get("details") or ""
+    )
     if result is None:
         return JSONResponse({"error": "text required"}, status_code=400)
     return JSONResponse(result)
@@ -2272,6 +2275,7 @@ async def update_locked(locked_id: int, request: Request):
         result = locked.edit(
             locked_id,
             text=body.get("text") if "text" in body else None,
+            details=body.get("details") if "details" in body else None,
             reason=body.get("reason") if "reason" in body else None,
             updated_by=sender,
         )
@@ -2285,6 +2289,48 @@ async def delete_locked(locked_id: int):
     if result is None:
         return JSONResponse({"error": "not found"}, status_code=404)
     return JSONResponse({"ok": True, "deleted": result})
+
+
+# --- Workspace files API (Changes/Code/Files docks) ---
+
+async def get_workspace_tree():
+    try:
+        return JSONResponse(workspace_files.list_tree())
+    except workspace_files.WorkspaceFilesError as error:
+        return JSONResponse({"error": str(error)}, status_code=error.status)
+
+
+async def get_workspace_changes():
+    try:
+        return JSONResponse(workspace_files.list_changes())
+    except workspace_files.WorkspaceFilesError as error:
+        return JSONResponse({"error": str(error)}, status_code=error.status)
+
+
+async def get_workspace_file(path: str = ""):
+    try:
+        return JSONResponse(workspace_files.read_file(path))
+    except workspace_files.WorkspaceFilesError as error:
+        return JSONResponse({"error": str(error)}, status_code=error.status)
+
+
+async def get_workspace_diff(path: str = ""):
+    try:
+        return JSONResponse(workspace_files.read_diff(path))
+    except workspace_files.WorkspaceFilesError as error:
+        return JSONResponse({"error": str(error)}, status_code=error.status)
+
+
+async def save_workspace_file(request: Request):
+    body = await request.json()
+    try:
+        return JSONResponse(
+            workspace_files.write_file(
+                str(body.get("path") or ""), str(body.get("content") or "")
+            )
+        )
+    except workspace_files.WorkspaceFilesError as error:
+        return JSONResponse({"error": str(error)}, status_code=error.status)
 
 
 # --- Pins API ---
@@ -3038,6 +3084,7 @@ def _include_main_route_modules() -> None:
         schedules as schedule_routes,
         sessions as session_routes,
         status as status_routes,
+        workspace as workspace_routes,
     )
 
     current_module = sys.modules[__name__]
@@ -3056,6 +3103,7 @@ def _include_main_route_modules() -> None:
         rule_routes,
         agent_routes,
         session_routes,
+        workspace_routes,
     )
     include_route_modules(app, current_module, route_modules)
 

@@ -42,6 +42,7 @@ export type JobItem = {
 export type LockedItem = {
   id: number
   text: string
+  details?: string
   reason?: string
   status: 'active' | 'archived' | string
   created_by?: string

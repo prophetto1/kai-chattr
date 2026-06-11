@@ -11,7 +11,7 @@
  */
 
 import { type ComponentType, useCallback, useMemo, useRef, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { DiffEditor, Editor } from '@monaco-editor/react'
 import {
   IconActivityHeartbeat,
@@ -28,6 +28,7 @@ import {
   IconLayoutBottombarExpand,
   IconLayoutKanban,
   IconRefresh,
+  IconRobot,
   IconTerminal2,
   IconWorld,
   IconWorldSearch,
@@ -118,6 +119,19 @@ import { DockWorkspace } from '@/components/workbench/DockWorkspace'
 import { JobsDock } from '@/components/workbench/JobsDock'
 import { AgentTerminalPane } from '@/components/workbench/AgentTerminalPane'
 import { AgentLauncherDialog } from '@/components/workbench/launcher/AgentLauncherDialog'
+import { WorkspaceFileTree } from '@/components/workbench/WorkspaceFileTree'
+import {
+  DropdownMenuCheckboxItem,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
+import {
+  getWorkspaceChanges,
+  getWorkspaceDiff,
+  getWorkspaceFile,
+  getWorkspaceTree,
+  monacoLanguageForPath,
+  saveWorkspaceFile,
+} from '@/lib/workspace-api'
 import { AppShell } from '@/components/layout/AppShell'
 import { KaiAppRail } from '@/components/layout/KaiAppRail'
 import { Sheet } from '@/components/layout/Sheet'
@@ -252,7 +266,7 @@ const dockTabs: Array<{
   { id: 'changes', label: 'Changes', icon: IconGitCompare },
   { id: 'browser', label: 'Browser', icon: IconWorld },
   { id: 'code', label: 'Code', icon: IconCode },
-  { id: 'docs', label: 'Docs', icon: IconBook },
+  { id: 'docs', label: 'Files', icon: IconBook },
   { id: 'terminal', label: 'Terminal', icon: IconTerminal2 },
 ]
 
@@ -874,16 +888,28 @@ function SourceViewerPane({
 }
 
 function ChangesViewerPane({ onClose }: { onClose?: () => void }) {
-  const [selectedPath, setSelectedPath] = useState(workbenchChangeItems[0].path)
-  const selectedChange =
-    workbenchChangeItems.find((change) => change.path === selectedPath) ??
-    workbenchChangeItems[0]
   const monacoTheme = useMonacoTheme()
+  const [selectedPath, setSelectedPath] = useState('')
+  const changesQuery = useQuery({
+    queryKey: ['workspace-changes'],
+    queryFn: getWorkspaceChanges,
+    refetchInterval: 15000,
+  })
+  const changes = changesQuery.data?.changes ?? []
+  const effectivePath = changes.some((change) => change.path === selectedPath)
+    ? selectedPath
+    : changes[0]?.path ?? ''
+  const selectedChange = changes.find((change) => change.path === effectivePath)
+  const diffQuery = useQuery({
+    enabled: Boolean(effectivePath),
+    queryKey: ['workspace-diff', effectivePath],
+    queryFn: () => getWorkspaceDiff(effectivePath),
+  })
 
   return (
     <DockWorkspace
       title="Changes"
-      path={selectedPath}
+      path={effectivePath || 'working tree'}
       icon={IconGitCompare}
       onClose={onClose}
       showSidebarLabel={false}
@@ -892,9 +918,23 @@ function ChangesViewerPane({ onClose }: { onClose?: () => void }) {
       sidebarDefaultSize="30%"
       sidebarMinSize="20%"
       sidebar={
-        <WorkbenchChangesTree
+        <WorkspaceFileTree
+          emptyText={
+            changesQuery.isError
+              ? changesQuery.error instanceof Error
+                ? `${changesQuery.error.message} — restart the API if /api/workspace routes are new.`
+                : 'Changes unavailable.'
+              : changesQuery.isLoading
+                ? 'Loading changes...'
+                : 'No changes in the working tree.'
+          }
+          entries={changes}
+          headerIcon={IconGitCompare}
+          headerLabel="All changes"
           onSelect={setSelectedPath}
-          selectedPath={selectedPath}
+          rootName={changesQuery.data?.root ?? 'workspace'}
+          selectedPath={effectivePath}
+          showStats
         />
       }
       main={
@@ -904,37 +944,180 @@ function ChangesViewerPane({ onClose }: { onClose?: () => void }) {
             data-testid="changes-selected-file"
           >
             <div className="min-w-0 flex-1">
-              <div className="truncate font-medium text-foreground">{selectedChange.path}</div>
+              <div className="truncate font-medium text-foreground">
+                {effectivePath || 'No file selected'}
+              </div>
             </div>
-            <ChangeCounts
-              additions={selectedChange.additions}
-              deletions={selectedChange.deletions}
-            />
+            {selectedChange ? (
+              <ChangeCounts
+                additions={selectedChange.additions}
+                deletions={selectedChange.deletions}
+              />
+            ) : null}
           </div>
           <div className="min-h-0 flex-1">
-            <DiffEditor
-              keepCurrentModifiedModel
-              keepCurrentOriginalModel
-              theme={monacoTheme}
-              language={selectedChange.language}
-              modified={selectedChange.modified}
-              modifiedModelPath={`file:///${selectedChange.path}`}
-              original={selectedChange.original}
-              originalModelPath={`file:///${selectedChange.path}.base`}
-              options={{
-                fontSize: 12,
-                lineDecorationsWidth: 12,
-                lineNumbersMinChars: 3,
-                minimap: { enabled: false },
-                padding: { top: 12 },
-                readOnly: true,
-                renderSideBySide: false,
-                scrollBeyondLastLine: false,
-                wordWrap: 'on',
-              }}
-            />
+            {diffQuery.isError ? (
+              <p className="px-3 py-4 text-[11px] text-destructive">
+                {diffQuery.error instanceof Error ? diffQuery.error.message : 'Diff unavailable.'}
+              </p>
+            ) : (
+              <DiffEditor
+                theme={monacoTheme}
+                language={monacoLanguageForPath(effectivePath)}
+                modified={diffQuery.data?.modified ?? ''}
+                modifiedModelPath={`file:///${effectivePath}`}
+                original={diffQuery.data?.original ?? ''}
+                originalModelPath={`file:///${effectivePath}.base`}
+                options={{
+                  fontSize: 12,
+                  lineDecorationsWidth: 12,
+                  lineNumbersMinChars: 3,
+                  minimap: { enabled: false },
+                  padding: { top: 12 },
+                  readOnly: true,
+                  renderSideBySide: false,
+                  scrollBeyondLastLine: false,
+                  wordWrap: 'on',
+                }}
+              />
+            )}
           </div>
         </div>
+      }
+    />
+  )
+}
+
+function CodeEditorPane({
+  onClose,
+  readOnly = false,
+  title,
+}: {
+  onClose?: () => void
+  readOnly?: boolean
+  title: string
+}) {
+  const monacoTheme = useMonacoTheme()
+  const queryClient = useQueryClient()
+  const [selectedPath, setSelectedPath] = useState('')
+  const [draft, setDraft] = useState<string | null>(null)
+  const treeQuery = useQuery({
+    queryKey: ['workspace-tree'],
+    queryFn: getWorkspaceTree,
+    staleTime: 60_000,
+  })
+  const files = treeQuery.data?.files ?? []
+  const fileQuery = useQuery({
+    enabled: Boolean(selectedPath),
+    queryKey: ['workspace-file', selectedPath],
+    queryFn: () => getWorkspaceFile(selectedPath),
+  })
+  const baseContent = fileQuery.data?.content
+  const content = draft ?? baseContent ?? ''
+  const dirty = !readOnly && draft !== null && draft !== baseContent
+  const saveMutation = useMutation({
+    mutationFn: () => saveWorkspaceFile(selectedPath, draft ?? ''),
+    onSuccess: async () => {
+      setDraft(null)
+      await queryClient.invalidateQueries({ queryKey: ['workspace-file', selectedPath] })
+      await queryClient.invalidateQueries({ queryKey: ['workspace-changes'] })
+      await queryClient.invalidateQueries({ queryKey: ['workspace-diff', selectedPath] })
+    },
+  })
+
+  const handleTreeSelect = useCallback((path: string) => {
+    setSelectedPath(path)
+    setDraft(null)
+  }, [])
+
+  return (
+    <DockWorkspace
+      title={title}
+      path={selectedPath || 'select a file'}
+      icon={readOnly ? IconBook : IconCode}
+      onClose={onClose}
+      showSidebarLabel={false}
+      scrollSidebar={false}
+      sidebarClassName="bg-background"
+      sidebarDefaultSize="30%"
+      sidebarMinSize="20%"
+      sidebar={
+        <WorkspaceFileTree
+          emptyText={
+            treeQuery.isError
+              ? treeQuery.error instanceof Error
+                ? `${treeQuery.error.message} — restart the API if /api/workspace routes are new.`
+                : 'Files unavailable.'
+              : treeQuery.isLoading
+                ? 'Loading files...'
+                : 'No files.'
+          }
+          entries={files.map((path) => ({ path }))}
+          headerIcon={readOnly ? IconBook : IconCode}
+          headerLabel={treeQuery.data?.root ?? 'workspace'}
+          onSelect={handleTreeSelect}
+          rootName={treeQuery.data?.root ?? 'workspace'}
+          selectedPath={selectedPath}
+        />
+      }
+      main={
+        selectedPath ? (
+          <div className="flex h-full min-h-0 flex-col bg-background">
+            <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border/25 bg-muted/15 px-2 text-[11px]">
+              <div className="min-w-0 flex-1 truncate font-medium text-foreground">
+                {selectedPath}
+                {dirty ? <span className="ml-1.5 text-amber-500">●</span> : null}
+              </div>
+              {fileQuery.isError ? (
+                <span className="shrink-0 text-destructive">
+                  {fileQuery.error instanceof Error ? fileQuery.error.message : 'Unavailable'}
+                </span>
+              ) : null}
+              {saveMutation.isError ? (
+                <span className="shrink-0 text-destructive">
+                  {saveMutation.error instanceof Error
+                    ? saveMutation.error.message
+                    : 'Save failed'}
+                </span>
+              ) : null}
+              {!readOnly ? (
+                <Button
+                  className="h-6 shrink-0 px-2 text-[11px]"
+                  disabled={!dirty || saveMutation.isPending}
+                  onClick={() => saveMutation.mutate()}
+                  size="sm"
+                  type="button"
+                  variant={dirty ? 'default' : 'outline'}
+                >
+                  {saveMutation.isPending ? 'Saving...' : 'Save'}
+                </Button>
+              ) : null}
+            </div>
+            <div className="min-h-0 flex-1">
+              <Editor
+                language={monacoLanguageForPath(selectedPath)}
+                theme={monacoTheme}
+                onChange={readOnly ? undefined : (value) => setDraft(value ?? '')}
+                options={{
+                  fontSize: 12,
+                  lineDecorationsWidth: 12,
+                  lineNumbersMinChars: 3,
+                  minimap: { enabled: false },
+                  padding: { top: 12 },
+                  readOnly,
+                  scrollBeyondLastLine: false,
+                  wordWrap: 'on',
+                }}
+                path={`workspace:///${selectedPath}`}
+                value={content}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex h-full items-center justify-center bg-background">
+            <p className="text-[11.5px] text-muted-foreground">Select a file from the tree.</p>
+          </div>
+        )
       }
     />
   )
@@ -984,17 +1167,19 @@ function WorkbenchChatMessage({
   message: WorkbenchMessage
 }) {
   return (
-    <Message from={message.role} key={`${message.role}-${index}`}>
-      <MessageContent>
+    <Message className="gap-1.5" from={message.role} key={`${message.role}-${index}`}>
+      <MessageContent className="gap-1.5 text-[13px] leading-[1.45] group-[.is-user]:px-3.5 group-[.is-user]:py-2.5">
         {message.reasoning && (
-          <Reasoning className="mb-3" defaultOpen={false} duration={14}>
+          <Reasoning className="mb-2.5" defaultOpen={false} duration={14}>
             <ReasoningTrigger />
             <ReasoningContent>{message.reasoning}</ReasoningContent>
           </Reasoning>
         )}
-        <MessageResponse>{message.text}</MessageResponse>
+        <MessageResponse className="text-[13px] leading-[1.45] [&_li]:leading-[1.45] [&_p]:leading-[1.45]">
+          {message.text}
+        </MessageResponse>
         {message.tool && (
-          <Tool className="mt-3" defaultOpen={false}>
+          <Tool className="mt-2.5" defaultOpen={false}>
             <ToolHeader
               state="output-available"
               title={message.tool.name}
@@ -1008,7 +1193,7 @@ function WorkbenchChatMessage({
           </Tool>
         )}
         {message.sources && (
-          <Sources className="mt-3">
+          <Sources className="mt-2.5">
             <SourcesTrigger count={message.sources.length} />
             <SourcesContent>
               {message.sources.map((source) => (
@@ -1102,6 +1287,7 @@ export default function WorkbenchPage() {
   const [composerText, setComposerText] = useState('')
   const [useWebSearch, setUseWebSearch] = useState(false)
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false)
+  const [agentLauncherOpen, setAgentLauncherOpen] = useState(false)
   const [selectedModel, setSelectedModel] = useState<(typeof composerModels)[number]['id']>(
     composerModels[0].id
   )
@@ -1282,7 +1468,7 @@ export default function WorkbenchPage() {
                       <ResizablePanel id="chat-main" order={1} defaultSize={78} minSize={42}>
                         <div className="flex h-full min-h-0 flex-col">
                 <Conversation className="flex-1">
-                  <ConversationContent className="mx-auto w-full max-w-3xl gap-5 px-4 py-6">
+                  <ConversationContent className="w-full max-w-none gap-4 px-4 py-5">
                     {chatMessages.map((m, i) => (
                       <WorkbenchChatMessage
                         index={i}
@@ -1294,7 +1480,12 @@ export default function WorkbenchPage() {
                   <ConversationScrollButton />
                 </Conversation>
                 <div className="shrink-0 px-4 pb-4 pt-1.5">
-                  <div className="mx-auto grid min-w-0 w-full max-w-3xl gap-2">
+                  <div className="grid min-w-0 w-full max-w-none gap-2">
+                    <AgentLauncherDialog
+                      hideTrigger
+                      onOpenChange={setAgentLauncherOpen}
+                      open={agentLauncherOpen}
+                    />
                     <PromptInput
                       className="min-w-0 max-w-full [&_[data-slot=input-group]]:rounded-[24px] [&_[data-slot=input-group]]:border-border/70 [&_[data-slot=input-group]]:bg-background [&_[data-slot=input-group]]:shadow-[0_2px_5px_rgba(17,18,24,0.06),0_12px_30px_rgba(17,18,24,0.10)]"
                       globalDrop
@@ -1319,6 +1510,17 @@ export default function WorkbenchPage() {
                             <PromptInputActionMenuContent>
                               <PromptInputActionAddAttachments />
                               <PromptInputActionAddScreenshot />
+                              <DropdownMenuItem onSelect={() => setAgentLauncherOpen(true)}>
+                                <IconRobot className="size-4" />
+                                Add agent
+                              </DropdownMenuItem>
+                              <DropdownMenuCheckboxItem
+                                checked={useWebSearch}
+                                onCheckedChange={() => toggleWebSearch()}
+                              >
+                                <IconWorldSearch className="size-4" />
+                                Web search
+                              </DropdownMenuCheckboxItem>
                             </PromptInputActionMenuContent>
                           </PromptInputActionMenu>
                           <SpeechInput
@@ -1327,14 +1529,6 @@ export default function WorkbenchPage() {
                             size="icon-sm"
                             variant="ghost"
                           />
-                          <PromptInputButton
-                            onClick={toggleWebSearch}
-                            tooltip="Toggle web search"
-                            variant={useWebSearch ? 'default' : 'ghost'}
-                          >
-                            <IconWorldSearch className="size-4" />
-                            <span className="hidden sm:inline">Search</span>
-                          </PromptInputButton>
                           <ModelSelector
                             onOpenChange={setModelSelectorOpen}
                             open={modelSelectorOpen}
@@ -1459,25 +1653,11 @@ export default function WorkbenchPage() {
                       </TabsContent>
 
                       <TabsContent value="code" className={dockWorkspaceContentClassName}>
-                        <SourceViewerPane
-                          code={codePaneSource}
-                          title="Code"
-                          icon={IconCode}
-                          language="tsx"
-                          onClose={closeRightDock}
-                          selectedPath="apps/web/src/routes/workbench.tsx"
-                        />
+                        <CodeEditorPane onClose={closeRightDock} title="Code" />
                       </TabsContent>
 
                       <TabsContent value="docs" className={dockWorkspaceContentClassName}>
-                        <SourceViewerPane
-                          code={docsPaneSource}
-                          title="Docs"
-                          icon={IconBook}
-                          language="markdown"
-                          onClose={closeRightDock}
-                          selectedPath="apps/internal/content/projects/chattr/contracts/frontend.mdx"
-                        />
+                        <CodeEditorPane onClose={closeRightDock} readOnly title="Files" />
                       </TabsContent>
 
                       <TabsContent value="terminal" className={dockWorkspaceContentClassName}>

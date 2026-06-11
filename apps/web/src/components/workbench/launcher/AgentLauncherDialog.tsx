@@ -42,8 +42,23 @@ type LaunchState = {
   error?: string
 }
 
-export function AgentLauncherDialog({ compact = false }: { compact?: boolean }) {
-  const [open, setOpen] = useState(false)
+export function AgentLauncherDialog({
+  compact = false,
+  hideTrigger = false,
+  onOpenChange,
+  open: openProp,
+}: {
+  compact?: boolean
+  hideTrigger?: boolean
+  onOpenChange?: (open: boolean) => void
+  open?: boolean
+}) {
+  const [openState, setOpenState] = useState(false)
+  const open = openProp ?? openState
+  const setOpen = (next: boolean) => {
+    setOpenState(next)
+    onOpenChange?.(next)
+  }
   const [confirmedRisky, setConfirmedRisky] = useState<Record<string, boolean>>({})
   const [launchState, setLaunchState] = useState<Record<string, LaunchState>>({})
   const preflight = useQuery({
@@ -93,26 +108,28 @@ export function AgentLauncherDialog({ compact = false }: { compact?: boolean }) 
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <Button
-              aria-label="Launch agents"
-              className={cn(
-                compact
-                  ? 'size-9 rounded-[5px] p-0 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:scale-95'
-                  : 'h-7 gap-1.5 px-2 text-xs'
-              )}
-              size={compact ? 'icon' : 'sm'}
-              variant={compact ? 'ghost' : 'outline'}
-            >
-              <IconRocket className={compact ? 'size-[18px]' : 'size-3.5'} />
-              {compact ? <span className="sr-only">Agents</span> : 'Agents'}
-            </Button>
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent>Launch local agents</TooltipContent>
-      </Tooltip>
+      {hideTrigger ? null : (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button
+                aria-label="Launch agents"
+                className={cn(
+                  compact
+                    ? 'size-9 rounded-[5px] p-0 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:scale-95'
+                    : 'h-7 gap-1.5 px-2 text-xs'
+                )}
+                size={compact ? 'icon' : 'sm'}
+                variant={compact ? 'ghost' : 'outline'}
+              >
+                <IconRocket className={compact ? 'size-[18px]' : 'size-3.5'} />
+                {compact ? <span className="sr-only">Agents</span> : 'Agents'}
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>Launch local agents</TooltipContent>
+        </Tooltip>
+      )}
       <DialogContent className="max-h-[min(720px,calc(100vh-2rem))] max-w-2xl gap-0 overflow-hidden p-0">
         <DialogHeader className="border-b px-4 py-3">
           <DialogTitle className="text-sm">Agent launcher</DialogTitle>

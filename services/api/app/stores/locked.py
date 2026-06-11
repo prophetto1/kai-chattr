@@ -14,6 +14,7 @@ import uuid
 from pathlib import Path
 
 MAX_LOCKED_TEXT_CHARS = 500
+MAX_LOCKED_DETAILS_CHARS = 2000
 MAX_LOCKED_REASON_CHARS = 500
 
 
@@ -74,8 +75,11 @@ class LockedStore:
                     return dict(item)
         return None
 
-    def create(self, text: str, created_by: str, reason: str = "") -> dict | None:
+    def create(
+        self, text: str, created_by: str, reason: str = "", details: str = ""
+    ) -> dict | None:
         text = text.strip()[:MAX_LOCKED_TEXT_CHARS]
+        details = details.strip()[:MAX_LOCKED_DETAILS_CHARS]
         reason = reason.strip()[:MAX_LOCKED_REASON_CHARS]
         if not text:
             return None
@@ -85,6 +89,7 @@ class LockedStore:
                 "id": self._next_id,
                 "uid": str(uuid.uuid4()),
                 "text": text,
+                "details": details,
                 "reason": reason,
                 "status": "active",
                 "created_by": created_by.strip() or "unknown",
@@ -104,6 +109,7 @@ class LockedStore:
         locked_id: int,
         *,
         text: str | None = None,
+        details: str | None = None,
         reason: str | None = None,
         updated_by: str = "",
     ) -> dict | None:
@@ -116,6 +122,8 @@ class LockedStore:
                     if not next_text:
                         return None
                     item["text"] = next_text
+                if details is not None:
+                    item["details"] = details.strip()[:MAX_LOCKED_DETAILS_CHARS]
                 if reason is not None:
                     item["reason"] = reason.strip()[:MAX_LOCKED_REASON_CHARS]
                 item["updated_by"] = updated_by.strip() or item.get("updated_by") or "unknown"

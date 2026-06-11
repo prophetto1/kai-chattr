@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  type ComponentType,
   type FormEvent,
   type ReactNode,
   useCallback,
@@ -21,12 +22,11 @@ import {
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import {
-  IconArchive,
-  IconCircle,
-  IconCircleCheck,
   IconEdit,
+  IconGavel,
+  IconListCheck,
+  IconPinned,
   IconPlus,
-  IconRestore,
   IconTrash,
   IconX,
 } from '@tabler/icons-react'
@@ -60,30 +60,62 @@ import {
 } from '@/components/workbench/board/types'
 import { chattrJson, errorMessage } from '@/lib/chattr-api'
 
-type DragRecord = { type: 'rule'; id: number; status: RuleLaneId }
+type DragRecord =
+  | { type: 'rule'; id: number; status: RuleLaneId }
+  | { type: 'decision'; id: number; status: LockedLaneId }
 
 type RuleMode =
   | { type: 'list' }
-  | { type: 'create'; text: string }
-  | { type: 'edit'; id: number; text: string }
+  | { body: string; title: string; type: 'create' }
+  | { body: string; id: number; title: string; type: 'edit' }
 
-const ruleLanes: Array<{ id: RuleLaneId; label: string; description: string }> = [
+type DecisionFields = { details: string; reason: string; title: string }
+
+type DecisionMode =
+  | { type: 'list' }
+  | (DecisionFields & { type: 'create' })
+  | (DecisionFields & { id: number; type: 'edit' })
+
+const ruleLanes: Array<{ id: Exclude<RuleLaneId, 'draft'>; label: string; description: string }> = [
   { id: 'active', label: 'Active', description: 'injected into agent context' },
-  { id: 'draft', label: 'Drafts', description: 'proposed and inactive rules' },
-  { id: 'archived', label: 'Archive', description: 'retained but inactive' },
+  { id: 'archived', label: 'Inactive', description: 'retained but not injected' },
 ]
 const activeRuleLane = ruleLanes[0]
 const secondaryRuleLanes = ruleLanes.slice(1)
 
-const lockedLanes: Array<{ id: LockedLaneId; label: string; description: string }> = [
-  { id: 'active', label: 'Decisions', description: 'current decisions' },
-  { id: 'archived', label: 'Archive', description: 'inactive decisions' },
+const decisionLanes: Array<{ id: LockedLaneId; label: string; description: string }> = [
+  { id: 'active', label: 'Active', description: 'decisions in force' },
+  { id: 'archived', label: 'Inactive', description: 'retained but not in force' },
 ]
+const activeDecisionLane = decisionLanes[0]
+const secondaryDecisionLanes = decisionLanes.slice(1)
 
 const pinLanes: Array<{ id: PinLaneId; label: string; description: string }> = [
   { id: 'todo', label: 'Todo', description: 'pinned follow-ups' },
   { id: 'done', label: 'Done', description: 'completed pins' },
 ]
+
+const boardTabMeta: Record<BoardTabId, { icon: ComponentType<{ className?: string }> }> = {
+  rules: { icon: IconListCheck },
+  decisions: { icon: IconGavel },
+  pins: { icon: IconPinned },
+}
+
+const ruleBodyMaxLength = 240
+const ruleTitleMaxLength = 96
+const decisionTitleMaxLength = 96
+const decisionDetailsMaxLength = 500
+const decisionReasonMaxLength = 240
+const boardScrollViewportClassName =
+  'overflow-x-hidden [&>div]:!block [&>div]:!min-w-0 [&>div]:!w-full [&>div]:!max-w-full'
+
+function trimRuleBody(value: string) {
+  return value.trim().slice(0, ruleBodyMaxLength)
+}
+
+function trimRuleTitle(value: string) {
+  return value.trim().slice(0, ruleTitleMaxLength)
+}
 
 function boardEmptyText(tabId: BoardTabId) {
   return boardTabs.find((tab) => tab.id === tabId)?.empty ?? `No ${tabId} items yet.`
@@ -122,21 +154,25 @@ function BoardForm({ children, onSubmit }: { children: ReactNode; onSubmit?: (ev
 }
 
 function RuleForm({
+  body,
   disabled,
   onCancel,
-  onChange,
+  onBodyChange,
   onSave,
+  onTitleChange,
   title,
-  value,
+  titleValue,
 }: {
+  body: string
   disabled: boolean
   onCancel: () => void
-  onChange: (value: string) => void
+  onBodyChange: (value: string) => void
   onSave: () => void
+  onTitleChange: (value: string) => void
   title?: string
-  value: string
+  titleValue: string
 }) {
-  const saveDisabled = disabled || !value.trim()
+  const saveDisabled = disabled || !titleValue.trim()
 
   return (
     <BoardForm
@@ -148,12 +184,24 @@ function RuleForm({
       }}
     >
       {title ? <h3 className="mb-2 text-sm font-medium text-foreground">{title}</h3> : null}
-      <Textarea
-        className="min-h-28 resize-none text-sm"
-        onChange={(event) => onChange(event.target.value)}
-        placeholder="Write the rule..."
-        value={value}
+      <Input
+        className="h-9 text-sm"
+        maxLength={ruleTitleMaxLength}
+        onChange={(event) => onTitleChange(event.target.value)}
+        placeholder="Rule title"
+        value={titleValue}
       />
+      <Textarea
+        className="mt-2 min-h-28 resize-none text-sm"
+        maxLength={ruleBodyMaxLength}
+        onChange={(event) => onBodyChange(event.target.value)}
+        placeholder="Write the rule details..."
+        value={body}
+      />
+      <div className="mt-1 flex justify-between gap-2 text-[11px] text-muted-foreground">
+        <span>{titleValue.length}/{ruleTitleMaxLength} title</span>
+        <span>{body.length}/{ruleBodyMaxLength} details</span>
+      </div>
       <div className="mt-2 flex justify-end gap-2">
         <Button
           className="border-destructive/35 text-destructive hover:bg-destructive/10"
@@ -190,113 +238,61 @@ function groupByStatus<T, S extends string>(
 }
 
 function RuleRow({
-  deleting,
   onDelete,
   onEdit,
-  onStatus,
   rule,
   saving,
 }: {
-  deleting: boolean
-  onDelete: (ruleId: number) => void
+  onDelete: (rule: RuleItem) => void
   onEdit: (rule: RuleItem) => void
-  onStatus: (ruleId: number, status: RuleLaneId) => void
   rule: RuleItem
   saving: boolean
 }) {
+  const [expanded, setExpanded] = useState(false)
   const status = normalizeRuleStatus(rule.status)
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     data: { id: rule.id, status, type: 'rule' } satisfies DragRecord,
     id: `rule:${rule.id}`,
   })
   const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined
+  const details = rule.reason?.trim()
+  const title = rule.text.trim() || 'Untitled rule'
 
   return (
     <BoardItemRow
-      actions={
-        <ButtonGroup>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                aria-label="Edit rule"
-                className="size-7"
-                disabled={saving}
-                onClick={() => onEdit(rule)}
-                size="icon"
-                type="button"
-                variant="outline"
-              >
-                <IconEdit className="size-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Edit rule</TooltipContent>
-          </Tooltip>
-          {status !== 'active' ? (
+      dragHandleProps={{ ...attributes, ...listeners }}
+      isDragging={isDragging}
+      ref={setNodeRef}
+      status={status}
+      statusClassName={statusBadgeClass(status)}
+      style={style}
+      title={
+        <button
+          aria-expanded={expanded}
+          className="block w-full min-w-0 max-w-full truncate rounded-sm text-left !text-[13px] font-medium text-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/45"
+          onClick={() => setExpanded((current) => !current)}
+          type="button"
+        >
+          {title}
+        </button>
+      }
+    >
+      {expanded ? (
+        <div className="min-w-0 max-w-full overflow-hidden rounded-md border border-border/50 bg-muted/20 px-2.5 py-2">
+          <div className="mb-1 text-[11px] text-muted-foreground">
+            #{rule.id}
+            {rule.author ? ` by ${rule.author}` : ''}
+          </div>
+          <p className="whitespace-pre-wrap break-words text-sm leading-5 text-foreground">
+            {details || 'No additional rule details yet.'}
+          </p>
+          <div className="mt-2 flex justify-end gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  aria-label={status === 'archived' ? 'Restore as active' : 'Activate rule'}
                   className="size-7"
                   disabled={saving}
-                  onClick={() => onStatus(rule.id, 'active')}
-                  size="icon"
-                  type="button"
-                  variant="ghost"
-                >
-                  <IconCircleCheck className="size-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{status === 'archived' ? 'Restore as active' : 'Activate rule'}</TooltipContent>
-            </Tooltip>
-          ) : null}
-          {status !== 'draft' ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  aria-label={status === 'archived' ? 'Restore as draft' : 'Return to draft'}
-                  className="size-7"
-                  disabled={saving}
-                  onClick={() => onStatus(rule.id, 'draft')}
-                  size="icon"
-                  type="button"
-                  variant="ghost"
-                >
-                  {status === 'archived' ? (
-                    <IconRestore className="size-3.5" />
-                  ) : (
-                    <IconCircle className="size-3.5" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{status === 'archived' ? 'Restore as draft' : 'Return to draft'}</TooltipContent>
-            </Tooltip>
-          ) : null}
-          {status !== 'archived' ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  aria-label="Archive rule"
-                  className="size-7"
-                  disabled={saving}
-                  onClick={() => onStatus(rule.id, 'archived')}
-                  size="icon"
-                  type="button"
-                  variant="outline"
-                >
-                  <IconArchive className="size-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Archive rule</TooltipContent>
-            </Tooltip>
-          ) : null}
-          {status === 'archived' ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  aria-label="Delete rule"
-                  className="size-7"
-                  disabled={saving || deleting}
-                  onClick={() => onDelete(rule.id)}
+                  onClick={() => onDelete(rule)}
                   size="icon"
                   type="button"
                   variant="ghost"
@@ -306,31 +302,193 @@ function RuleRow({
               </TooltipTrigger>
               <TooltipContent>Delete rule</TooltipContent>
             </Tooltip>
-          ) : null}
-        </ButtonGroup>
-      }
+            <Button
+              className="h-7 px-2 text-xs"
+              disabled={saving}
+              onClick={() => onEdit(rule)}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              <IconEdit className="size-3.5" />
+              Edit rule
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </BoardItemRow>
+  )
+}
+
+function DecisionForm({
+  disabled,
+  fields,
+  onCancel,
+  onChange,
+  onSave,
+  title,
+}: {
+  disabled: boolean
+  fields: DecisionFields
+  onCancel: () => void
+  onChange: (next: Partial<DecisionFields>) => void
+  onSave: () => void
+  title?: string
+}) {
+  const saveDisabled = disabled || !fields.title.trim()
+
+  return (
+    <BoardForm
+      onSubmit={(event) => {
+        event.preventDefault()
+        if (!saveDisabled) {
+          onSave()
+        }
+      }}
+    >
+      {title ? <h3 className="mb-2 text-sm font-medium text-foreground">{title}</h3> : null}
+      <Input
+        className="h-9 text-sm"
+        maxLength={decisionTitleMaxLength}
+        onChange={(event) => onChange({ title: event.target.value })}
+        placeholder="Decision title"
+        value={fields.title}
+      />
+      <Textarea
+        className="mt-2 min-h-24 resize-none text-sm"
+        maxLength={decisionDetailsMaxLength}
+        onChange={(event) => onChange({ details: event.target.value })}
+        placeholder="Decision details..."
+        value={fields.details}
+      />
+      <Textarea
+        className="mt-2 min-h-16 resize-none text-sm"
+        maxLength={decisionReasonMaxLength}
+        onChange={(event) => onChange({ reason: event.target.value })}
+        placeholder="Reason"
+        value={fields.reason}
+      />
+      <div className="mt-1 flex justify-between gap-2 text-[11px] text-muted-foreground">
+        <span>{fields.title.length}/{decisionTitleMaxLength} title</span>
+        <span>{fields.details.length}/{decisionDetailsMaxLength} details</span>
+        <span>{fields.reason.length}/{decisionReasonMaxLength} reason</span>
+      </div>
+      <div className="mt-2 flex justify-end gap-2">
+        <Button
+          className="border-destructive/35 text-destructive hover:bg-destructive/10"
+          disabled={disabled}
+          onClick={onCancel}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          <IconX className="size-4" />
+          Cancel
+        </Button>
+        <Button disabled={saveDisabled} size="sm" type="submit">
+          Save
+        </Button>
+      </div>
+    </BoardForm>
+  )
+}
+
+function DecisionRow({
+  item,
+  onDelete,
+  onEdit,
+  saving,
+}: {
+  item: LockedItem
+  onDelete: (item: LockedItem) => void
+  onEdit: (item: LockedItem) => void
+  saving: boolean
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const status = normalizeLockedStatus(item.status)
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    data: { id: item.id, status, type: 'decision' } satisfies DragRecord,
+    id: `decision:${item.id}`,
+  })
+  const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined
+  const details = item.details?.trim()
+  const reason = item.reason?.trim()
+  const title = item.text.trim() || 'Untitled decision'
+
+  return (
+    <BoardItemRow
       dragHandleProps={{ ...attributes, ...listeners }}
       isDragging={isDragging}
-      meta={
-        <>
-          #{rule.id}
-          {rule.author ? ` by ${rule.author}` : ''}
-        </>
-      }
       ref={setNodeRef}
       status={status}
       statusClassName={statusBadgeClass(status)}
       style={style}
-      title={<span>{rule.text}</span>}
-    />
+      title={
+        <button
+          aria-expanded={expanded}
+          className="block w-full min-w-0 max-w-full truncate rounded-sm text-left !text-[13px] font-medium text-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/45"
+          onClick={() => setExpanded((current) => !current)}
+          type="button"
+        >
+          {title}
+        </button>
+      }
+    >
+      {expanded ? (
+        <div className="min-w-0 max-w-full overflow-hidden rounded-md border border-border/50 bg-muted/20 px-2.5 py-2">
+          <div className="mb-1 text-[11px] text-muted-foreground">
+            #{item.id}
+            {item.updated_by ? ` updated by ${item.updated_by}` : ''}
+          </div>
+          <p className="whitespace-pre-wrap break-words text-sm leading-5 text-foreground">
+            {details || 'No decision details yet.'}
+          </p>
+          {reason ? (
+            <p className="mt-1.5 whitespace-pre-wrap break-words text-xs leading-5 text-muted-foreground">
+              <span className="font-medium text-foreground/80">Reason:</span> {reason}
+            </p>
+          ) : null}
+          <div className="mt-2 flex justify-end gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  className="size-7"
+                  disabled={saving}
+                  onClick={() => onDelete(item)}
+                  size="icon"
+                  type="button"
+                  variant="ghost"
+                >
+                  <IconTrash className="size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Delete decision</TooltipContent>
+            </Tooltip>
+            <Button
+              className="h-7 px-2 text-xs"
+              disabled={saving}
+              onClick={() => onEdit(item)}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              <IconEdit className="size-3.5" />
+              Edit decision
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </BoardItemRow>
   )
 }
 
 function BoardDragPreview({
   drag,
+  lockedItem,
   rule,
 }: {
   drag: DragRecord | null
+  lockedItem?: LockedItem
   rule?: RuleItem
 }) {
   const previewClassName = 'pointer-events-none w-[520px] max-w-[calc(100vw-2rem)] cursor-grabbing'
@@ -350,6 +508,21 @@ function BoardDragPreview({
     )
   }
 
+  if (drag?.type === 'decision' && lockedItem) {
+    const status = normalizeLockedStatus(lockedItem.status)
+
+    return (
+      <BoardItemRow
+        className={previewClassName}
+        isDragging
+        meta={<>#{lockedItem.id}{lockedItem.updated_by ? ` updated by ${lockedItem.updated_by}` : ''}</>}
+        status={status}
+        statusClassName={statusBadgeClass(status)}
+        title={<span>{lockedItem.text}</span>}
+      />
+    )
+  }
+
   return null
 }
 
@@ -363,9 +536,8 @@ export function BoardDock() {
   const [saving, setSaving] = useState('')
   const [error, setError] = useState('')
   const [ruleMode, setRuleMode] = useState<RuleMode>({ type: 'list' })
+  const [decisionMode, setDecisionMode] = useState<DecisionMode>({ type: 'list' })
   const [activeDrag, setActiveDrag] = useState<DragRecord | null>(null)
-  const [lockedDraft, setLockedDraft] = useState({ text: '', reason: '' })
-  const [lockedEdits, setLockedEdits] = useState<Record<number, { text: string; reason: string }>>({})
   const [pinMessageId, setPinMessageId] = useState('')
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
@@ -387,6 +559,14 @@ export function BoardDock() {
     () => groupByStatus(rules, ['draft', 'active', 'archived'] as const, (rule) => normalizeRuleStatus(rule.status)),
     [rules]
   )
+  // Two-lane display (parity with Decisions): legacy drafts fold into Inactive.
+  const ruleLaneItems = useMemo(
+    () => ({
+      active: groupedRules.active,
+      archived: [...groupedRules.draft, ...groupedRules.archived],
+    }),
+    [groupedRules]
+  )
   const groupedLocked = useMemo(
     () =>
       groupByStatus(locked, ['active', 'archived'] as const, (item) =>
@@ -402,10 +582,17 @@ export function BoardDock() {
     () => (activeDrag?.type === 'rule' ? rules.find((rule) => rule.id === activeDrag.id) : undefined),
     [activeDrag, rules]
   )
+  const activeDragLocked = useMemo(
+    () =>
+      activeDrag?.type === 'decision'
+        ? locked.find((item) => item.id === activeDrag.id)
+        : undefined,
+    [activeDrag, locked]
+  )
 
   const counts: Record<BoardTabId, number> = useMemo(
     () => ({
-      rules: groupedRules.active.length + groupedRules.draft.length,
+      rules: groupedRules.active.length,
       decisions: groupedLocked.active.length,
       pins: groupedPins.todo.length,
     }),
@@ -472,14 +659,15 @@ export function BoardDock() {
   )
 
   const createRule = useCallback(
-    async (textValue: string) => {
-      const text = textValue.trim()
+    async (titleValue: string, bodyValue: string) => {
+      const text = trimRuleTitle(titleValue)
+      const reason = trimRuleBody(bodyValue)
       if (!text) {
         return
       }
-      await withSave('create-rule-draft', async () => {
+      await withSave('create-rule', async () => {
         await chattrJson<RuleItem>('/api/rules', {
-          body: JSON.stringify({ reason: '', status: 'draft', text }),
+          body: JSON.stringify({ reason, status: 'active', text }),
           method: 'POST',
         })
         setRuleMode({ type: 'list' })
@@ -501,14 +689,15 @@ export function BoardDock() {
   )
 
   const saveRuleEdit = useCallback(
-    async (ruleId: number, textValue: string) => {
-      const text = textValue.trim()
+    async (ruleId: number, titleValue: string, bodyValue: string) => {
+      const text = trimRuleTitle(titleValue)
+      const reason = trimRuleBody(bodyValue)
       if (!text) {
         return
       }
       await withSave(`rule-${ruleId}-edit`, async () => {
         await chattrJson<RuleItem>(`/api/rules/${ruleId}`, {
-          body: JSON.stringify({ text }),
+          body: JSON.stringify({ reason, text }),
           method: 'PATCH',
         })
         setRuleMode({ type: 'list' })
@@ -534,22 +723,47 @@ export function BoardDock() {
     [withSave]
   )
 
-  const createLocked = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault()
-      const text = lockedDraft.text.trim()
+  const createDecision = useCallback(
+    async (fields: DecisionFields) => {
+      const text = fields.title.trim().slice(0, decisionTitleMaxLength)
       if (!text) {
         return
       }
-      await withSave('create-locked', async () => {
+      await withSave('create-decision', async () => {
         await chattrJson<LockedItem>('/api/locked', {
-          body: JSON.stringify({ ...lockedDraft, sender: 'user' }),
+          body: JSON.stringify({
+            details: fields.details.trim().slice(0, decisionDetailsMaxLength),
+            reason: fields.reason.trim().slice(0, decisionReasonMaxLength),
+            sender: 'user',
+            text,
+          }),
           method: 'POST',
         })
-        setLockedDraft({ text: '', reason: '' })
+        setDecisionMode({ type: 'list' })
       })
     },
-    [lockedDraft, withSave]
+    [withSave]
+  )
+
+  const saveDecisionEdit = useCallback(
+    async (decisionId: number, fields: DecisionFields) => {
+      const text = fields.title.trim().slice(0, decisionTitleMaxLength)
+      if (!text) {
+        return
+      }
+      await withSave(`locked-${decisionId}-edit`, async () => {
+        await chattrJson<LockedItem>(`/api/locked/${decisionId}`, {
+          body: JSON.stringify({
+            details: fields.details.trim().slice(0, decisionDetailsMaxLength),
+            reason: fields.reason.trim().slice(0, decisionReasonMaxLength),
+            text,
+          }),
+          method: 'PATCH',
+        })
+        setDecisionMode({ type: 'list' })
+      })
+    },
+    [withSave]
   )
 
   const updateLocked = useCallback(
@@ -650,8 +864,24 @@ export function BoardDock() {
         return
       }
 
+      if (activeData.type === 'decision') {
+        const status = overId.startsWith('decisions:')
+          ? (overId.slice('decisions:'.length) as LockedLaneId)
+          : overData?.type === 'decision'
+            ? overData.status
+            : null
+        if (status && status !== activeData.status) {
+          void updateLocked(
+            activeData.id,
+            { action: status === 'archived' ? 'archive' : 'restore' },
+            `locked-${activeData.id}-${status}`
+          )
+        }
+        return
+      }
+
     },
-    [deleteRule, setRuleStatus]
+    [deleteRule, setRuleStatus, updateLocked]
   )
 
   return (
@@ -672,25 +902,62 @@ export function BoardDock() {
           }}
           value={activeTab}
         >
-          <div className="w-full min-w-0 shrink-0 overflow-hidden border-b border-border">
+          <div className="flex h-11 w-full min-w-0 shrink-0 items-stretch gap-3 overflow-hidden border-b border-border bg-card px-3">
             <TabsList
+              aria-label="Board sections"
               variant="line"
-              className="flex h-10 w-full min-w-0 max-w-full items-stretch justify-start rounded-none bg-card p-0"
+              className="flex h-11 min-w-0 flex-1 max-w-full !flex-row items-stretch justify-start gap-5 overflow-x-auto rounded-none bg-transparent p-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
-              {availableTabs.map((tab) => (
-                <TabsTrigger
-                  className="h-10 min-w-0 overflow-hidden rounded-none px-3 text-xs"
-                  disabled={loading}
-                  key={tab.id}
-                  value={tab.id}
-                >
-                  <span className="min-w-0 truncate">{tab.label}</span>
-                  <Badge variant="secondary" className="h-4 min-w-4 shrink-0 px-1 text-[10px] tabular-nums">
-                    {counts[tab.id]}
-                  </Badge>
-                </TabsTrigger>
-              ))}
+              {availableTabs.map((tab) => {
+                const Icon = boardTabMeta[tab.id].icon
+
+                return (
+                  <TabsTrigger
+                    className="group/board-tab h-11 !w-auto flex-none !justify-center rounded-none border-x-0 border-t-0 border-b-2 border-transparent bg-transparent px-0 text-[13px] font-semibold text-muted-foreground shadow-none transition-[border-color,color,transform] duration-150 after:hidden active:scale-[0.98] hover:text-foreground data-[state=active]:border-b-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:bg-transparent [&_svg]:size-4"
+                    disabled={loading}
+                    key={tab.id}
+                    value={tab.id}
+                  >
+                    <Icon className="text-muted-foreground/80 transition-colors duration-150 group-data-[state=active]/board-tab:text-foreground" />
+                    <span>{tab.label}</span>
+                    <Badge
+                      className="h-4 min-w-4 shrink-0 rounded-[4px] border-border/50 bg-muted/70 px-1 text-[10px] leading-none text-muted-foreground tabular-nums group-data-[state=active]/board-tab:text-foreground"
+                      variant="secondary"
+                    >
+                      {counts[tab.id]}
+                    </Badge>
+                  </TabsTrigger>
+                )
+              })}
             </TabsList>
+            {activeTab === 'rules' && ruleMode.type === 'list' && isTabAvailable('rules') ? (
+              <Button
+                aria-label="Create new rule"
+                className="h-7 shrink-0 self-center px-2 text-xs"
+                disabled={loading || Boolean(saving)}
+                onClick={() => setRuleMode({ body: '', title: '', type: 'create' })}
+                size="sm"
+                type="button"
+              >
+                <IconPlus className="size-3.5" />
+                New
+              </Button>
+            ) : null}
+            {activeTab === 'decisions' && decisionMode.type === 'list' && isTabAvailable('decisions') ? (
+              <Button
+                aria-label="Create new decision"
+                className="h-7 shrink-0 self-center px-2 text-xs"
+                disabled={loading || Boolean(saving)}
+                onClick={() =>
+                  setDecisionMode({ details: '', reason: '', title: '', type: 'create' })
+                }
+                size="sm"
+                type="button"
+              >
+                <IconPlus className="size-3.5" />
+                New
+              </Button>
+            ) : null}
           </div>
 
           {error ? (
@@ -711,26 +978,32 @@ export function BoardDock() {
               {ruleMode.type === 'list' ? (
                 <div className="flex h-full min-h-0 flex-col px-3 pb-3">
                   <div className="min-h-0 flex-1 pt-3">
-                    <ScrollArea className="h-full">
+                    <ScrollArea
+                      className="h-full"
+                      viewportClassName={boardScrollViewportClassName}
+                    >
                       <div className="pr-1 pb-2">
                         <BoardDropZone id={`rules:${activeRuleLane.id}`}>
                           <BoardSection
                             collapsible={false}
-                            count={groupedRules[activeRuleLane.id].length}
+                            count={ruleLaneItems[activeRuleLane.id].length}
                             title={activeRuleLane.label}
                           >
-                            {groupedRules[activeRuleLane.id].length === 0 ? (
+                            {ruleLaneItems[activeRuleLane.id].length === 0 ? (
                               <EmptyState>No active.</EmptyState>
                             ) : null}
-                            {groupedRules[activeRuleLane.id].map((rule) => (
+                            {ruleLaneItems[activeRuleLane.id].map((rule) => (
                               <RuleRow
-                                deleting={saving === `delete-rule-${rule.id}`}
                                 key={rule.id}
-                                onDelete={(ruleId) => void deleteRule(ruleId)}
+                                onDelete={(nextRule) => void deleteRule(nextRule.id)}
                                 onEdit={(nextRule) =>
-                                  setRuleMode({ id: nextRule.id, text: nextRule.text, type: 'edit' })
+                                  setRuleMode({
+                                    body: nextRule.reason ?? '',
+                                    id: nextRule.id,
+                                    title: nextRule.text,
+                                    type: 'edit',
+                                  })
                                 }
-                                onStatus={setRuleStatus}
                                 rule={rule}
                                 saving={Boolean(saving)}
                               />
@@ -745,22 +1018,26 @@ export function BoardDock() {
                     {secondaryRuleLanes.map((lane) => (
                       <BoardDropZone id={`rules:${lane.id}`} key={lane.id}>
                         <BoardSection
-                          count={groupedRules[lane.id].length}
-                          defaultOpen={lane.id !== 'archived'}
+                          count={ruleLaneItems[lane.id].length}
+                          defaultOpen={false}
+                          description={lane.description}
                           title={lane.label}
                         >
-                          {groupedRules[lane.id].length === 0 ? (
+                          {ruleLaneItems[lane.id].length === 0 ? (
                             <EmptyState>No {lane.label.toLowerCase()}.</EmptyState>
                           ) : null}
-                          {groupedRules[lane.id].map((rule) => (
+                          {ruleLaneItems[lane.id].map((rule) => (
                             <RuleRow
-                              deleting={saving === `delete-rule-${rule.id}`}
                               key={rule.id}
-                              onDelete={(ruleId) => void deleteRule(ruleId)}
+                              onDelete={(nextRule) => void deleteRule(nextRule.id)}
                               onEdit={(nextRule) =>
-                                setRuleMode({ id: nextRule.id, text: nextRule.text, type: 'edit' })
+                                setRuleMode({
+                                  body: nextRule.reason ?? '',
+                                  id: nextRule.id,
+                                  title: nextRule.text,
+                                  type: 'edit',
+                                })
                               }
-                              onStatus={setRuleStatus}
                               rule={rule}
                               saving={Boolean(saving)}
                             />
@@ -768,48 +1045,57 @@ export function BoardDock() {
                         </BoardSection>
                       </BoardDropZone>
                     ))}
-                    <div className="flex justify-end">
-                      <Button
-                        disabled={Boolean(saving)}
-                        onClick={() => setRuleMode({ text: '', type: 'create' })}
-                        size="sm"
-                        type="button"
-                      >
-                        <IconPlus className="size-4" />
-                        {rules.length > 0 ? 'Create rule' : 'Create first rule'}
-                      </Button>
-                    </div>
                   </div>
                 </div>
               ) : (
-                <ScrollArea className="h-full">
+                <ScrollArea
+                  className="h-full"
+                  viewportClassName={boardScrollViewportClassName}
+                >
                   <div className="space-y-3 p-3">
                   {ruleMode.type === 'create' ? (
                     <RuleForm
+                      body={ruleMode.body}
                       disabled={Boolean(saving)}
                       onCancel={() => setRuleMode({ type: 'list' })}
-                      onChange={(text) =>
+                      onBodyChange={(body) =>
                         setRuleMode((current) =>
-                          current.type === 'create' ? { ...current, text } : current
+                          current.type === 'create' ? { ...current, body } : current
                         )
                       }
-                      onSave={() => void createRule(ruleMode.text)}
+                      onSave={() => void createRule(ruleMode.title, ruleMode.body)}
+                      onTitleChange={(titleValue) =>
+                        setRuleMode((current) =>
+                          current.type === 'create'
+                            ? { ...current, title: titleValue.slice(0, ruleTitleMaxLength) }
+                            : current
+                        )
+                      }
                       title="Create rule"
-                      value={ruleMode.text}
+                      titleValue={ruleMode.title}
                     />
                   ) : null}
 
                   {ruleMode.type === 'edit' ? (
                     <RuleForm
+                      body={ruleMode.body}
                       disabled={Boolean(saving)}
                       onCancel={() => setRuleMode({ type: 'list' })}
-                      onChange={(text) =>
+                      onBodyChange={(body) =>
                         setRuleMode((current) =>
-                          current.type === 'edit' ? { ...current, text } : current
+                          current.type === 'edit' ? { ...current, body } : current
                         )
                       }
-                      onSave={() => void saveRuleEdit(ruleMode.id, ruleMode.text)}
-                      value={ruleMode.text}
+                      onSave={() => void saveRuleEdit(ruleMode.id, ruleMode.title, ruleMode.body)}
+                      onTitleChange={(titleValue) =>
+                        setRuleMode((current) =>
+                          current.type === 'edit'
+                            ? { ...current, title: titleValue.slice(0, ruleTitleMaxLength) }
+                            : current
+                        )
+                      }
+                      title="Edit rule"
+                      titleValue={ruleMode.title}
                     />
                   ) : null}
 
@@ -821,151 +1107,124 @@ export function BoardDock() {
 
           {isTabAvailable('decisions') ? (
             <TabsContent value="decisions" className="min-h-0 flex-1 overflow-hidden">
-              <ScrollArea className="h-full">
-                <div className="space-y-3 p-3">
-                  <BoardForm onSubmit={(event) => void createLocked(event)}>
-                    <Textarea
-                      className="min-h-20 resize-none text-sm"
-                      onChange={(event) =>
-                        setLockedDraft((current) => ({ ...current, text: event.target.value }))
-                      }
-                      placeholder="Decision record"
-                      value={lockedDraft.text}
-                    />
-                    <ButtonGroup className="mt-2 w-full">
-                      <Input
-                        className="h-8 text-xs"
-                        onChange={(event) =>
-                          setLockedDraft((current) => ({ ...current, reason: event.target.value }))
-                        }
-                        placeholder="Reason"
-                        value={lockedDraft.reason}
-                      />
-                      <Button
-                        className="h-8 px-3 text-xs"
-                        disabled={!lockedDraft.text.trim() || Boolean(saving)}
-                        size="sm"
-                        type="submit"
-                      >
-                        Save
-                      </Button>
-                    </ButtonGroup>
-                  </BoardForm>
-
-                  {locked.length === 0 ? <EmptyState>{boardEmptyText('decisions')}</EmptyState> : null}
-                  {lockedLanes.map((lane) => (
-                    <BoardSection
-                      count={groupedLocked[lane.id].length}
-                      defaultOpen={lane.id !== 'archived'}
-                      description={lane.description}
-                      key={lane.id}
-                      title={lane.label}
+              {decisionMode.type === 'list' ? (
+                <div className="flex h-full min-h-0 flex-col px-3 pb-3">
+                  <div className="min-h-0 flex-1 pt-3">
+                    <ScrollArea
+                      className="h-full"
+                      viewportClassName={boardScrollViewportClassName}
                     >
-                      {groupedLocked[lane.id].length === 0 ? (
-                        <EmptyState>No {lane.label.toLowerCase()}.</EmptyState>
-                      ) : null}
-                      {groupedLocked[lane.id].map((item) => {
-                        const edit = lockedEdits[item.id] ?? {
-                          reason: item.reason ?? '',
-                          text: item.text,
-                        }
-                        return (
-                          <BoardItemRow
-                            actions={
-                              <ButtonGroup>
-                                <Button
-                                  className="h-7 px-2 text-xs"
-                                  disabled={Boolean(saving) || !edit.text.trim()}
-                                  onClick={() =>
-                                    void updateLocked(item.id, {
-                                      reason: edit.reason,
-                                      text: edit.text,
-                                    })
-                                  }
-                                  size="sm"
-                                  type="button"
-                                  variant="outline"
-                                >
-                                  Save
-                                </Button>
-                                <Button
-                                  className="h-7 px-2 text-xs"
-                                  disabled={Boolean(saving)}
-                                  onClick={() =>
-                                    void updateLocked(item.id, {
-                                      action: item.status === 'archived' ? 'restore' : 'archive',
-                                    })
-                                  }
-                                  size="sm"
-                                  type="button"
-                                  variant="outline"
-                                >
-                                  {item.status === 'archived' ? 'Restore' : 'Archive'}
-                                </Button>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      className="size-7"
-                                      disabled={Boolean(saving)}
-                                      onClick={() => void deleteLocked(item.id)}
-                                      size="icon"
-                                      type="button"
-                                      variant="ghost"
-                                    >
-                                      <IconTrash className="size-3.5" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Delete decision</TooltipContent>
-                                </Tooltip>
-                              </ButtonGroup>
-                            }
-                            key={item.id}
-                            meta={
-                              <>
-                                #{item.id}
-                                {item.updated_by ? ` updated by ${item.updated_by}` : ''}
-                              </>
-                            }
-                            status={normalizeLockedStatus(item.status)}
-                            statusClassName={statusBadgeClass(normalizeLockedStatus(item.status))}
-                            title={
-                              <div className="space-y-1.5">
-                                <Textarea
-                                  className="min-h-16 resize-none text-sm"
-                                  onChange={(event) =>
-                                    setLockedEdits((current) => ({
-                                      ...current,
-                                      [item.id]: { ...edit, text: event.target.value },
-                                    }))
-                                  }
-                                  value={edit.text}
-                                />
-                                <Input
-                                  className="h-8 text-xs"
-                                  onChange={(event) =>
-                                    setLockedEdits((current) => ({
-                                      ...current,
-                                      [item.id]: { ...edit, reason: event.target.value },
-                                    }))
-                                  }
-                                  placeholder="Reason"
-                                  value={edit.reason}
-                                />
-                              </div>
-                            }
-                          />
-                        )
-                      })}
-                    </BoardSection>
-                  ))}
+                      <div className="pr-1 pb-2">
+                        <BoardDropZone id={`decisions:${activeDecisionLane.id}`}>
+                          <BoardSection
+                            collapsible={false}
+                            count={groupedLocked[activeDecisionLane.id].length}
+                            title={activeDecisionLane.label}
+                          >
+                            {groupedLocked[activeDecisionLane.id].length === 0 ? (
+                              <EmptyState>No active.</EmptyState>
+                            ) : null}
+                            {groupedLocked[activeDecisionLane.id].map((item) => (
+                              <DecisionRow
+                                item={item}
+                                key={item.id}
+                                onDelete={(next) => void deleteLocked(next.id)}
+                                onEdit={(next) =>
+                                  setDecisionMode({
+                                    details: next.details ?? '',
+                                    id: next.id,
+                                    reason: next.reason ?? '',
+                                    title: next.text,
+                                    type: 'edit',
+                                  })
+                                }
+                                saving={Boolean(saving)}
+                              />
+                            ))}
+                          </BoardSection>
+                        </BoardDropZone>
+                      </div>
+                    </ScrollArea>
+                  </div>
+
+                  <div className="shrink-0 space-y-3 pt-3">
+                    {secondaryDecisionLanes.map((lane) => (
+                      <BoardDropZone id={`decisions:${lane.id}`} key={lane.id}>
+                        <BoardSection
+                          count={groupedLocked[lane.id].length}
+                          defaultOpen={false}
+                          description={lane.description}
+                          title={lane.label}
+                        >
+                          {groupedLocked[lane.id].length === 0 ? (
+                            <EmptyState>No {lane.label.toLowerCase()}.</EmptyState>
+                          ) : null}
+                          {groupedLocked[lane.id].map((item) => (
+                            <DecisionRow
+                              item={item}
+                              key={item.id}
+                              onDelete={(next) => void deleteLocked(next.id)}
+                              onEdit={(next) =>
+                                setDecisionMode({
+                                  details: next.details ?? '',
+                                  id: next.id,
+                                  reason: next.reason ?? '',
+                                  title: next.text,
+                                  type: 'edit',
+                                })
+                              }
+                              saving={Boolean(saving)}
+                            />
+                          ))}
+                        </BoardSection>
+                      </BoardDropZone>
+                    ))}
+                  </div>
                 </div>
-              </ScrollArea>
+              ) : (
+                <ScrollArea
+                  className="h-full"
+                  viewportClassName={boardScrollViewportClassName}
+                >
+                  <div className="space-y-3 p-3">
+                    {decisionMode.type === 'create' ? (
+                      <DecisionForm
+                        disabled={Boolean(saving)}
+                        fields={decisionMode}
+                        onCancel={() => setDecisionMode({ type: 'list' })}
+                        onChange={(next) =>
+                          setDecisionMode((current) =>
+                            current.type === 'create' ? { ...current, ...next } : current
+                          )
+                        }
+                        onSave={() => void createDecision(decisionMode)}
+                        title="Create decision"
+                      />
+                    ) : null}
+
+                    {decisionMode.type === 'edit' ? (
+                      <DecisionForm
+                        disabled={Boolean(saving)}
+                        fields={decisionMode}
+                        onCancel={() => setDecisionMode({ type: 'list' })}
+                        onChange={(next) =>
+                          setDecisionMode((current) =>
+                            current.type === 'edit' ? { ...current, ...next } : current
+                          )
+                        }
+                        onSave={() => void saveDecisionEdit(decisionMode.id, decisionMode)}
+                        title="Edit decision"
+                      />
+                    ) : null}
+                  </div>
+                </ScrollArea>
+              )}
             </TabsContent>
           ) : null}
 
           {isTabAvailable('pins') ? (
             <TabsContent value="pins" className="min-h-0 flex-1 overflow-hidden">
-              <ScrollArea className="h-full">
+              <ScrollArea className="h-full" viewportClassName={boardScrollViewportClassName}>
                 <div className="space-y-3 p-3">
                   <BoardForm onSubmit={(event) => void createPin(event)}>
                     <ButtonGroup className="w-full">
@@ -1075,7 +1334,7 @@ export function BoardDock() {
         </Tabs>
       </section>
       <DragOverlay dropAnimation={null} zIndex={1000}>
-        <BoardDragPreview drag={activeDrag} rule={activeDragRule} />
+        <BoardDragPreview drag={activeDrag} lockedItem={activeDragLocked} rule={activeDragRule} />
       </DragOverlay>
     </DndContext>
   )

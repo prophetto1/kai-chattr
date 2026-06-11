@@ -51,21 +51,21 @@ export const BoardItemRow = forwardRef<HTMLDivElement, BoardItemRowProps>(
       ref={ref}
       style={{ ...style, zIndex: isDragging ? 1000 : style?.zIndex }}
     >
-      <div className="flex min-w-0 items-start gap-1.5">
+      <div className="flex min-w-0 items-center gap-1.5">
         {dragHandleProps ? (
           <Button
             aria-label="Drag item"
-            className="mt-0.5 size-6 shrink-0 cursor-grab p-0 active:cursor-grabbing"
+            className="size-5 shrink-0 cursor-grab p-0 active:cursor-grabbing"
             size="icon"
             type="button"
             variant="ghost"
             {...dragHandleProps}
           >
-            <IconGripVertical className="size-3.5" />
+            <IconGripVertical className="size-3" />
           </Button>
         ) : null}
         {status ? (
-          <Badge className={cn('mt-0.5 h-5 shrink-0 text-[10px]', statusClassName)}>
+          <Badge className={cn('h-[18px] shrink-0 rounded-[4px] px-1.5 text-[10px] leading-none', statusClassName)}>
             {status}
           </Badge>
         ) : null}
