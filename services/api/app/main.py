@@ -31,6 +31,7 @@ from app.events import JsonlEventStream, RUNTIME_EVENT_SCHEMA_VERSION
 from app.routes.launchers import router as launcher_control_router
 from app.routes.home_start import router as home_start_router
 from app.routes.auth import router as identity_auth_router
+from app.routes.invitations import router as workspace_invitations_router
 from app.stores.locked import LockedStore
 from app import workspace_files
 from app.observability import configure_observability, init_observability, observed_endpoint_catalog
@@ -120,6 +121,7 @@ app.include_router(launcher_control_router)
 app.include_router(platform_router)
 app.include_router(home_start_router)
 app.include_router(identity_auth_router)
+app.include_router(workspace_invitations_router)
 
 # --- globals (set by configure()) ---
 store: MessageStore | None = None

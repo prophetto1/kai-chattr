@@ -116,3 +116,23 @@ def logout(
 ) -> dict[str, Any]:
     raw_token = request.headers.get("authorization", "").partition(" ")[2].strip()
     return {"revoked": _store(request).revoke_session(raw_token)}
+
+
+@router.get("/api/user/account")
+def user_account(
+    request: Request, session: dict[str, Any] = Depends(current_session)
+) -> dict[str, Any]:
+    """The session decides whose account this is — any client-supplied
+    user id (query, header, body) is ignored by construction."""
+    user = _store(request).get_user(session["user_id"])
+    if user is None:
+        raise HTTPException(status_code=401, detail="invalid or expired session")
+    return {
+        "user": {
+            "id": user["id"],
+            "email": user["email_normalized"],
+            "display_name": user["display_name"],
+            "status": user["status"],
+            "created_at": user["created_at"],
+        }
+    }

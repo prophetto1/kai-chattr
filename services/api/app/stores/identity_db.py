@@ -438,6 +438,13 @@ class SqlAlchemyIdentityStore:
             user = session.get(User, _to_uuid(user_id))
             return self._user_dict(user) if user is not None else None
 
+    def find_user_by_email(self, email: str) -> dict[str, Any] | None:
+        with self._lock, self._sessions() as session:
+            user = session.scalar(
+                select(User).where(User.email_normalized == _normalize_email(email))
+            )
+            return self._user_dict(user) if user is not None else None
+
     def get_workspace_by_public_id(self, public_id: str) -> dict[str, Any] | None:
         with self._lock, self._sessions() as session:
             workspace = session.scalar(

@@ -137,7 +137,9 @@ def endpoint_policy_for_path(method: str, path: str) -> EndpointPolicy:
         return EndpointPolicy("public", "uploads", "upload-assets")
     if path in {"/auth/signup", "/auth/login"}:
         return EndpointPolicy("public", "api", "identity")
-    if path.startswith("/auth/"):
+    if path.startswith("/auth/") or path.startswith("/api/user/"):
+        return EndpointPolicy("user-bearer", "api", "identity")
+    if path.startswith("/w/") and path.endswith("/invitations"):
         return EndpointPolicy("user-bearer", "api", "identity")
     if path.startswith("/api/runtime/"):
         return EndpointPolicy("public", "api", "runtime-topology")
@@ -145,7 +147,7 @@ def endpoint_policy_for_path(method: str, path: str) -> EndpointPolicy:
         return EndpointPolicy("session-or-local-agent-bearer", "api", "agent-runtime")
     if path.startswith("/api/launchers/"):
         return EndpointPolicy("session", "api", "launcher")
-    if path.startswith(("/api/repositories", "/api/conversations", "/api/suggested-tasks")):
+    if path.startswith(("/api/git/", "/api/repositories", "/api/conversations", "/api/suggested-tasks")):
         return EndpointPolicy("session", "api", "home-start")
     if path in {"/api/register"}:
         return EndpointPolicy("local-or-remote-agent-token", "api", "agent-runtime")

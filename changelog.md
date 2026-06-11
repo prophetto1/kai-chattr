@@ -4,6 +4,12 @@ Repo-root changelog (decision 2026-06-11: lives here, not in the Planned store).
 
 ## 2026-06-11
 
+### feat(api): Plan 1.5 T6 — /api/user/account + workspace invitations
+- `GET /api/user/account`: answers from the validated session only; any client-supplied user id is ignored by construction (acceptance 5).
+- `POST /w/{workspace_public_id}/invitations`: first real consumer of the frozen tenancy seam (`resolve_workspace_context`) — non-member → 404 (seam, fail-closed), member-but-not-admin → 403, duplicate → 409 (DB constraint), unknown email → 404, `role: owner` → 422 (ownership never granted by invite). v1 invites existing accounts into the workspace; token-based email invitations for unregistered users = later slice.
+- Store: `find_user_by_email` lookup. Middleware passes `/api/user/*` + `/w/*` (route layer owns authn); endpoint contracts registered for both.
+- Tests: 7 new (`tests/test_account_invitations.py`); full suite 236 pass / 1 pre-existing zellij failure.
+
 ### feat(web): public auth routes aligned with the locked route law (commit 6bebbbb)
 - `/register` → `/signup` per `governance/plans/kai-chattr-scope-based-routing-foundation.md` (public auth = `/login` + `/signup`); `/register` kept as a redirect alias only.
 - `APP_ROUTES` gains `login`/`signup`; `main.tsx` registers via constants.
