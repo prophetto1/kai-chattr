@@ -4,6 +4,11 @@ Repo-root changelog (decision 2026-06-11: lives here, not in the Planned store).
 
 ## 2026-06-11
 
+### feat(web): public auth routes aligned with the locked route law (commit 6bebbbb)
+- `/register` → `/signup` per `governance/plans/kai-chattr-scope-based-routing-foundation.md` (public auth = `/login` + `/signup`); `/register` kept as a redirect alias only.
+- `APP_ROUTES` gains `login`/`signup`; `main.tsx` registers via constants.
+- Login/Signup pages remain designer-ready placeholders but now document their live wiring contracts (`POST /auth/login`, `POST /auth/signup`). Build green.
+
 ### feat(api): Plan 1.5 T4 — signup/login/logout routes
 - `app/routes/auth.py`: `POST /auth/signup` (S1: duplicate email → 409 via the DB constraint; argon2 hash; auto-creates the personal workspace + owner membership; issues a session), `POST /auth/login` (uniform 401 — no account enumeration), `POST /auth/logout` (revokes the bearer session).
 - `app/stores/factory.py`: `create_identity_store` (postgres-only; file mode → None and `/auth/*` answers 503 — no stub fallback). Wired in `main.py` as `app.state.identity_store` + router include.
