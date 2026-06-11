@@ -12,6 +12,7 @@ from fastapi.routing import APIRoute
 
 EndpointAuth = Literal[
     "public",
+    "user-bearer",
     "session",
     "session-or-local-agent-bearer",
     "session-or-agent-bearer",
@@ -29,6 +30,7 @@ EndpointSurface = Literal[
     "api-docs",
     "archive",
     "board",
+    "identity",
     "contract-status",
     "home-start",
     "launcher",
@@ -133,6 +135,10 @@ def endpoint_policy_for_path(method: str, path: str) -> EndpointPolicy:
         return EndpointPolicy("public", "observability", "observability")
     if path.startswith("/uploads/"):
         return EndpointPolicy("public", "uploads", "upload-assets")
+    if path in {"/auth/signup", "/auth/login"}:
+        return EndpointPolicy("public", "api", "identity")
+    if path.startswith("/auth/"):
+        return EndpointPolicy("user-bearer", "api", "identity")
     if path.startswith("/api/runtime/"):
         return EndpointPolicy("public", "api", "runtime-topology")
     if path == "/api/roles" or path.startswith("/api/roles/"):

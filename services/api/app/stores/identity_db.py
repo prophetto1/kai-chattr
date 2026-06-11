@@ -421,6 +421,16 @@ class SqlAlchemyIdentityStore:
             session.commit()
             return True
 
+    def find_password_credential(self, email: str) -> dict[str, Any] | None:
+        with self._lock, self._sessions() as session:
+            credential = session.scalar(
+                select(AuthCredential).where(
+                    AuthCredential.provider == "password",
+                    AuthCredential.email_normalized == _normalize_email(email),
+                )
+            )
+            return self._credential_dict(credential) if credential is not None else None
+
     # --- lookups for the tenancy seam (Plan 1.5) ---
 
     def get_user(self, user_id: str | uuid.UUID) -> dict[str, Any] | None:

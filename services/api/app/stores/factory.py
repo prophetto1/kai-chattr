@@ -8,6 +8,7 @@ from typing import Any
 from app.database import database_settings
 from app.stores.home_start import HomeStartStore
 from app.stores.home_start_db import SqlAlchemyHomeStartStore
+from app.stores.identity_db import SqlAlchemyIdentityStore
 from app.stores.jobs import JobStore
 from app.stores.jobs_db import SqlAlchemyJobStore
 from app.stores.routing_decisions_db import SqlAlchemyRoutingDecisionStore
@@ -70,4 +71,15 @@ def create_routing_decision_store(config: dict[str, Any]) -> SqlAlchemyRoutingDe
         return None
     if settings.mode == "postgres":
         return SqlAlchemyRoutingDecisionStore(settings.url)
+    raise ValueError(f"Unsupported database.mode={settings.mode!r}")
+
+
+def create_identity_store(config: dict[str, Any]) -> SqlAlchemyIdentityStore | None:
+    """Identity/auth is postgres-only; file mode has no identity store
+    (auth endpoints answer 503 rather than falling back to a stub)."""
+    settings = database_settings(config)
+    if settings.mode == "file":
+        return None
+    if settings.mode == "postgres":
+        return SqlAlchemyIdentityStore(settings.url)
     raise ValueError(f"Unsupported database.mode={settings.mode!r}")

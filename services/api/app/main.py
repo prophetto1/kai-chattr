@@ -16,7 +16,7 @@ from pydantic import ValidationError
 
 from app.stores.messages import MessageStore
 from app.stores.rules import RuleStore
-from app.stores.factory import create_job_store, create_rule_store
+from app.stores.factory import create_identity_store, create_job_store, create_rule_store
 from app.stores.summaries import SummaryStore
 from app.stores.jobs import JobStore
 from app.stores.schedules import ScheduleStore, parse_schedule_spec
@@ -30,6 +30,7 @@ from app.routes.terminal import TerminalApiState, create_terminal_router
 from app.events import JsonlEventStream, RUNTIME_EVENT_SCHEMA_VERSION
 from app.routes.launchers import router as launcher_control_router
 from app.routes.home_start import router as home_start_router
+from app.routes.auth import router as identity_auth_router
 from app.stores.locked import LockedStore
 from app import workspace_files
 from app.observability import configure_observability, init_observability, observed_endpoint_catalog
@@ -118,6 +119,7 @@ app = create_app(title="noname")
 app.include_router(launcher_control_router)
 app.include_router(platform_router)
 app.include_router(home_start_router)
+app.include_router(identity_auth_router)
 
 # --- globals (set by configure()) ---
 store: MessageStore | None = None
@@ -438,6 +440,10 @@ def configure(cfg: dict, session_token: str = ""):
 
     locked = LockedStore(str(Path(data_dir) / "locked.json"))
     locked.on_change(_on_locked_change)
+
+    # Identity/auth store (Plan 1.5): postgres-only; None in file mode, in
+    # which case /auth/* answers 503 instead of falling back to a stub.
+    app.state.identity_store = create_identity_store(cfg)
 
     schedules = ScheduleStore(str(Path(data_dir) / "schedules.json"))
     schedules.on_change(_on_schedule_change)

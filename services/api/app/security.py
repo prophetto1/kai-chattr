@@ -54,6 +54,12 @@ def create_security_middleware(
             ):
                 return await _with_cors(call_next, request, cors_origin)
 
+            # Identity endpoints authenticate at the route layer (argon2 +
+            # revocable bearer sessions); the legacy x-session-token gate
+            # does not apply to them.
+            if path in ("/auth/signup", "/auth/login", "/auth/logout"):
+                return await _with_cors(call_next, request, cors_origin)
+
             if path == "/api/roles" or path.startswith("/api/roles/"):
                 client_ip = request.client.host if request.client else ""
                 if client_ip in ("127.0.0.1", "::1", "localhost") or resolve_authenticated_agent(request):
