@@ -19,7 +19,6 @@ import { AppThemeProvider } from '@/components/theme/AppThemeProvider'
 import { Button } from '@/components/ui/button'
 import HomePage from './routes/home'
 import BoardRulesVisualPage from './routes/board-rules-visual'
-import LandingPage from './routes/landing'
 import LoginPage from './routes/login'
 import ObservabilityPage from './routes/observability'
 import RegisterPage from './routes/register'
@@ -61,7 +60,7 @@ function WorkbenchRouteError() {
 }
 
 const router = createBrowserRouter([
-  { path: '/', element: <LandingPage /> },
+  { path: '/', element: <Navigate to={APP_ROUTES.home} replace /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
   { path: APP_ROUTES.home, element: <HomePage /> },
