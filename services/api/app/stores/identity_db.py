@@ -5,13 +5,14 @@ from __future__ import annotations
 import secrets
 import threading
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid, func, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Mapped, mapped_column, sessionmaker
 
+from app.auth import tokens as auth_tokens
 from app.database import create_database_engine, normalize_database_url
 from app.stores.base import Base
 
@@ -366,6 +367,97 @@ class SqlAlchemyIdentityStore:
             session.add(credential)
             session.commit()
             return self._credential_dict(credential)
+
+    # --- auth sessions (Plan 1.5): the DB row is the single source of truth ---
+
+    DEFAULT_SESSION_TTL_SECONDS = 60 * 60 * 24 * 14  # 14 days
+
+    def issue_session(
+        self,
+        *,
+        user_id: str | uuid.UUID,
+        ttl_seconds: int | None = None,
+    ) -> dict[str, Any]:
+        raw_token = auth_tokens.new_session_token()
+        record = AuthSession(
+            user_id=_to_uuid(user_id),
+            session_token_hash=auth_tokens.hash_token(raw_token),
+            status="active",
+            expires_at=_now() + timedelta(seconds=ttl_seconds or self.DEFAULT_SESSION_TTL_SECONDS),
+        )
+        with self._lock, self._sessions() as session:
+            session.add(record)
+            session.commit()
+            result = self._session_dict(record)
+        # The raw token leaves the store exactly once; only its SHA-256 persists.
+        result["token"] = raw_token
+        return result
+
+    def validate_session(self, raw_token: str) -> dict[str, Any] | None:
+        token_hash = auth_tokens.hash_token(str(raw_token or ""))
+        with self._lock, self._sessions() as session:
+            record = session.scalar(
+                select(AuthSession).where(AuthSession.session_token_hash == token_hash)
+            )
+            if record is None or record.status != "active":
+                return None
+            expires_at = record.expires_at
+            if expires_at is not None:
+                if expires_at.tzinfo is None:  # SQLite returns naive datetimes
+                    expires_at = expires_at.replace(tzinfo=UTC)
+                if expires_at <= _now():
+                    return None
+            return self._session_dict(record)
+
+    def revoke_session(self, raw_token: str) -> bool:
+        token_hash = auth_tokens.hash_token(str(raw_token or ""))
+        with self._lock, self._sessions() as session:
+            record = session.scalar(
+                select(AuthSession).where(AuthSession.session_token_hash == token_hash)
+            )
+            if record is None:
+                return False
+            record.status = "revoked"
+            session.commit()
+            return True
+
+    # --- lookups for the tenancy seam (Plan 1.5) ---
+
+    def get_user(self, user_id: str | uuid.UUID) -> dict[str, Any] | None:
+        with self._lock, self._sessions() as session:
+            user = session.get(User, _to_uuid(user_id))
+            return self._user_dict(user) if user is not None else None
+
+    def get_workspace_by_public_id(self, public_id: str) -> dict[str, Any] | None:
+        with self._lock, self._sessions() as session:
+            workspace = session.scalar(
+                select(Workspace).where(Workspace.public_id == str(public_id or "").strip())
+            )
+            return self._workspace_dict(workspace) if workspace is not None else None
+
+    def get_membership(
+        self,
+        *,
+        workspace_id: str | uuid.UUID,
+        user_id: str | uuid.UUID,
+    ) -> dict[str, Any] | None:
+        with self._lock, self._sessions() as session:
+            membership = session.scalar(
+                select(WorkspaceMembership).where(
+                    WorkspaceMembership.workspace_id == _to_uuid(workspace_id),
+                    WorkspaceMembership.user_id == _to_uuid(user_id),
+                )
+            )
+            return self._membership_dict(membership) if membership is not None else None
+
+    def _session_dict(self, record: AuthSession) -> dict[str, Any]:
+        return {
+            "id": str(record.id),
+            "user_id": str(record.user_id),
+            "status": record.status,
+            "expires_at": record.expires_at.isoformat() if record.expires_at else None,
+            "created_at": record.created_at.isoformat(),
+        }
 
     def _user_dict(self, user: User) -> dict[str, Any]:
         return {

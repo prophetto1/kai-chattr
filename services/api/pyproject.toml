@@ -5,6 +5,7 @@ description = "Local multi-agent chat and launcher control plane"
 requires-python = ">=3.11"
 dependencies = [
   "alembic>=1.13",
+  "argon2-cffi>=25.1.0",
   "fastapi>=0.110",
   "mcp>=1.0",
   "opentelemetry-api>=1.42.1",
