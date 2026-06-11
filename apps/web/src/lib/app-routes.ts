@@ -9,6 +9,7 @@ export const APP_ROUTES = {
   libraryFileStores: '/library/file-stores',
   libraryKnowledgeBases: '/library/knowledge-bases',
   libraryNew: '/library/new',
+  login: '/login',
   observability: '/observability',
   projects: '/projects',
   projectsNew: '/projects/new',
@@ -16,6 +17,7 @@ export const APP_ROUTES = {
   search: '/search',
   settings: '/settings/user/account',
   settingsAppearance: '/settings/user/appearance',
+  signup: '/signup',
   workbenchHelper: '/workbench',
 } as const
 

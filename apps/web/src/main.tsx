@@ -21,7 +21,7 @@ import HomePage from './routes/home'
 import BoardRulesVisualPage from './routes/board-rules-visual'
 import LoginPage from './routes/login'
 import ObservabilityPage from './routes/observability'
-import RegisterPage from './routes/register'
+import SignupPage from './routes/signup'
 import SettingsPage from './routes/settings'
 import WorkbenchPage from './routes/workbench'
 import { ProductSectionPage } from './routes/product-section'
@@ -61,8 +61,10 @@ function WorkbenchRouteError() {
 
 const router = createBrowserRouter([
   { path: '/', element: <Navigate to={APP_ROUTES.home} replace /> },
-  { path: '/login', element: <LoginPage /> },
-  { path: '/register', element: <RegisterPage /> },
+  { path: APP_ROUTES.login, element: <LoginPage /> },
+  { path: APP_ROUTES.signup, element: <SignupPage /> },
+  // Locked route law names /signup; keep /register as a redirect alias only.
+  { path: '/register', element: <Navigate to={APP_ROUTES.signup} replace /> },
   { path: APP_ROUTES.home, element: <HomePage /> },
   { path: APP_ROUTES.search, element: <ProductSectionPage activeItem="search" description="Current-user search across conversations and workspace-visible resources." route={APP_ROUTES.search} scope="current user" title="Search" />, errorElement: <WorkbenchRouteError /> },
   { path: APP_ROUTES.integrations, element: <ProductSectionPage activeItem="integrations" description="Workspace integration catalog and connection setup surface." route={APP_ROUTES.integrations} scope="workspace" title="Integrations" />, errorElement: <WorkbenchRouteError /> },
