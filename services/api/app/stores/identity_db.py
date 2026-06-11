@@ -135,6 +135,7 @@ class WorkspaceMembership(Base):
         Uuid(),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     role: Mapped[str] = mapped_column(String(40), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
@@ -156,6 +157,7 @@ class ChatSession(Base):
         Uuid(),
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(),
@@ -188,6 +190,7 @@ class ChatMessage(Base):
         Uuid(),
         ForeignKey("chat_sessions.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     sequence: Mapped[int] = mapped_column(Integer, nullable=False)
     role: Mapped[str] = mapped_column(String(40), nullable=False)
