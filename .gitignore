@@ -62,3 +62,6 @@ htmlcov/
 
 # Agent session memory/handoffs are machine-local, never published.
 .remember/
+
+# Ad-hoc service restart logs (process holds these open while running)
+services/api/api-restart.*.log
