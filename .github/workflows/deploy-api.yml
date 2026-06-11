@@ -16,6 +16,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+      - name: Gate - requirements.txt must match pyproject.toml
+        run: python3 governance/scripts/check-python-requirements-sync.py
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Select Fly target
         shell: bash
