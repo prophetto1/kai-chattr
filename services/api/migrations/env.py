@@ -17,9 +17,12 @@ from app.database import (  # noqa: E402
     MIGRATION_DATABASE_URL_ENV,
     normalize_database_url,
 )
-from app.stores.rules_db import Base  # noqa: E402
+from app.stores.base import Base  # noqa: E402
+import app.stores.rules_db  # noqa: E402, F401
 import app.stores.jobs_db  # noqa: E402, F401
 import app.stores.home_start_db  # noqa: E402, F401
+import app.stores.routing_decisions_db  # noqa: E402, F401
+import app.stores.identity_db  # noqa: E402, F401
 
 config = context.config
 VERSION_TABLE = "kai_chattr_alembic_version"

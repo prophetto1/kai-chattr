@@ -213,3 +213,63 @@ def test_migration_file_chains_from_routing_decisions():
     assert module.down_revision == "20260609_0004"
     assert callable(module.upgrade)
     assert callable(module.downgrade)
+
+
+def test_chat_messages_get_monotonic_sequence():
+    from app.stores.identity_db import SqlAlchemyIdentityStore
+
+    store = SqlAlchemyIdentityStore(_memory_engine())
+    user = store.create_user(email="seq@example.com", display_name="Seq")
+    ws = store.create_workspace(name="Acme", created_by_user_id=user["id"])
+    session = store.create_chat_session(
+        workspace_id=ws["id"], created_by_user_id=user["id"], title="Chat", mode="scratch"
+    )
+
+    first = store.append_message(chat_session_id=session["id"], role="user", content="one")
+    second = store.append_message(chat_session_id=session["id"], role="agent", content="two")
+
+    assert first["sequence"] == 0
+    assert second["sequence"] == 1
+    # list_messages orders by the explicit sequence, not insertion timestamp (S6).
+    assert [m["content"] for m in store.list_messages(session["id"])] == ["one", "two"]
+
+
+def test_duplicate_sequence_in_session_is_rejected():
+    from app.stores.identity_db import ChatMessage, SqlAlchemyIdentityStore
+
+    store = SqlAlchemyIdentityStore(_memory_engine())
+    user = store.create_user(email="dupseq@example.com", display_name="Dup")
+    ws = store.create_workspace(name="Acme", created_by_user_id=user["id"])
+    session = store.create_chat_session(
+        workspace_id=ws["id"], created_by_user_id=user["id"], title="Chat", mode="scratch"
+    )
+    store.append_message(chat_session_id=session["id"], role="user", content="one")  # sequence 0
+
+    # Force a second row into the same (session, sequence) slot: the DB must reject it.
+    with store._sessions() as raw:  # noqa: SLF001  (white-box: prove the unique constraint)
+        raw.add(
+            ChatMessage(
+                chat_session_id=uuid.UUID(session["id"]),
+                sequence=0,
+                role="user",
+                content="dup",
+            )
+        )
+        with pytest.raises(IntegrityError):
+            raw.commit()
+
+
+def test_identity_store_sqlite_creates_only_its_own_tables():
+    from sqlalchemy import inspect
+
+    import app.stores.rules_db  # noqa: F401  (registers board tables on the shared Base)
+    from app.stores.identity_db import SqlAlchemyIdentityStore
+
+    engine = _memory_engine()
+    SqlAlchemyIdentityStore(engine)  # __init__ runs the scoped create_all
+    created = set(inspect(engine).get_table_names())
+
+    # The identity store must create its own tables...
+    assert {"users", "chat_messages", "workspaces"}.issubset(created)
+    # ...but NOT board tables that merely share Base.metadata (audit guard).
+    assert "board_rules" not in created

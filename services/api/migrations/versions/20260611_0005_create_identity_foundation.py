@@ -109,6 +109,7 @@ def upgrade() -> None:
         "chat_messages",
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("chat_session_id", sa.Uuid(), nullable=False),
+        sa.Column("sequence", sa.Integer(), nullable=False),
         sa.Column("role", sa.String(length=40), nullable=False),
         sa.Column("content", sa.Text(), nullable=False),
         sa.Column("author_user_id", sa.Uuid(), nullable=True),
@@ -117,6 +118,9 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["author_user_id"], ["users.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(["chat_session_id"], ["chat_sessions.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "chat_session_id", "sequence", name="uq_chat_messages_session_sequence"
+        ),
     )
 
     op.create_index("ix_chat_messages_chat_session_id", "chat_messages", ["chat_session_id"])

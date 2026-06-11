@@ -8,7 +8,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint, Uuid, select
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid, func, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Mapped, mapped_column, sessionmaker
 
@@ -177,6 +177,11 @@ class ChatSession(Base):
 
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
+    __table_args__ = (
+        UniqueConstraint(
+            "chat_session_id", "sequence", name="uq_chat_messages_session_sequence"
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(), primary_key=True, default=uuid.uuid4)
     chat_session_id: Mapped[uuid.UUID] = mapped_column(
@@ -184,6 +189,7 @@ class ChatMessage(Base):
         ForeignKey("chat_sessions.id", ondelete="CASCADE"),
         nullable=False,
     )
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
     role: Mapped[str] = mapped_column(String(40), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     author_user_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -193,6 +199,21 @@ class ChatMessage(Base):
     )
     metadata_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
+
+
+# Tables this store owns. The identity store scopes its SQLite create_all to
+# these so it never materialises unrelated board tables that also register on
+# the shared Base.metadata (audit: keep identity metadata out of the legacy
+# SQLite create_all paths and vice-versa).
+_IDENTITY_TABLES = [
+    User.__table__,
+    AuthCredential.__table__,
+    AuthSession.__table__,
+    Workspace.__table__,
+    WorkspaceMembership.__table__,
+    ChatSession.__table__,
+    ChatMessage.__table__,
+]
 
 
 class SqlAlchemyIdentityStore:
@@ -211,7 +232,7 @@ class SqlAlchemyIdentityStore:
             future=True,
         )
         if self._engine.url.get_backend_name() == "sqlite":
-            Base.metadata.create_all(self._engine)
+            Base.metadata.create_all(self._engine, tables=_IDENTITY_TABLES)
         self._lock = threading.Lock()
 
     def create_user(self, *, email: str, display_name: str) -> dict[str, Any]:
@@ -292,13 +313,26 @@ class SqlAlchemyIdentityStore:
         content: str,
         author_user_id: str | uuid.UUID | None = None,
     ) -> dict[str, Any]:
-        message = ChatMessage(
-            chat_session_id=_to_uuid(chat_session_id),
-            role=str(role or "").strip(),
-            content=str(content or ""),
-            author_user_id=_to_uuid(author_user_id) if author_user_id is not None else None,
-        )
+        cs_id = _to_uuid(chat_session_id)
         with self._lock, self._sessions() as session:
+            # Per-session monotonic sequence. The (chat_session_id, sequence)
+            # unique constraint makes a concurrent duplicate fail loudly
+            # instead of silently claiming the same position (audit S6).
+            next_sequence = (
+                session.scalar(
+                    select(func.coalesce(func.max(ChatMessage.sequence), -1)).where(
+                        ChatMessage.chat_session_id == cs_id
+                    )
+                )
+                + 1
+            )
+            message = ChatMessage(
+                chat_session_id=cs_id,
+                sequence=next_sequence,
+                role=str(role or "").strip(),
+                content=str(content or ""),
+                author_user_id=_to_uuid(author_user_id) if author_user_id is not None else None,
+            )
             session.add(message)
             session.commit()
             return self._message_dict(message)
@@ -308,7 +342,7 @@ class SqlAlchemyIdentityStore:
             messages = session.scalars(
                 select(ChatMessage)
                 .where(ChatMessage.chat_session_id == _to_uuid(chat_session_id))
-                .order_by(ChatMessage.created_at, ChatMessage.id)
+                .order_by(ChatMessage.sequence)
             ).all()
             return [self._message_dict(message) for message in messages]
 
@@ -379,6 +413,7 @@ class SqlAlchemyIdentityStore:
         return {
             "id": str(message.id),
             "chat_session_id": str(message.chat_session_id),
+            "sequence": message.sequence,
             "role": message.role,
             "content": message.content,
             "author_user_id": str(message.author_user_id) if message.author_user_id else None,
