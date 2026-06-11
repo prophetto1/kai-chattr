@@ -32,6 +32,8 @@ from app.routes.launchers import router as launcher_control_router
 from app.routes.home_start import router as home_start_router
 from app.routes.auth import router as identity_auth_router
 from app.routes.invitations import router as workspace_invitations_router
+from app.routes.oauth import router as oauth_router
+from app.auth.oauth_providers import load_oauth_providers
 from app.stores.locked import LockedStore
 from app import workspace_files
 from app.observability import configure_observability, init_observability, observed_endpoint_catalog
@@ -122,6 +124,7 @@ app.include_router(platform_router)
 app.include_router(home_start_router)
 app.include_router(identity_auth_router)
 app.include_router(workspace_invitations_router)
+app.include_router(oauth_router)
 
 # --- globals (set by configure()) ---
 store: MessageStore | None = None
@@ -446,6 +449,8 @@ def configure(cfg: dict, session_token: str = ""):
     # Identity/auth store (Plan 1.5): postgres-only; None in file mode, in
     # which case /auth/* answers 503 instead of falling back to a stub.
     app.state.identity_store = create_identity_store(cfg)
+    # OAuth providers from SOPS-decrypted env; unconfigured providers -> 503.
+    app.state.oauth_providers = load_oauth_providers()
 
     schedules = ScheduleStore(str(Path(data_dir) / "schedules.json"))
     schedules.on_change(_on_schedule_change)

@@ -4,6 +4,25 @@ Repo-root changelog (decision 2026-06-11: lives here, not in the Planned store).
 
 ## 2026-06-11
 
+### feat(api): Plan 1.5 T5 — OAuth sign-in (Google + GitHub) with the S1 link rule
+- `GET /auth/oauth/{provider}` + `/callback`: returning provider credential → login (keyed on the provider's immutable account id, never mutable email); **IdP-verified email matching an existing user → links** (never a second account); **unverified + existing → 409 login-then-link** (blocks unverified-email account takeover); verified + unknown → OAuth signup (user + personal workspace + session); unverified + unknown → 403.
+- State = server-side single-use hashed attempt rows (`auth_oauth_attempts`, shape borrowed lean from writing-system) with expiry; replay → 400. Google uses PKCE.
+- Declared schema delta: migration `0006` adds `auth_credentials.provider_account_id` (+ unique per provider) and `auth_oauth_attempts`. Round-trip-verified on dev Neon (up `0004→0006`, check clean for identity/oauth, down restored to `0004`).
+- Providers load from SOPS-decrypted env (`KAI_CHATTR_OAUTH_{GOOGLE,GITHUB}_CLIENT_ID/_SECRET`); unconfigured → 503, no stub. `httpx` added for the live exchange. Live round-trip pending creds in `secrets/dev/`.
+- Tests: 8 new (`tests/test_oauth_s1.py`, fake-IdP boundary only — real attempt/S1/store paths); suite 244 pass / 1 pre-existing zellij failure.
+
+### feat(web): scoped workspace route placeholders for route-law compliance
+- Added workspace route patterns/helpers for `/w/{workspace_public_id}/repositories`, `/w/{workspace_public_id}/settings/workspace/{section}`, and `/w/{workspace_public_id}/sessions/{session_hash}` in `apps/web/src/lib/app-routes.ts`.
+- Mounted designer-ready AppShell placeholders for workspace repositories and workspace settings in `apps/web/src/main.tsx` and `apps/web/src/routes/workspace-placeholders.tsx`.
+- Existing `/workbench` and global product routes remain transitional/helper surfaces; the canonical session mount remains `/w/{workspace_public_id}/sessions/{session_hash}`.
+- Tests: `pnpm --dir apps/web run build`; `pnpm exec playwright test tests/e2e/scoped-routing.spec.ts` (3 passed); `pnpm exec playwright test tests/e2e/home-start.spec.ts` (3 passed); `pnpm run check:contracts`.
+
+### feat(home-start): cloud-first Open Repository flow
+- Added provider-aware `/api/git/repositories/search` and `/api/git/branches/search` aliases and classified them as `home-start`.
+- Made the cloud repository list provider-filtered, removed local repository discovery from the cloud Open Repository flow, and updated `/home` to choose Git provider before repository/branch selection.
+- Scratch session creation and the Design Agent card wiring remain intact; local folder opening stays separated for the future local bridge path.
+- Tests: `uv run pytest -q tests/test_home_start_api.py`; `uv run pytest -q tests/test_home_start_api.py tests/test_observability_contract.py` (17 passed); `pnpm exec playwright test tests/e2e/home-start.spec.ts` (3 passed); `pnpm --dir apps/web run build`; `pnpm run check:contracts`.
+
 ### feat(api): Plan 1.5 T6 — /api/user/account + workspace invitations
 - `GET /api/user/account`: answers from the validated session only; any client-supplied user id is ignored by construction (acceptance 5).
 - `POST /w/{workspace_public_id}/invitations`: first real consumer of the frozen tenancy seam (`resolve_workspace_context`) — non-member → 404 (seam, fail-closed), member-but-not-admin → 403, duplicate → 409 (DB constraint), unknown email → 404, `role: owner` → 422 (ownership never granted by invite). v1 invites existing accounts into the workspace; token-based email invitations for unregistered users = later slice.

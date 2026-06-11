@@ -57,6 +57,9 @@ class AuthCredential(Base):
     __tablename__ = "auth_credentials"
     __table_args__ = (
         UniqueConstraint("provider", "email_normalized", name="uq_auth_credentials_provider_email"),
+        UniqueConstraint(
+            "provider", "provider_account_id", name="uq_auth_credentials_provider_account"
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(), primary_key=True, default=uuid.uuid4)
@@ -66,6 +69,8 @@ class AuthCredential(Base):
         nullable=False,
     )
     provider: Mapped[str] = mapped_column(String(40), nullable=False)
+    # Immutable account id at the provider (OAuth); NULL for password rows.
+    provider_account_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
     email_normalized: Mapped[str] = mapped_column(String(320), nullable=False)
     password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
@@ -96,6 +101,25 @@ class AuthSession(Base):
         default=_now,
         onupdate=_now,
     )
+
+
+class AuthOAuthAttempt(Base):
+    """Server-side OAuth attempt: hashed single-use state + expiry.
+
+    Borrowed shape (lean subset) from writing-system's auth_oauth_attempts —
+    the state secret is stored hashed and consumed exactly once.
+    """
+
+    __tablename__ = "auth_oauth_attempts"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(), primary_key=True, default=uuid.uuid4)
+    provider: Mapped[str] = mapped_column(String(40), nullable=False)
+    state_hash: Mapped[str] = mapped_column(String(160), unique=True, nullable=False)
+    code_verifier: Mapped[str | None] = mapped_column(Text, nullable=True)  # PKCE
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="started")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Workspace(Base):
@@ -213,6 +237,7 @@ _IDENTITY_TABLES = [
     User.__table__,
     AuthCredential.__table__,
     AuthSession.__table__,
+    AuthOAuthAttempt.__table__,
     Workspace.__table__,
     WorkspaceMembership.__table__,
     ChatSession.__table__,
@@ -421,6 +446,88 @@ class SqlAlchemyIdentityStore:
             session.commit()
             return True
 
+    # --- oauth (Plan 1.5 T5): single-use hashed state + provider credentials ---
+
+    DEFAULT_OAUTH_ATTEMPT_TTL_SECONDS = 600
+
+    def create_oauth_attempt(
+        self,
+        *,
+        provider: str,
+        code_verifier: str | None = None,
+        ttl_seconds: int | None = None,
+    ) -> dict[str, Any]:
+        raw_state = "kos_" + auth_tokens.new_session_token().removeprefix("kcs_")
+        record = AuthOAuthAttempt(
+            provider=str(provider or "").strip(),
+            state_hash=auth_tokens.hash_token(raw_state),
+            code_verifier=code_verifier,
+            status="started",
+            expires_at=_now()
+            + timedelta(seconds=ttl_seconds or self.DEFAULT_OAUTH_ATTEMPT_TTL_SECONDS),
+        )
+        with self._lock, self._sessions() as session:
+            session.add(record)
+            session.commit()
+        # The raw state leaves the store exactly once (into the authorize URL).
+        return {"id": str(record.id), "provider": record.provider, "state": raw_state}
+
+    def consume_oauth_attempt(self, state: str) -> dict[str, Any] | None:
+        """Single use: returns the attempt and marks it consumed, or None for
+        unknown, expired, or already-consumed states (replay fails closed)."""
+        state_hash = auth_tokens.hash_token(str(state or ""))
+        with self._lock, self._sessions() as session:
+            record = session.scalar(
+                select(AuthOAuthAttempt).where(AuthOAuthAttempt.state_hash == state_hash)
+            )
+            if record is None or record.consumed_at is not None:
+                return None
+            expires_at = record.expires_at
+            if expires_at.tzinfo is None:  # SQLite returns naive datetimes
+                expires_at = expires_at.replace(tzinfo=UTC)
+            if expires_at <= _now():
+                return None
+            record.consumed_at = _now()
+            record.status = "callback_received"
+            session.commit()
+            return {
+                "id": str(record.id),
+                "provider": record.provider,
+                "code_verifier": record.code_verifier,
+            }
+
+    def find_credential_by_provider_account(
+        self, *, provider: str, provider_account_id: str
+    ) -> dict[str, Any] | None:
+        with self._lock, self._sessions() as session:
+            credential = session.scalar(
+                select(AuthCredential).where(
+                    AuthCredential.provider == str(provider or "").strip(),
+                    AuthCredential.provider_account_id == str(provider_account_id or "").strip(),
+                )
+            )
+            return self._credential_dict(credential) if credential is not None else None
+
+    def add_oauth_credential(
+        self,
+        *,
+        user_id: str | uuid.UUID,
+        provider: str,
+        provider_account_id: str,
+        email_normalized: str,
+    ) -> dict[str, Any]:
+        credential = AuthCredential(
+            user_id=_to_uuid(user_id),
+            provider=str(provider or "").strip(),
+            provider_account_id=str(provider_account_id or "").strip(),
+            email_normalized=_normalize_email(email_normalized),
+            password_hash=None,
+        )
+        with self._lock, self._sessions() as session:
+            session.add(credential)
+            session.commit()
+            return self._credential_dict(credential)
+
     def find_password_credential(self, email: str) -> dict[str, Any] | None:
         with self._lock, self._sessions() as session:
             credential = session.scalar(
@@ -537,6 +644,7 @@ class SqlAlchemyIdentityStore:
             "id": str(credential.id),
             "user_id": str(credential.user_id),
             "provider": credential.provider,
+            "provider_account_id": credential.provider_account_id,
             "email_normalized": credential.email_normalized,
             "password_hash": credential.password_hash,
             "created_at": credential.created_at.isoformat(),

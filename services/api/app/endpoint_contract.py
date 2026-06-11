@@ -135,7 +135,7 @@ def endpoint_policy_for_path(method: str, path: str) -> EndpointPolicy:
         return EndpointPolicy("public", "observability", "observability")
     if path.startswith("/uploads/"):
         return EndpointPolicy("public", "uploads", "upload-assets")
-    if path in {"/auth/signup", "/auth/login"}:
+    if path in {"/auth/signup", "/auth/login"} or path.startswith("/auth/oauth/"):
         return EndpointPolicy("public", "api", "identity")
     if path.startswith("/auth/") or path.startswith("/api/user/"):
         return EndpointPolicy("user-bearer", "api", "identity")
