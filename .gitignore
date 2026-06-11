@@ -32,7 +32,7 @@ data/
 .playwright-mcp/
 
 # Playwright test artifacts
-test-results/
+tests/test-results/
 playwright-report/
 
 # Brainstorming visual-companion scratch (mockups regenerated per session)
@@ -59,3 +59,6 @@ htmlcov/
 
 # Operator-local service config — holds local overrides/secrets (*.local does not match *.toml; keep the .example tracked)
 *.local.toml
+
+# Agent session memory/handoffs are machine-local, never published.
+.remember/

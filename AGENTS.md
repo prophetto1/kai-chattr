@@ -45,3 +45,13 @@ then move the code. Nothing is enforced until Jon confirms it (decide → encode
 
 Push to `main` → GitHub Action deploys to Cloudflare Pages (production). Branch deploys → preview.
 No manual step.
+
+## Python environment (`services/api`)
+
+- `services/api/.venv` is machine-local and uv-managed. Never commit it (it is gitignored), never
+  edit it by hand, never point tooling at its interpreter directly.
+- `services/api/uv.lock` + `pyproject.toml` are the dependency source of truth and are tracked.
+- Always launch and test through `uv run` from `services/api` (e.g. `uv run python -m app.cli`,
+  `uv run python -m pytest`). Never invoke a bare global interpreter with `-m app.cli` — it does
+  not resolve the project venv and the server fails to bind.
+- Rebuild a broken environment by deleting `.venv` and running `uv sync`; do not patch it in place.
