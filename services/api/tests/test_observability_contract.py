@@ -111,6 +111,10 @@ def test_endpoint_contract_classifies_auth_and_proxy_surfaces() -> None:
     assert endpoints[("POST", "/api/roles/{agent_name}")].auth == "session-or-local-agent-bearer"
     assert endpoint_policy_for_path("GET", "/api/roles-extra").auth == "session"
 
+    assert endpoints[("GET", "/api/git/repositories/search")].auth == "session"
+    assert endpoints[("GET", "/api/git/repositories/search")].surface == "home-start"
+    assert endpoints[("GET", "/api/git/branches/search")].surface == "home-start"
+
 
 def test_observability_catalog_exposes_contract_metadata(tmp_path) -> None:
     chattr_test_configure(tmp_path)

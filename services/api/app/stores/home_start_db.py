@@ -6,7 +6,6 @@ import json
 import threading
 import uuid
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
 
 from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, select
@@ -17,10 +16,7 @@ from app.database import create_database_engine, normalize_database_url
 from app.product_routes import workspace_session_url
 from app.stores.home_start import (
     _conversation_title,
-    _discover_local_repositories,
-    _find_local_repository,
-    _list_local_branches,
-    _merge_repository_items,
+    _filter_cloud_repositories,
 )
 from app.stores.rules_db import Base
 
@@ -35,7 +31,7 @@ class HomeRepository(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     repository_id: Mapped[str] = mapped_column(String(240), unique=True, nullable=False)
     full_name: Mapped[str] = mapped_column(String(240), nullable=False)
-    git_provider: Mapped[str] = mapped_column(String(40), nullable=False, default="local")
+    git_provider: Mapped[str] = mapped_column(String(40), nullable=False, default="github")
     is_public: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     main_branch: Mapped[str | None] = mapped_column(String(160), nullable=True)
     created_at: Mapped[str] = mapped_column(String(40), nullable=False)
@@ -111,21 +107,15 @@ class SqlAlchemyHomeStartStore:
         )
         if self._engine.url.get_backend_name() == "sqlite":
             Base.metadata.create_all(self._engine)
-        self._local_repository_roots = [
-            Path(root).expanduser().resolve()
-            for root in (local_repository_roots or [])
-        ]
+        self._local_repository_roots = local_repository_roots or []
         self._lock = threading.Lock()
 
-    def list_repositories(self, query: str | None = None) -> dict:
+    def list_repositories(self, query: str | None = None, provider: str | None = "github") -> dict:
         with self._lock, self._sessions() as session:
             stmt = select(HomeRepository).order_by(HomeRepository.updated_at.desc())
             repositories = session.scalars(stmt).all()
             items = [self._repository_dict(repository) for repository in repositories]
-            items = _merge_repository_items(
-                items,
-                _discover_local_repositories(self._local_repository_roots),
-            )
+            items = _filter_cloud_repositories(items, provider=provider)
             if query:
                 needle = query.strip().lower()
                 items = [
@@ -138,14 +128,14 @@ class SqlAlchemyHomeStartStore:
                 "next_page_id": None,
             }
 
-    def list_branches(self, repository: str) -> dict:
-        local_repo = _find_local_repository(self._local_repository_roots, repository)
-        if local_repo is not None:
-            return {"items": _list_local_branches(local_repo), "next_page_id": None}
-
+    def list_branches(self, repository: str, provider: str | None = "github") -> dict:
+        provider_name = (provider or "github").strip().lower()
         with self._lock, self._sessions() as session:
             repo = session.scalar(
-                select(HomeRepository).where(HomeRepository.full_name == repository)
+                select(HomeRepository).where(
+                    HomeRepository.full_name == repository,
+                    HomeRepository.git_provider == provider_name,
+                )
             )
             if repo is None:
                 return {"items": [], "next_page_id": None}

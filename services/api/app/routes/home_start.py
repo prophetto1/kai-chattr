@@ -42,18 +42,56 @@ def _store():
 
 
 @router.get("/api/repositories", response_model=RepositoryPage)
-async def list_repositories():
-    return _store().list_repositories()
+async def list_repositories(provider: str = Query(default="github", min_length=1)):
+    return _store().list_repositories(provider=provider)
 
 
 @router.get("/api/repositories/search", response_model=RepositoryPage)
-async def search_repositories(query: str = Query(default="")):
-    return _store().list_repositories(query=query)
+async def search_repositories(
+    query: str = Query(default=""),
+    provider: str = Query(default="github", min_length=1),
+):
+    return _store().list_repositories(query=query, provider=provider)
+
+
+@router.get("/api/git/repositories/search", response_model=RepositoryPage)
+async def search_git_repositories(
+    provider: str = Query(min_length=1),
+    query: str = Query(default=""),
+    page_id: str | None = Query(default=None),
+    limit: int = Query(default=30, gt=0, le=100),
+    installation_id: str | None = Query(default=None),
+):
+    del page_id, limit, installation_id
+    return _store().list_repositories(query=query, provider=provider)
 
 
 @router.get("/api/repositories/{repository:path}/branches", response_model=BranchPage)
-async def list_repository_branches(repository: str):
-    return _store().list_branches(repository)
+async def list_repository_branches(
+    repository: str,
+    provider: str = Query(default="github", min_length=1),
+):
+    return _store().list_branches(repository, provider=provider)
+
+
+@router.get("/api/git/branches/search", response_model=BranchPage)
+async def search_git_branches(
+    provider: str = Query(min_length=1),
+    repository: str = Query(min_length=1),
+    query: str = Query(default=""),
+    page_id: str | None = Query(default=None),
+    limit: int = Query(default=30, gt=0, le=100),
+):
+    del page_id, limit
+    page = _store().list_branches(repository, provider=provider)
+    if query:
+        needle = query.strip().lower()
+        page["items"] = [
+            item
+            for item in page["items"]
+            if needle in str(item.get("name", "")).lower()
+        ]
+    return page
 
 
 @router.get("/api/conversations/recent", response_model=ConversationPage)

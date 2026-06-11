@@ -14,7 +14,7 @@ def _strip(value):
 class RepositorySummary(BaseModel):
     id: str
     full_name: str
-    git_provider: str = "local"
+    git_provider: str = "github"
     is_public: bool = True
     main_branch: str | None = None
 
@@ -55,7 +55,7 @@ class ConversationRepositoryInput(BaseModel):
 
     name: str = Field(min_length=1, max_length=240)
     branch: str | None = Field(default=None, max_length=160)
-    git_provider: str = Field(default="local", alias="gitProvider", max_length=40)
+    git_provider: str = Field(default="github", alias="gitProvider", max_length=40)
 
     _strip_name = field_validator("name", mode="before")(_strip)
     _strip_branch = field_validator("branch", mode="before")(_strip)

@@ -6,6 +6,7 @@ import {
 } from '@tabler/icons-react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router'
 
 import { AppShell } from '@/components/layout/AppShell'
 import { KaiAppRail } from '@/components/layout/KaiAppRail'
@@ -18,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { APP_ROUTES } from '@/lib/app-routes'
 import {
   Select,
   SelectContent,
@@ -26,12 +28,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+  CLOUD_GIT_PROVIDERS,
   createConversation,
   listBranches,
   listRecentConversations,
   listRepositories,
   listSuggestedTasks,
   type BranchSummary,
+  type GitProvider,
   type RepositorySummary,
 } from '@/lib/home-start-api'
 
@@ -40,22 +44,31 @@ function OpenRepositoryCard({
   branchesLoading,
   canCreate,
   onCreate,
+  providers,
   repositories,
   selectedBranch,
+  selectedProvider,
   selectedRepository,
   setSelectedBranch,
+  setSelectedProvider,
   setSelectedRepository,
 }: {
   branches: BranchSummary[]
   branchesLoading: boolean
   canCreate: boolean
   onCreate: () => void
+  providers: GitProvider[]
   repositories: RepositorySummary[]
   selectedBranch: string
+  selectedProvider: string
   selectedRepository: RepositorySummary | null
   setSelectedBranch: (branch: string) => void
+  setSelectedProvider: (provider: string) => void
   setSelectedRepository: (repository: RepositorySummary | null) => void
 }) {
+  const selectedProviderLabel = providers.find((provider) => provider.id === selectedProvider)?.label
+    ?? 'Git provider'
+
   return (
     <Card className="min-h-[236px] border-border bg-card/80 py-0 shadow-sm">
       <CardHeader className="gap-2 px-5 pt-5">
@@ -64,10 +77,30 @@ function OpenRepositoryCard({
           Open Repository
         </CardTitle>
         <CardDescription className="text-xs text-muted-foreground">
-          Select or insert a URL
+          Select a cloud repository and branch
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 px-5 pb-5">
+        <Select
+          onValueChange={(value) => {
+            setSelectedProvider(value)
+            setSelectedBranch('')
+            setSelectedRepository(null)
+          }}
+          value={selectedProvider}
+        >
+          <SelectTrigger aria-label="Git provider" className="w-full">
+            <SelectValue placeholder="Git provider">{selectedProviderLabel}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {providers.map((provider) => (
+              <SelectItem key={provider.id} value={provider.id}>
+                {provider.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         <Select
           onValueChange={(value) => {
             setSelectedBranch('')
@@ -78,7 +111,9 @@ function OpenRepositoryCard({
           value={selectedRepository?.full_name ?? ''}
         >
           <SelectTrigger aria-label="Repository" className="w-full">
-            <SelectValue placeholder="user/repo" />
+            <SelectValue
+              placeholder={repositories.length > 0 ? 'user/repo' : 'No cloud repositories'}
+            />
           </SelectTrigger>
           <SelectContent>
             {repositories.map((repository) => (
@@ -162,10 +197,16 @@ function NewConversationCard({
 function PlaceholderStartCard({
   description,
   icon: Icon,
+  buttonVariant = 'default',
+  actionLabel,
+  onAction,
   title,
 }: {
   description: string
   icon: typeof IconRobot
+  buttonVariant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
+  actionLabel?: string
+  onAction?: () => void
   title: string
 }) {
   return (
@@ -180,8 +221,14 @@ function PlaceholderStartCard({
         </CardDescription>
       </CardHeader>
       <CardContent className="mt-auto px-5 pb-5">
-        <Button className="w-full" disabled type="button" variant="secondary">
-          Coming soon
+        <Button
+          className="w-full"
+          disabled={!onAction}
+          onClick={onAction}
+          type="button"
+          variant={onAction ? buttonVariant : 'secondary'}
+        >
+          {actionLabel ?? 'Coming soon'}
         </Button>
       </CardContent>
     </Card>
@@ -189,17 +236,22 @@ function PlaceholderStartCard({
 }
 
 export default function HomePage() {
+  const navigate = useNavigate()
+  const [selectedProvider, setSelectedProvider] = useState(CLOUD_GIT_PROVIDERS[0]?.id ?? 'github')
   const [selectedRepository, setSelectedRepository] = useState<RepositorySummary | null>(null)
   const [selectedBranch, setSelectedBranch] = useState('')
 
   const repositories = useQuery({
-    queryKey: ['home-start', 'repositories'],
-    queryFn: listRepositories,
+    queryKey: ['home-start', 'git-repositories', selectedProvider],
+    queryFn: () => listRepositories({ provider: selectedProvider }),
   })
   const branches = useQuery({
     enabled: !!selectedRepository,
-    queryKey: ['home-start', 'branches', selectedRepository?.full_name],
-    queryFn: () => listBranches(selectedRepository?.full_name ?? ''),
+    queryKey: ['home-start', 'git-branches', selectedProvider, selectedRepository?.full_name],
+    queryFn: () => listBranches({
+      provider: selectedProvider,
+      repository: selectedRepository?.full_name ?? '',
+    }),
   })
   const recentConversations = useQuery({
     queryKey: ['home-start', 'recent-conversations'],
@@ -283,14 +335,17 @@ export default function HomePage() {
                   repository: {
                     name: selectedRepository.full_name,
                     branch: selectedBranch,
-                    gitProvider: selectedRepository.git_provider,
+                    gitProvider: selectedProvider,
                   },
                 })
               }}
+              providers={CLOUD_GIT_PROVIDERS}
               repositories={repositoryItems}
               selectedBranch={selectedBranch}
+              selectedProvider={selectedProvider}
               selectedRepository={selectedRepository}
               setSelectedBranch={setSelectedBranch}
+              setSelectedProvider={setSelectedProvider}
               setSelectedRepository={setSelectedRepository}
             />
             <NewConversationCard
@@ -301,6 +356,11 @@ export default function HomePage() {
               description="Create a reusable agent configuration for cloud or local runtime use."
               icon={IconRobot}
               title="Design an Agent"
+              buttonVariant="default"
+              actionLabel="Create Agent"
+              onAction={() => {
+                navigate(APP_ROUTES.agentsNew)
+              }}
             />
             <PlaceholderStartCard
               description="Select a local folder and connect it through a local runtime bridge."

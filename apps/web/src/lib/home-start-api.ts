@@ -41,6 +41,11 @@ export type PageResult<T> = {
   next_page_id: string | null
 }
 
+export type GitProvider = {
+  id: string
+  label: string
+}
+
 export type CreateConversationResponse = {
   conversation_id: string
   status: string
@@ -58,13 +63,30 @@ export type CreateConversationInput = {
   suggested_task?: SuggestedTask
 }
 
-export function listRepositories() {
-  return chattrJson<PageResult<RepositorySummary>>('/api/repositories')
+export const CLOUD_GIT_PROVIDERS: GitProvider[] = [
+  {
+    id: 'github',
+    label: 'GitHub',
+  },
+]
+
+function queryString(params: Record<string, string | undefined>) {
+  const search = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value) search.set(key, value)
+  }
+  return search.toString()
 }
 
-export function listBranches(repository: string) {
+export function listRepositories({ provider, query }: { provider: string; query?: string }) {
+  const search = queryString({ provider, query })
+  return chattrJson<PageResult<RepositorySummary>>(`/api/git/repositories/search?${search}`)
+}
+
+export function listBranches({ provider, repository }: { provider: string; repository: string }) {
+  const search = queryString({ provider, repository })
   return chattrJson<PageResult<BranchSummary>>(
-    `/api/repositories/${repository}/branches`
+    `/api/git/branches/search?${search}`
   )
 }
 

@@ -4,6 +4,16 @@ Repo-root changelog (decision 2026-06-11: lives here, not in the Planned store).
 
 ## 2026-06-11
 
+### fix(dev): map Neon SOPS env into the dev orchestrator
+- `scripts/dev/start-kai-chattr.mjs` now maps `NEON_DEV_DATABASE_URL` into `KAI_CHATTR_DATABASE_URL` and forces `KAI_CHATTR_DATABASE_MODE=postgres` when a database URL is present. This lets `sops exec-env secrets/dev/neon.yaml 'pnpm run dev'` start the full web/API stack with the current Neon-backed identity/home schema instead of silently falling back to file mode.
+- Restarted the local stack on `8800/8840/8841/8842`. Verification: `GET /healthz` returned `database_mode:"postgres"` and the `/home` browser probe reported no `Home API error` and no failed responses; `pnpm exec playwright test tests/e2e/home-start.spec.ts` passed 3 tests.
+
+### feat(web): functional login/signup forms (kai-ai donor, rewired to /auth/*) — commit 4d3d781
+- Lifted the kai-ai auth page shape and rebuilt it on kai-chattr's stack (shadcn + react-router v7; dropped ark-ui/tabler/Supabase). `lib/auth-api.ts` wires real `POST /auth/{login,signup,logout}` + stores the `kcs_` bearer token + `oauthStartUrl`; `components/auth/{oauth-buttons,auth-shell}.tsx`; `/login` (uniform-401 copy, `?redirect=` support), `/signup` (match/min-8 guard, 409→already-registered, success→/home); `/register` stays redirect-only. Build green. Decision: **kai-ai = FE donor; Better Auth (blockdata) = deferred backend-architecture fork, not adopted.**
+
+### chore(dev): dev Neon now carries migrations (policy change)
+- Stopped the round-trip-and-restore pattern; applied `0005`+`0006` and **left dev Neon at `20260611_0006 (head)`** so id/URL-law verification can run against real data.
+
 ### feat(api): Plan 1.5 T5 — OAuth sign-in (Google + GitHub) with the S1 link rule
 - `GET /auth/oauth/{provider}` + `/callback`: returning provider credential → login (keyed on the provider's immutable account id, never mutable email); **IdP-verified email matching an existing user → links** (never a second account); **unverified + existing → 409 login-then-link** (blocks unverified-email account takeover); verified + unknown → OAuth signup (user + personal workspace + session); unverified + unknown → 403.
 - State = server-side single-use hashed attempt rows (`auth_oauth_attempts`, shape borrowed lean from writing-system) with expiry; replay → 400. Google uses PKCE.

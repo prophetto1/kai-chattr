@@ -11,6 +11,11 @@ const apiRoot = path.join(repoRoot, 'services', 'api');
 const tokenFromEnv = (process.env.KAI_CHATTR_SESSION_TOKEN ?? '').trim();
 const sessionToken = tokenFromEnv || randomBytes(32).toString('hex');
 const tokenSource = tokenFromEnv ? 'environment' : 'generated in-memory';
+const databaseUrl = (
+  process.env.KAI_CHATTR_DATABASE_URL ??
+  process.env.NEON_DEV_DATABASE_URL ??
+  ''
+).trim();
 const children = new Set();
 
 logEvent('kai_chattr.runtime.dev_start', {
@@ -24,6 +29,12 @@ const childEnv = {
   ...process.env,
   KAI_CHATTR_SESSION_TOKEN: sessionToken,
   VITE_KAI_CHATTR_SESSION_TOKEN: sessionToken,
+  ...(databaseUrl
+    ? {
+        KAI_CHATTR_DATABASE_MODE: 'postgres',
+        KAI_CHATTR_DATABASE_URL: databaseUrl,
+      }
+    : {}),
   LOGFIRE_ENABLED:
     (process.env.LOGFIRE_ENABLED ?? '').trim() ||
     ((process.env.LOGFIRE_TOKEN ?? '').trim() ? 'true' : 'false'),

@@ -25,10 +25,11 @@ import SignupPage from './routes/signup'
 import SettingsPage from './routes/settings'
 import WorkbenchPage from './routes/workbench'
 import { ProductSectionPage } from './routes/product-section'
+import { WorkspaceRepositoriesPage, WorkspaceSettingsPage } from './routes/workspace-placeholders'
 import AgentsRosterPage from './routes/agents'
 import AgentDetailPage from './routes/agent-detail'
 import AgentCreatePage from './routes/agents-new'
-import { APP_ROUTES } from '@/lib/app-routes'
+import { APP_ROUTES, WORKSPACE_ROUTE_PATTERNS } from '@/lib/app-routes'
 import './styles.css'
 
 function WorkbenchRouteError() {
@@ -81,8 +82,10 @@ const router = createBrowserRouter([
   { path: APP_ROUTES.observability, element: <ObservabilityPage />, errorElement: <WorkbenchRouteError /> },
   { path: '/settings', element: <Navigate to={APP_ROUTES.settings} replace /> },
   { path: '/settings/user/:sectionId', element: <SettingsPage />, errorElement: <WorkbenchRouteError /> },
+  { path: WORKSPACE_ROUTE_PATTERNS.repositories, element: <WorkspaceRepositoriesPage />, errorElement: <WorkbenchRouteError /> },
+  { path: WORKSPACE_ROUTE_PATTERNS.settings, element: <WorkspaceSettingsPage />, errorElement: <WorkbenchRouteError /> },
   { path: APP_ROUTES.workbenchHelper, element: <WorkbenchPage />, errorElement: <WorkbenchRouteError /> },
-  { path: '/w/:workspacePublicId/sessions/:sessionHash', element: <WorkbenchPage />, errorElement: <WorkbenchRouteError /> },
+  { path: WORKSPACE_ROUTE_PATTERNS.session, element: <WorkbenchPage />, errorElement: <WorkbenchRouteError /> },
   { path: '/workbench/board-rules-visual', element: <BoardRulesVisualPage /> },
 ])
 

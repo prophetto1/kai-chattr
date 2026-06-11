@@ -54,7 +54,15 @@ def test_home_start_endpoints_return_typed_empty_states():
             headers=_headers(),
         ).json() == {"items": [], "next_page_id": None}
         assert client.get(
+            "/api/git/repositories/search?provider=github&query=kai",
+            headers=_headers(),
+        ).json() == {"items": [], "next_page_id": None}
+        assert client.get(
             "/api/repositories/propreheto/kai-chattr/branches",
+            headers=_headers(),
+        ).json() == {"items": [], "next_page_id": None}
+        assert client.get(
+            "/api/git/branches/search?provider=github&repository=propreheto/kai-chattr",
             headers=_headers(),
         ).json() == {"items": [], "next_page_id": None}
         assert client.get("/api/suggested-tasks", headers=_headers()).json() == {
@@ -100,7 +108,7 @@ def test_create_conversation_persists_to_recent_conversations():
         tmp.cleanup()
 
 
-def test_home_start_discovers_configured_local_git_repositories(tmp_path):
+def test_home_start_cloud_repository_list_does_not_use_configured_local_roots(tmp_path):
     if shutil.which("git") is None:
         return
 
@@ -113,12 +121,104 @@ def test_home_start_discovers_configured_local_git_repositories(tmp_path):
     client, tmp = _make_client({"home": {"local_repository_roots": [str(workspace)]}})
     try:
         repositories = client.get("/api/repositories", headers=_headers()).json()
+        assert repositories == {"items": [], "next_page_id": None}
+
+        search = client.get("/api/repositories/search?query=sample", headers=_headers()).json()
+        assert search == {"items": [], "next_page_id": None}
+
+        branches = client.get(
+            "/api/repositories/local/sample/branches",
+            headers=_headers(),
+        ).json()
+        assert branches == {"items": [], "next_page_id": None}
+    finally:
+        client.close()
+        tmp.cleanup()
+
+
+def test_open_repository_cloud_endpoints_do_not_surface_local_repositories(tmp_path):
+    if shutil.which("git") is None:
+        return
+
+    workspace = tmp_path / "workspace"
+    repo = workspace / "sample"
+    repo.mkdir(parents=True)
+    subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "checkout", "-b", "main"], cwd=repo, check=True, capture_output=True, text=True)
+
+    client, tmp = _make_client({"home": {"local_repository_roots": [str(workspace)]}})
+    try:
+        assert client.get(
+            "/api/git/repositories/search?provider=github",
+            headers=_headers(),
+        ).json() == {"items": [], "next_page_id": None}
+        assert client.get(
+            "/api/git/branches/search?provider=github&repository=local/sample",
+            headers=_headers(),
+        ).json() == {"items": [], "next_page_id": None}
+    finally:
+        client.close()
+        tmp.cleanup()
+
+
+def test_open_repository_cloud_endpoints_filter_by_provider(tmp_path):
+    client, tmp = _make_client()
+    try:
+        data_file = Path(tmp.name) / "home_start.json"
+        data_file.write_text(
+            """
+{
+  "repositories": [
+    {
+      "id": "github:propreheto/kai-chattr",
+      "full_name": "propreheto/kai-chattr",
+      "git_provider": "github",
+      "is_public": false,
+      "main_branch": "main"
+    },
+    {
+      "id": "gitlab:propreheto/kai-chattr",
+      "full_name": "propreheto/kai-chattr",
+      "git_provider": "gitlab",
+      "is_public": false,
+      "main_branch": "trunk"
+    }
+  ],
+  "branches": {
+    "github:propreheto/kai-chattr": [
+      {
+        "name": "main",
+        "commit_sha": "abc123",
+        "protected": true,
+        "last_push_date": "2026-06-11T00:00:00Z"
+      }
+    ],
+    "gitlab:propreheto/kai-chattr": [
+      {
+        "name": "trunk",
+        "commit_sha": "def456",
+        "protected": false,
+        "last_push_date": null
+      }
+    ]
+  },
+  "conversations": [],
+  "suggested_tasks": []
+}
+""".strip(),
+            "utf-8",
+        )
+
+        repositories = client.get(
+            "/api/git/repositories/search?provider=github&query=kai",
+            headers=_headers(),
+        ).json()
         assert repositories == {
             "items": [
                 {
-                    "id": "local:local/sample",
-                    "full_name": "local/sample",
-                    "git_provider": "local",
+                    "id": "github:propreheto/kai-chattr",
+                    "full_name": "propreheto/kai-chattr",
+                    "git_provider": "github",
                     "is_public": False,
                     "main_branch": "main",
                 }
@@ -126,20 +226,17 @@ def test_home_start_discovers_configured_local_git_repositories(tmp_path):
             "next_page_id": None,
         }
 
-        search = client.get("/api/repositories/search?query=sample", headers=_headers()).json()
-        assert search["items"][0]["full_name"] == "local/sample"
-
         branches = client.get(
-            "/api/repositories/local/sample/branches",
+            "/api/git/branches/search?provider=github&repository=propreheto/kai-chattr",
             headers=_headers(),
         ).json()
         assert branches == {
             "items": [
                 {
                     "name": "main",
-                    "commit_sha": "",
-                    "protected": False,
-                    "last_push_date": None,
+                    "commit_sha": "abc123",
+                    "protected": True,
+                    "last_push_date": "2026-06-11T00:00:00Z",
                 }
             ],
             "next_page_id": None,

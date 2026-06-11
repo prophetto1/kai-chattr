@@ -1,5 +1,11 @@
 export const DEFAULT_WORKSPACE_PUBLIC_ID = 'local'
 
+export const WORKSPACE_ROUTE_PATTERNS = {
+  repositories: '/w/:workspacePublicId/repositories',
+  settings: '/w/:workspacePublicId/settings/workspace/:sectionId',
+  session: '/w/:workspacePublicId/sessions/:sessionHash',
+} as const
+
 export const APP_ROUTES = {
   agents: '/agents',
   agentsNew: '/agents/new',
@@ -18,8 +24,34 @@ export const APP_ROUTES = {
   settings: '/settings/user/account',
   settingsAppearance: '/settings/user/appearance',
   signup: '/signup',
+  workspaceRepositories: workspaceRepositoriesRoute(),
+  workspaceSettingsAgents: workspaceSettingsRoute({ sectionId: 'agents' }),
+  workspaceSettingsGeneral: workspaceSettingsRoute({ sectionId: 'general' }),
+  workspaceSettingsMembers: workspaceSettingsRoute({ sectionId: 'members' }),
   workbenchHelper: '/workbench',
 } as const
+
+function encodeSegment(value: string) {
+  return encodeURIComponent(value)
+}
+
+export function workspaceRepositoriesRoute({
+  workspacePublicId = DEFAULT_WORKSPACE_PUBLIC_ID,
+}: {
+  workspacePublicId?: string
+} = {}) {
+  return `/w/${encodeSegment(workspacePublicId)}/repositories`
+}
+
+export function workspaceSettingsRoute({
+  sectionId,
+  workspacePublicId = DEFAULT_WORKSPACE_PUBLIC_ID,
+}: {
+  sectionId: 'agents' | 'general' | 'members'
+  workspacePublicId?: string
+}) {
+  return `/w/${encodeSegment(workspacePublicId)}/settings/workspace/${encodeSegment(sectionId)}`
+}
 
 export function workspaceSessionRoute({
   sessionHash,
@@ -28,5 +60,5 @@ export function workspaceSessionRoute({
   sessionHash: string
   workspacePublicId?: string
 }) {
-  return `/w/${encodeURIComponent(workspacePublicId)}/sessions/${encodeURIComponent(sessionHash)}`
+  return `/w/${encodeSegment(workspacePublicId)}/sessions/${encodeSegment(sessionHash)}`
 }
