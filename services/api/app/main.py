@@ -294,6 +294,7 @@ app.include_router(create_terminal_router(TerminalApiState(
     extract_agent_token=_extract_agent_token,
     get_event_stream=lambda: runtime_event_stream,
     get_data_dir=lambda: config.get("server", {}).get("data_dir", "./data"),
+    post_chat_message=lambda **kw: store.add(**kw) if store else None,
 )))
 
 

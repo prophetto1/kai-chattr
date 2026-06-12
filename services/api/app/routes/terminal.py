@@ -11,6 +11,8 @@ from fastapi import APIRouter
 from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 
+from app.terminal import approval_bridge
+
 
 @dataclass(frozen=True)
 class TerminalApiState:
@@ -21,6 +23,10 @@ class TerminalApiState:
     extract_agent_token: Callable[[Request], str]
     get_event_stream: Callable[[], Any | None]
     get_data_dir: Callable[[], str] = lambda: "./data"
+    # Posts an approval/stuck card into the chat room lane (MessageStore.add
+    # signature: sender, text, msg_type, channel, metadata). None disables
+    # card posting (tests, minimal deployments).
+    post_chat_message: Callable[..., Any] | None = None
 
 
 # Crude approval-prompt detection on snapshot text (Jon's spec: heuristic is
@@ -77,6 +83,41 @@ def _terminal_snapshot_age_ms(snapshot: dict | None) -> int:
     if received_at <= 0:
         return 0
     return max(0, int((time.time() - received_at) * 1000))
+
+
+def _post_attention_card(
+    state: TerminalApiState,
+    agent_name: str,
+    *,
+    reason: str,
+    hint: str,
+    detected_at: float,
+) -> None:
+    """Post an approval/stuck card into the chat (frozen card contract:
+    type=approval_card, metadata.card=agent_attention.v1)."""
+    if state.post_chat_message is None:
+        return
+    if reason == "approval":
+        fallback = f"{agent_name} is asking: {hint}" if hint else f"{agent_name} is waiting on an approval"
+    else:
+        fallback = f"{agent_name} looks stuck — open its screen to check"
+    try:
+        state.post_chat_message(
+            sender=agent_name,
+            text=fallback,
+            msg_type="approval_card",
+            channel="general",
+            metadata={
+                "card": "agent_attention.v1",
+                "agent": agent_name,
+                "reason": reason,
+                "hint": hint,
+                "detected_at": detected_at,
+            },
+        )
+    except Exception:
+        # Chat-card delivery must never break wrapper snapshot ingestion.
+        return
 
 
 def _append_runtime_event(state: TerminalApiState, event_type: str, *, actor: str, details: dict) -> None:
@@ -138,14 +179,34 @@ def create_terminal_router(state: TerminalApiState) -> APIRouter:
         }
         with state.snapshots_lock:
             previous = state.snapshots.get(canonical_name)
-            state.snapshots[canonical_name] = snapshot
-        if approval_needed and not (previous or {}).get("approval_needed"):
-            _append_runtime_event(
-                state,
-                "terminal.attention_needed",
-                actor=canonical_name,
-                details={"reason": "approval_prompt_detected"},
+            decision = approval_bridge.evaluate(
+                previous, snapshot, now=snapshot["received_at"]
             )
+            snapshot.update(decision["state"])
+            state.snapshots[canonical_name] = snapshot
+        for action in decision["actions"]:
+            if action[0] == "post_card":
+                reason, hint = action[1], action[2]
+                _append_runtime_event(
+                    state,
+                    "terminal.attention_needed",
+                    actor=canonical_name,
+                    details={
+                        "reason": "approval_prompt_detected"
+                        if reason == "approval"
+                        else "stuck"
+                    },
+                )
+                _post_attention_card(
+                    state,
+                    canonical_name,
+                    reason=reason,
+                    hint=hint,
+                    detected_at=float(snapshot["received_at"]),
+                )
+            elif action[0] == "resolved":
+                # terminal.approval.resolved emission lands with the R-B task.
+                pass
         _append_runtime_event(
             state,
             "terminal.snapshot.write",

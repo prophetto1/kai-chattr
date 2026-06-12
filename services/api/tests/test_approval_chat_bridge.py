@@ -91,3 +91,90 @@ def test_no_stuck_while_approval_pending():
     new = snap("prompt", approval=True, hint="h")
     r = evaluate(prev, new, now=100.0, stuck_ms=20000)
     assert actions(r) == []  # approval card already covers attention
+
+
+# --- Route-level: snapshot POST drives card posting (plan Task 3) ---
+
+import threading
+
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+APPROVAL_SCREEN = "Tool use\n\n Do you want to proceed?\n ❯ 1. Yes\n   2. No\n"
+CLEARED_SCREEN = "done.\n❯\n"
+
+
+class _FakeRegistry:
+    def __init__(self, names):
+        self._names = list(names)
+
+    def get_all_names(self):
+        return list(self._names)
+
+    def resolve_name(self, name):
+        return name
+
+
+def _make_state(tmp_path, posted: list | None):
+    from app.routes.terminal import TerminalApiState
+
+    kwargs = dict(
+        snapshots={},
+        snapshots_lock=threading.Lock(),
+        get_registry=lambda: _FakeRegistry(["claude"]),
+        resolve_authenticated_agent=lambda request: {"name": "claude"},
+        extract_agent_token=lambda request: "agent-token",
+        get_event_stream=lambda: None,
+        get_data_dir=lambda: str(tmp_path),
+    )
+    if posted is not None:
+        kwargs["post_chat_message"] = lambda **kw: posted.append(kw)
+    return TerminalApiState(**kwargs)
+
+
+def _client(state):
+    from app.routes.terminal import create_terminal_router
+
+    app = FastAPI()
+    app.include_router(create_terminal_router(state))
+    return TestClient(app)
+
+
+def test_snapshot_transition_posts_one_card(tmp_path):
+    posted: list = []
+    client = _client(_make_state(tmp_path, posted))
+
+    r = client.post("/api/terminal/claude", json={"text": APPROVAL_SCREEN})
+    assert r.status_code == 200
+    assert len(posted) == 1
+    card = posted[0]
+    assert card["sender"] == "claude"
+    assert card["msg_type"] == "approval_card"
+    assert card["channel"] == "general"
+    assert "claude" in card["text"]
+    meta = card["metadata"]
+    assert meta["card"] == "agent_attention.v1"
+    assert meta["agent"] == "claude"
+    assert meta["reason"] == "approval"
+    assert meta["hint"]
+    assert isinstance(meta["detected_at"], float)
+
+    # same prompt again: no second card
+    client.post("/api/terminal/claude", json={"text": APPROVAL_SCREEN})
+    assert len(posted) == 1
+
+    # cleared screen: no card
+    client.post("/api/terminal/claude", json={"text": CLEARED_SCREEN})
+    assert len(posted) == 1
+
+    # re-fire after clear: second card
+    client.post("/api/terminal/claude", json={"text": APPROVAL_SCREEN})
+    assert len(posted) == 2
+
+
+def test_snapshot_route_works_without_post_chat_message(tmp_path):
+    client = _client(_make_state(tmp_path, None))
+    r = client.post("/api/terminal/claude", json={"text": APPROVAL_SCREEN})
+    assert r.status_code == 200
+    r = client.post("/api/terminal/claude", json={"text": CLEARED_SCREEN})
+    assert r.status_code == 200
