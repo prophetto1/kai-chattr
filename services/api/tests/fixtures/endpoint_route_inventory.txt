@@ -2,6 +2,7 @@ DELETE /api/hat/{agent_name}
 DELETE /api/jobs/{job_id}
 DELETE /api/jobs/{job_id}/messages/{msg_id}
 DELETE /api/locked/{locked_id}
+DELETE /api/model-providers/{provider_id}
 DELETE /api/pins
 DELETE /api/pins/{message_id}
 DELETE /api/rules/{rule_id}
@@ -20,6 +21,8 @@ GET /api/launchers/status
 GET /api/locked
 GET /api/mcp/tools
 GET /api/messages
+GET /api/model-providers
+GET /api/model-providers/{provider_id}
 GET /api/pins
 GET /api/platform
 GET /api/poll/{agent_name}
@@ -61,6 +64,7 @@ GET /schemas/pydantic/status
 GET /uploads/{filename}
 PATCH /api/jobs/{job_id}
 PATCH /api/locked/{locked_id}
+PATCH /api/model-providers/{provider_id}
 PATCH /api/pins/{message_id}
 PATCH /api/rules/{rule_id}
 PATCH /api/schedules/{schedule_id}/toggle
@@ -83,6 +87,7 @@ POST /api/messages/{msg_id}/demote
 POST /api/messages/{msg_id}/demote_rule_proposal
 POST /api/messages/{msg_id}/resolve_decision
 POST /api/messages/{msg_id}/resolve_rule_proposal
+POST /api/model-providers
 POST /api/open-path
 POST /api/pins
 POST /api/register

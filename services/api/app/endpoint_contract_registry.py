@@ -235,6 +235,15 @@ _c("GET", "/api/workspace/file", "session", "agent-runtime", "global", "legacy",
 _c("PUT", "/api/workspace/file", "session", "agent-runtime", "global", "legacy", "host filesystem")
 _c("GET", "/api/workspace/tree", "session", "agent-runtime", "global", "legacy", "host filesystem")
 
+# --- model providers (K-layer registry, MDA Deployment record; tenancy
+# ruling pending — global+legacy until Jon decides platform-global vs
+# workspace-scoped; untyped models = visible debt, Pydantic pass queued) ---
+_c("GET", "/api/model-providers", "session", "board", "global", "legacy", "model_providers store (JSON/db)")
+_c("POST", "/api/model-providers", "session", "board", "global", "legacy", "model_providers store (JSON/db)")
+_c("GET", "/api/model-providers/{provider_id}", "session", "board", "global", "legacy", "model_providers store (JSON/db)")
+_c("PATCH", "/api/model-providers/{provider_id}", "session", "board", "global", "legacy", "model_providers store (JSON/db)")
+_c("DELETE", "/api/model-providers/{provider_id}", "session", "board", "global", "legacy", "model_providers store (JSON/db)")
+
 # --- settings / themes / platform / archive / version (legacy) ---
 _c("GET", "/api/settings", "session", "settings", "global", "legacy", "settings store")
 _c("PATCH", "/api/settings", "session", "settings", "global", "legacy", "settings store")
