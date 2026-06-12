@@ -52,7 +52,7 @@ def test_terminal_ws_ready_io_list_and_cleanup(tmp_path):
     client = TestClient(app_module.app)
     headers = conftest.session_headers()
 
-    with client.websocket_connect(f"/ws/terminals?token={TOKEN}") as ws:
+    with client.websocket_connect(f"/ws/terminals?token={conftest.TEST_SESSION_TOKEN}") as ws:
         ready = ws.receive_json()
         assert ready["type"] == "ready"
         terminal_id = ready["terminal_id"]
@@ -96,7 +96,7 @@ def test_terminal_runtime_events_emitted_and_schema_valid(tmp_path):
     app_module = _configure(str(tmp_path))
     client = TestClient(app_module.app)
 
-    with client.websocket_connect(f"/ws/terminals?token={TOKEN}") as ws:
+    with client.websocket_connect(f"/ws/terminals?token={conftest.TEST_SESSION_TOKEN}") as ws:
         ready = ws.receive_json()
         assert ready["type"] == "ready"
 

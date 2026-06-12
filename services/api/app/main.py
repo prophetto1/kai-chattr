@@ -324,7 +324,7 @@ async def terminal_websocket_endpoint(websocket: WebSocket):
     await terminal_stream_endpoint(
         websocket,
         manager=terminal_session_manager,
-        validate_token=lambda token: token == _session_token_provider(),
+        validate_token=lambda token: _validate_user_session(token) is not None,
         cwd=_TERMINAL_CWD,
         get_event_stream=lambda: runtime_event_stream,
     )
@@ -1142,11 +1142,13 @@ def _on_registry_change():
 async def websocket_endpoint(websocket: WebSocket):
     # --- Security: validate session token on WebSocket connect ---
     token = websocket.query_params.get("token", "")
-    if token != _session_token_provider():
+    # Phase 0 auth unification (plan v2 Task 2): websockets validate kcs_
+    # auth sessions; the launcher token is not a product credential.
+    if _validate_user_session(token) is None:
         # Must accept before closing so the browser receives the close frame.
-        # Code 4003 triggers an auto-reload in the client to pick up the new token.
+        # Code 4003 triggers an auto-reload in the client to pick up a fresh session.
         await websocket.accept()
-        await websocket.close(code=4003, reason="forbidden: invalid session token")
+        await websocket.close(code=4003, reason="unauthorized: a valid auth session is required")
         return
 
     await websocket.accept()

@@ -101,7 +101,7 @@ def test_websocket_mention_reaches_registered_agent_queue_and_response_broadcast
         app_module = _configure_runtime(tmp)
 
         with TestClient(app_module.app) as client:
-            with client.websocket_connect("/ws?token=runtime-loop-token") as websocket:
+            with client.websocket_connect(f"/ws?token={conftest.TEST_SESSION_TOKEN}") as websocket:
                 _drain_initial_websocket_payload(websocket)
 
                 registration = client.post(
