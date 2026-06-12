@@ -20,6 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
+  getEndpointContractCoverage,
   getObservedEndpoints,
   getObservabilityStatus,
   type ObservedEndpoint,
@@ -371,7 +372,10 @@ function EndpointContractTable({
             <th className="px-3 py-2 font-medium">Method</th>
             <th className="px-3 py-2 font-medium">Path</th>
             <th className="px-3 py-2 font-medium">Auth</th>
-            <th className="px-3 py-2 font-medium">Proxy</th>
+            <th className="px-3 py-2 font-medium">Scope</th>
+            <th className="px-3 py-2 font-medium">Status</th>
+            <th className="px-3 py-2 font-medium">Data owner</th>
+            <th className="px-3 py-2 font-medium">Models (req → res)</th>
             <th className="px-3 py-2 font-medium">Surface</th>
             <th className="px-3 py-2 font-medium">Span</th>
           </tr>
@@ -384,7 +388,16 @@ function EndpointContractTable({
               </td>
               <td className="px-3 py-2 font-mono text-foreground">{endpoint.path}</td>
               <td className="px-3 py-2 text-muted-foreground">{endpoint.auth}</td>
-              <td className="px-3 py-2 text-muted-foreground">{endpoint.proxy}</td>
+              <td className="px-3 py-2 text-muted-foreground">{endpoint.scope}</td>
+              <td className="px-3 py-2">
+                <Badge variant={endpoint.canonical_status === 'canonical' ? 'secondary' : 'outline'}>
+                  {endpoint.canonical_status}
+                </Badge>
+              </td>
+              <td className="px-3 py-2 text-muted-foreground">{endpoint.data_owner}</td>
+              <td className="px-3 py-2 font-mono text-muted-foreground">
+                {endpoint.request_model} → {endpoint.response_model}
+              </td>
               <td className="px-3 py-2 text-muted-foreground">{endpoint.surface}</td>
               <td className="px-3 py-2 font-mono text-muted-foreground">{endpoint.span_name}</td>
             </tr>
@@ -396,9 +409,28 @@ function EndpointContractTable({
 }
 
 function OpenApiObservabilityPanel() {
+  const coverageQuery = useQuery({
+    queryFn: getEndpointContractCoverage,
+    queryKey: ['endpoint-contract-coverage'],
+  })
+  const coverage = coverageQuery.data
+
   return (
     <div className="grid gap-5">
       <ObservabilityPanel eyebrow="Schema" title="OpenAPI and observed endpoints">
+        <ObservabilityRow
+          action={(
+            <Badge variant={coverage && coverage.uncontracted_routes.length === 0 ? 'secondary' : 'destructive'}>
+              {coverage
+                ? `${coverage.contracted_routes}/${coverage.total_routes} contracted`
+                : coverageQuery.isLoading
+                  ? 'loading…'
+                  : 'unavailable'}
+            </Badge>
+          )}
+          description="Every safe route owns one explicit contract (auth, scope, canonical status, data owner). Source: /schemas/endpoint-contracts/status."
+          label="Endpoint contract coverage"
+        />
         <ObservabilityRow
           action={(
             <Button asChild size="sm" type="button" variant="secondary">
