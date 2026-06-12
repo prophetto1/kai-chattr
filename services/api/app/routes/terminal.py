@@ -230,19 +230,35 @@ def create_terminal_router(state: TerminalApiState) -> APIRouter:
             snapshots = {name: dict(snap) for name, snap in state.snapshots.items()}
 
         agents = []
+        now = time.time()
         for name in sorted(known | set(snapshots)):
             snapshot = snapshots.get(name)
             tail = ""
+            last_change_ms = 0
             if snapshot:
                 tail = "\n".join(snapshot.get("text", "").splitlines()[-25:])
+                try:
+                    last_change_at = float(snapshot.get("last_change_at") or 0)
+                except (TypeError, ValueError):
+                    last_change_at = 0.0
+                if last_change_at > 0:
+                    last_change_ms = max(0, int((now - last_change_at) * 1000))
+            approval_needed = bool((snapshot or {}).get("approval_needed"))
             agents.append({
                 "name": name,
                 "registered": name in known,
                 "has_snapshot": snapshot is not None,
                 "snapshot_age_ms": _terminal_snapshot_age_ms(snapshot),
-                "approval_needed": bool((snapshot or {}).get("approval_needed")),
+                "approval_needed": approval_needed,
                 "approval_hint": (snapshot or {}).get("approval_hint", ""),
                 "screen_tail": tail,
+                "last_change_ms": last_change_ms,
+                "stuck": bool(
+                    name in known
+                    and snapshot is not None
+                    and not approval_needed
+                    and last_change_ms >= approval_bridge.STUCK_MS
+                ),
             })
         return JSONResponse({
             "ok": True,

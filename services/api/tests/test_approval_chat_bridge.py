@@ -178,3 +178,56 @@ def test_snapshot_route_works_without_post_chat_message(tmp_path):
     assert r.status_code == 200
     r = client.post("/api/terminal/claude", json={"text": CLEARED_SCREEN})
     assert r.status_code == 200
+
+
+# --- Runtimes endpoint: last_change_ms + stuck (plan Task 4) ---
+
+def test_runtimes_reports_last_change_and_stuck(tmp_path):
+    posted: list = []
+    state = _make_state(tmp_path, posted)
+    client = _client(state)
+
+    client.post("/api/terminal/claude", json={"text": "working...\n"})
+    agent = client.get("/api/terminal-runtimes").json()["agents"][0]
+    assert agent["last_change_ms"] < 5000
+    assert agent["stuck"] is False
+
+    # age the last screen change past STUCK_MS
+    with state.snapshots_lock:
+        state.snapshots["claude"]["last_change_at"] -= 25.0
+    agent = client.get("/api/terminal-runtimes").json()["agents"][0]
+    assert agent["last_change_ms"] >= 20000
+    assert agent["stuck"] is True
+
+
+def test_no_stuck_flag_while_approval_pending(tmp_path):
+    state = _make_state(tmp_path, [])
+    client = _client(state)
+    client.post("/api/terminal/claude", json={"text": APPROVAL_SCREEN})
+    with state.snapshots_lock:
+        state.snapshots["claude"]["last_change_at"] -= 25.0
+    agent = client.get("/api/terminal-runtimes").json()["agents"][0]
+    assert agent["approval_needed"] is True
+    assert agent["stuck"] is False
+
+
+def test_stuck_posts_card_once_via_route(tmp_path):
+    posted: list = []
+    state = _make_state(tmp_path, posted)
+    client = _client(state)
+
+    client.post("/api/terminal/claude", json={"text": "frozen screen\n"})
+    assert posted == []
+    with state.snapshots_lock:
+        state.snapshots["claude"]["last_change_at"] -= 25.0
+
+    # same text again: bridge sees unchanged screen past stuck_ms
+    client.post("/api/terminal/claude", json={"text": "frozen screen\n"})
+    assert len(posted) == 1
+    assert posted[0]["metadata"]["reason"] == "stuck"
+
+    # and only once per episode
+    with state.snapshots_lock:
+        state.snapshots["claude"]["last_change_at"] -= 25.0
+    client.post("/api/terminal/claude", json={"text": "frozen screen\n"})
+    assert len(posted) == 1
