@@ -2663,6 +2663,15 @@ async def register_agent(request: Request):
             "color": result.get("color", "#888"),
         })
         _schedule_runtime_coroutine(_broadcast(pending_event))
+    else:
+        # Join message mirrors the leave-message convention (msg_type="leave"
+        # on disconnect): one chat-visible line per active registration.
+        store.add(
+            result["name"],
+            f"{result['name']} entered the chat",
+            msg_type="join",
+            channel=_last_active_channel,
+        )
     return JSONResponse(result)
 
 
