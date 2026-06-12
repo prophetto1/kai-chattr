@@ -1726,6 +1726,12 @@ async def get_pydantic_contract_status() -> PydanticContractStatus:
     return describe_pydantic_contract_status()
 
 
+async def get_endpoint_contract_status():
+    from app.endpoint_contract_registry import coverage_status
+
+    return JSONResponse(coverage_status(app))
+
+
 async def get_observed_endpoints():
     return observed_endpoint_catalog()
 

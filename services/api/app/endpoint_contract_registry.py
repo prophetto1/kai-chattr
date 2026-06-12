@@ -131,6 +131,7 @@ _c("POST", "/w/{workspace_public_id}/invitations", "user-bearer", "identity", "w
 # --- system / contract / observability / runtime topology (internal infra) ---
 _c("GET", "/healthz", "public", "system-health", "public", "internal", "runtime", proxy="direct-backend")
 _c("GET", "/schemas/pydantic/status", "public", "contract-status", "public", "internal", "contract code", proxy="direct-backend")
+_c("GET", "/schemas/endpoint-contracts/status", "public", "contract-status", "public", "internal", "endpoint registry", proxy="direct-backend", res="coverage_status dict")
 _c("GET", "/observability/endpoints", "public", "observability", "public", "internal", "endpoint registry", proxy="observability")
 _c("GET", "/observability/status", "public", "observability", "public", "internal", "otel/jsonl exporters", proxy="observability")
 _c("GET", "/api/runtime/ports", "public", "runtime-topology", "public", "internal", "runtime contract")

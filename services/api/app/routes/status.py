@@ -25,6 +25,11 @@ def register_routes(main_module) -> None:
         response_model=PydanticContractStatus,
     )
     router.add_api_route(
+        "/schemas/endpoint-contracts/status",
+        main_module.get_endpoint_contract_status,
+        methods=["GET"],
+    )
+    router.add_api_route(
         "/observability/endpoints",
         main_module.get_observed_endpoints,
         methods=["GET"],
