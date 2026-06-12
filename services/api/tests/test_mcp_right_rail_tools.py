@@ -7,6 +7,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import conftest  # noqa: E402
+
 from app.stores.jobs import JobStore
 from app.stores.rules import RuleStore
 from app.stores.locked import LockedStore
@@ -226,11 +228,12 @@ def test_right_rail_capabilities_endpoint_is_mcp_backed(tmp_path):
         },
         session_token="right-rail-test-token",
     )
+    conftest.mint_test_session(app_module)
     client = TestClient(app_module.app)
 
     res = client.get(
         "/api/right-rail/capabilities",
-        headers={"X-Session-Token": "right-rail-test-token"},
+        headers=conftest.session_headers(),
     )
     assert res.status_code == 200
     tabs = res.json()["tabs"]
@@ -261,21 +264,22 @@ def test_browser_session_endpoint_is_not_exposed_and_right_rail_stays_protected(
         },
         session_token="right-rail-test-token",
     )
+    conftest.mint_test_session(app_module)
     client = TestClient(app_module.app)
 
     session_res = client.get(
         "/api/session",
-        headers={"X-Session-Token": "right-rail-test-token"},
+        headers=conftest.session_headers(),
     )
     assert session_res.status_code == 404
 
     forbidden_res = client.get("/api/right-rail/capabilities")
-    assert forbidden_res.status_code == 403
-    assert forbidden_res.json()["error"] == "forbidden: invalid or missing session token"
+    assert forbidden_res.status_code == 401  # Phase 0: unauthenticated = 401
+    assert forbidden_res.json()["error"] == "unauthorized: a valid auth session is required"
 
     authed_res = client.get(
         "/api/right-rail/capabilities",
-        headers={"X-Session-Token": "right-rail-test-token"},
+        headers=conftest.session_headers(),
     )
     assert authed_res.status_code == 200
 
@@ -295,8 +299,9 @@ def test_locked_http_api_supports_ui_lifecycle(tmp_path):
         },
         session_token="right-rail-test-token",
     )
+    conftest.mint_test_session(app_module)
     client = TestClient(app_module.app)
-    headers = {"X-Session-Token": "right-rail-test-token"}
+    headers = conftest.session_headers()
 
     created = client.post(
         "/api/locked",
@@ -346,8 +351,9 @@ def test_rules_http_api_supports_ui_lifecycle(tmp_path):
         },
         session_token="right-rail-test-token",
     )
+    conftest.mint_test_session(app_module)
     client = TestClient(app_module.app)
-    headers = {"X-Session-Token": "right-rail-test-token"}
+    headers = conftest.session_headers()
 
     created = client.post(
         "/api/rules",
@@ -410,8 +416,9 @@ def test_pins_http_api_supports_ui_lifecycle(tmp_path):
         },
         session_token="right-rail-test-token",
     )
+    conftest.mint_test_session(app_module)
     client = TestClient(app_module.app)
-    headers = {"X-Session-Token": "right-rail-test-token"}
+    headers = conftest.session_headers()
     msg = app_module.store.add("user", "Pin this Board item.", channel="general")
 
     created = client.post(

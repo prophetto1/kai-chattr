@@ -87,3 +87,79 @@ def test_local_session_503_without_identity_store():
     client = TestClient(app)
     response = client.post("/auth/local-session", json={})
     assert response.status_code == 503
+
+
+# --- Task 1: middleware flip — auth_sessions is the single user authority ---
+
+import importlib
+import tempfile
+
+
+def _configured_app_with_identity():
+    from app import main as app_module
+
+    app_module = importlib.reload(app_module)
+    tmp = tempfile.TemporaryDirectory()
+    cfg = {
+        "server": {"port": 8840, "data_dir": tmp.name, "remote_agent_token": "remote-test-token"},
+        "agents": {"codex": {"command": "codex", "cwd": ".", "label": "Codex"}},
+        "routing": {"default": "none", "max_agent_hops": 4},
+        "images": {"upload_dir": str(Path(tmp.name) / "uploads"), "max_size_mb": 10},
+        "mcp": {"http_port": 8841, "sse_port": 8842},
+    }
+    app_module.configure(cfg, session_token="legacy-launcher-token")
+
+    from sqlalchemy import create_engine
+    from sqlalchemy.pool import StaticPool
+
+    from app.stores.identity_db import SqlAlchemyIdentityStore
+
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool, future=True
+    )
+    app_module.app.state.identity_store = SqlAlchemyIdentityStore(engine)
+    client = TestClient(app_module.app)
+    token = client.post("/auth/local-session", json={}).json()["token"]
+    return app_module, client, token, tmp
+
+
+def test_flipped_routes_reject_launcher_token_and_accept_kcs():
+    app_module, client, token, _tmp = _configured_app_with_identity()
+
+    legacy = client.get("/api/jobs", headers={"X-Session-Token": "legacy-launcher-token"})
+    assert legacy.status_code == 401
+
+    via_legacy_header = client.get("/api/jobs", headers={"X-Session-Token": token})
+    assert via_legacy_header.status_code == 200
+
+    via_bearer = client.get("/api/jobs", headers={"Authorization": f"Bearer {token}"})
+    assert via_bearer.status_code == 200
+
+    missing = client.get("/api/jobs")
+    assert missing.status_code == 401
+
+
+def test_expired_session_rejected():
+    app_module, client, token, _tmp = _configured_app_with_identity()
+    store = app_module.app.state.identity_store
+    user = store.find_user_by_email("owner@local.kai")
+    expired = store.issue_session(user_id=user["id"], ttl_seconds=-60)
+    response = client.get("/api/jobs", headers={"X-Session-Token": expired["token"]})
+    assert response.status_code == 401
+
+
+def test_agent_bearer_lane_unaffected_by_flip():
+    app_module, client, token, _tmp = _configured_app_with_identity()
+    reg = client.post(
+        "/api/register",
+        json={"base": "codex"},
+        headers={"X-Agentchattr-Remote-Token": "remote-test-token"},
+    )
+    assert reg.status_code == 200
+    agent_token = reg.json()["token"]
+    posted = client.post(
+        "/api/terminal/codex",
+        json={"text": "agent screen"},
+        headers={"Authorization": f"Bearer {agent_token}"},
+    )
+    assert posted.status_code == 200

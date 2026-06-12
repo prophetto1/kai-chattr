@@ -17,6 +17,7 @@ def create_security_middleware(
     resolve_authenticated_agent: Callable[[Request], dict[str, Any] | None],
     remote_agent_token: Callable[[dict[str, Any]], str],
     request_remote_agent_token: Callable[[Request], str],
+    validate_user_session: Callable[[str], Any | None] | None = None,
 ):
     class SecurityMiddleware(BaseHTTPMiddleware):
         async def dispatch(self, request: Request, call_next):
@@ -92,11 +93,26 @@ def create_security_middleware(
                 if resolve_authenticated_agent(request):
                     return await _with_cors(call_next, request, cors_origin)
 
-            req_token = request.headers.get("x-session-token") or request.query_params.get("token")
-            if req_token != get_session_token():
+            # Phase 0 auth unification (plan v2, Task 1): the user-session gate
+            # validates revocable auth_sessions (kcs_) — the launcher token is
+            # no longer a product credential. Dual-accept window: the kcs_
+            # token may arrive via Authorization: Bearer or the legacy
+            # X-Session-Token header/query param; Task 7 retires the latter.
+            bearer = ""
+            auth_value = request.headers.get("authorization", "")
+            if auth_value.lower().startswith("bearer "):
+                bearer = auth_value.partition(" ")[2].strip()
+            req_token = (
+                request.headers.get("x-session-token")
+                or bearer
+                or request.query_params.get("token")
+                or ""
+            )
+            session = validate_user_session(req_token) if (validate_user_session and req_token) else None
+            if session is None:
                 return JSONResponse(
-                    {"error": "forbidden: invalid or missing session token"},
-                    status_code=403,
+                    {"error": "unauthorized: a valid auth session is required"},
+                    status_code=401,
                 )
 
             return await _with_cors(call_next, request, cors_origin)

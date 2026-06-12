@@ -79,4 +79,39 @@ def chattr_test_configure(
         # OTel providers were installed on the first configure() and cannot
         # be reinstalled; only re-point the JSON-lines exporter file paths.
         set_export_paths(data_dir_path)
-    return session_token
+    from app import main as _app_module
+    return mint_test_session(_app_module)
+
+
+# --- Phase 0 auth unification: tests authenticate with real auth sessions ---
+TEST_SESSION_TOKEN: str = ""
+
+
+def mint_test_session(app_module) -> str:
+    """Attach an in-memory identity store (if absent) and mint the local
+    owner's kcs_ session via /auth/local-session. The launcher token is no
+    longer a product credential (plan v2 Task 1)."""
+    global TEST_SESSION_TOKEN
+    from fastapi.testclient import TestClient
+    from sqlalchemy import create_engine
+    from sqlalchemy.pool import StaticPool
+
+    from app.stores.identity_db import SqlAlchemyIdentityStore
+
+    if getattr(app_module.app.state, "identity_store", None) is None:
+        engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+            future=True,
+        )
+        app_module.app.state.identity_store = SqlAlchemyIdentityStore(engine)
+    client = TestClient(app_module.app)  # no context manager: do not run app lifespan here
+    response = client.post("/auth/local-session", json={})
+    assert response.status_code == 200, f"local-session bootstrap failed: {response.status_code} {response.text}"
+    TEST_SESSION_TOKEN = response.json()["token"]
+    return TEST_SESSION_TOKEN
+
+
+def session_headers() -> dict:
+    return {"X-Session-Token": TEST_SESSION_TOKEN}

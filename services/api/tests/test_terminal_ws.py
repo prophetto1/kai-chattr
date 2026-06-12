@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import conftest  # noqa: E402
+
 import importlib
 import json
 import time
@@ -25,6 +27,9 @@ def _configure(tmp_dir: str):
         "mcp": {"http_port": 8841, "sse_port": 8842},
     }
     app_module.configure(cfg, session_token=TOKEN)
+    import conftest
+    conftest.mint_test_session(app_module)
+
     return app_module
 
 
@@ -45,7 +50,7 @@ def _collect_output_until(ws, needle: str, timeout_s: float = 25.0) -> str:
 def test_terminal_ws_ready_io_list_and_cleanup(tmp_path):
     app_module = _configure(str(tmp_path))
     client = TestClient(app_module.app)
-    headers = {"X-Session-Token": TOKEN}
+    headers = conftest.session_headers()
 
     with client.websocket_connect(f"/ws/terminals?token={TOKEN}") as ws:
         ready = ws.receive_json()

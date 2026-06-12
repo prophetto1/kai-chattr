@@ -12,6 +12,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import conftest  # noqa: E402
+
 from app.events import validate_payload  # noqa: E402
 from app import main as app  # noqa: E402
 
@@ -40,6 +42,8 @@ class TerminalSnapshotApiTests(unittest.TestCase):
             "mcp": {"http_port": 8841, "sse_port": 8842},
         }
         app.configure(cfg, session_token="ui-test-token")
+        import conftest
+        conftest.mint_test_session(app)
         cls.client = TestClient(app.app)
 
     def setUp(self):
@@ -52,7 +56,7 @@ class TerminalSnapshotApiTests(unittest.TestCase):
     def test_terminal_routes_remain_in_openapi(self):
         schema = self.client.get(
             "/openapi.json",
-            headers={"X-Session-Token": "ui-test-token"},
+            headers=conftest.session_headers(),
         )
         self.assertEqual(schema.status_code, 200)
         paths = schema.json()["paths"]
@@ -78,7 +82,7 @@ class TerminalSnapshotApiTests(unittest.TestCase):
 
         fetched = self.client.get(
             "/api/terminal/codex",
-            headers={"X-Session-Token": "ui-test-token"},
+            headers=conftest.session_headers(),
         )
         self.assertEqual(fetched.status_code, 200)
         snapshot = fetched.json()["snapshot"]

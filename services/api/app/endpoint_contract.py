@@ -13,6 +13,12 @@ from fastapi.routing import APIRoute
 EndpointAuth = Literal[
     "public",
     "user-bearer",
+    # Phase 0 auth unification: user-session* values validate kcs_ auth_sessions.
+    "user-session",
+    "user-session-or-agent-bearer",
+    "user-session-or-local-agent-bearer",
+    # Legacy launcher-token values remain only for the heuristic fallback path,
+    # which the registry coverage gate keeps at zero live routes.
     "session",
     "session-or-local-agent-bearer",
     "session-or-agent-bearer",
@@ -174,30 +180,30 @@ def endpoint_policy_for_path(method: str, path: str) -> EndpointPolicy:
     if path.startswith("/api/runtime/"):
         return EndpointPolicy("public", "api", "runtime-topology")
     if path == "/api/roles" or path.startswith("/api/roles/"):
-        return EndpointPolicy("session-or-local-agent-bearer", "api", "agent-runtime")
+        return EndpointPolicy("user-session-or-local-agent-bearer", "api", "agent-runtime")
     if path.startswith("/api/launchers/"):
-        return EndpointPolicy("session", "api", "launcher")
+        return EndpointPolicy("user-session", "api", "launcher")
     if path.startswith(("/api/git/", "/api/repositories", "/api/conversations", "/api/suggested-tasks")):
-        return EndpointPolicy("session", "api", "home-start")
+        return EndpointPolicy("user-session", "api", "home-start")
     if path in {"/api/register"}:
         return EndpointPolicy("local-or-remote-agent-token", "api", "agent-runtime")
     if path.startswith(("/api/deregister/", "/api/heartbeat/", "/api/poll/")):
         return EndpointPolicy("local-or-agent-bearer", "api", "agent-runtime")
     if path in {"/api/messages", "/api/send"} or path.startswith(("/api/rules/", "/api/terminal/")):
-        return EndpointPolicy("session-or-agent-bearer", "api", _surface_for_api_path(path))
+        return EndpointPolicy("user-session-or-agent-bearer", "api", _surface_for_api_path(path))
     if path.startswith("/api/settings"):
-        return EndpointPolicy("session", "api", "settings")
+        return EndpointPolicy("user-session", "api", "settings")
     if path.startswith("/api/themes"):
-        return EndpointPolicy("session", "api", "theme")
+        return EndpointPolicy("user-session", "api", "theme")
     if path.startswith("/api/version_check"):
-        return EndpointPolicy("session", "api", "version")
+        return EndpointPolicy("user-session", "api", "version")
     if path.startswith("/api/open-path") or path.startswith("/api/platform"):
-        return EndpointPolicy("session", "api", "platform")
+        return EndpointPolicy("user-session", "api", "platform")
     if path.startswith(("/api/upload", "/api/export", "/api/import")):
-        return EndpointPolicy("session", "api", "archive")
+        return EndpointPolicy("user-session", "api", "archive")
     if path.startswith("/api/mcp/"):
-        return EndpointPolicy("session", "api", "mcp")
-    return EndpointPolicy("session", "api", _surface_for_api_path(path))
+        return EndpointPolicy("user-session", "api", "mcp")
+    return EndpointPolicy("user-session", "api", _surface_for_api_path(path))
 
 
 def identify_endpoint(

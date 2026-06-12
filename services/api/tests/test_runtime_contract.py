@@ -90,7 +90,7 @@ class RuntimeArchitectureContractTests(unittest.TestCase):
             try:
                 response = client.get("/healthz")
             finally:
-                chattr_test_configure(self.tmp.name, session_token=self.token)
+                type(self).token = chattr_test_configure(self.tmp.name)
 
         body = response.json()
         self.assertEqual(response.status_code, 200)
@@ -100,7 +100,7 @@ class RuntimeArchitectureContractTests(unittest.TestCase):
 
     def test_right_rail_capabilities_are_protected_and_available_when_authenticated(self):
         forbidden = self.client.get("/api/right-rail/capabilities")
-        self.assertEqual(forbidden.status_code, 403)
+        self.assertEqual(forbidden.status_code, 401)  # Phase 0: unauthenticated = 401
 
         authed = self.client.get(
             "/api/right-rail/capabilities",
@@ -124,7 +124,7 @@ class RuntimeArchitectureContractTests(unittest.TestCase):
 
     def test_roles_api_requires_session_token_for_remote_style_requests(self):
         forbidden = self.client.get("/api/roles")
-        self.assertEqual(forbidden.status_code, 403)
+        self.assertEqual(forbidden.status_code, 401)  # Phase 0: unauthenticated = 401
 
         authed = self.client.get(
             "/api/roles",

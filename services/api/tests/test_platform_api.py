@@ -11,12 +11,15 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import conftest  # noqa: E402
+
 _CLIENTS = []
 _TEMPDIRS = []
 
 
-def session_headers(token: str = "platform-test-token"):
-    return {"X-Session-Token": token}
+def session_headers(token: str | None = None):
+    # Late-bound: the kcs_ token is minted per-test by chattr_test_configure.
+    return {"X-Session-Token": token if token is not None else conftest.TEST_SESSION_TOKEN}
 
 
 @pytest.fixture(autouse=True)
@@ -57,6 +60,9 @@ def make_client():
         "mcp": {"http_port": 8841, "sse_port": 8842},
     }
     app_module.configure(cfg, session_token="platform-test-token")
+    import conftest
+    conftest.mint_test_session(app_module)
+
     client = TestClient(app_module.app)
     _CLIENTS.append(client)
     return client
@@ -65,7 +71,7 @@ def make_client():
 def test_platform_requires_session_token():
     client = make_client()
     res = client.get("/api/platform")
-    assert res.status_code == 403
+    assert res.status_code == 401
 
 
 def test_platform_returns_current_platform_with_session_token():

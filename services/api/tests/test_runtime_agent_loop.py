@@ -11,6 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import conftest  # noqa: E402
+
 
 def _configure_runtime(tmp_dir: str):
     from app import main as app_module
@@ -39,6 +41,9 @@ def _configure_runtime(tmp_dir: str):
         "mcp": {"http_port": 8841, "sse_port": 8842},
     }
     app_module.configure(cfg, session_token="runtime-loop-token")
+    import conftest
+    conftest.mint_test_session(app_module)
+
     return app_module
 
 
@@ -61,7 +66,7 @@ def _wait_for_message_in_store(
         response = client.get(
             "/api/messages",
             params={"limit": 50, "channel": "general"},
-            headers={"X-Session-Token": "runtime-loop-token"},
+            headers=conftest.session_headers(),
         )
         assert response.status_code == 200
         for message in response.json():

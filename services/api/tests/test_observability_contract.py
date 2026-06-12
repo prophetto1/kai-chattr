@@ -97,26 +97,26 @@ def test_endpoint_contract_classifies_auth_and_proxy_surfaces() -> None:
     assert endpoints[("GET", "/api/runtime/ports")].auth == "public"
     assert endpoints[("GET", "/api/runtime/ports")].proxy == "api"
 
-    assert endpoints[("PATCH", "/api/settings")].auth == "session"
+    assert endpoints[("PATCH", "/api/settings")].auth == "user-session"
     assert endpoints[("PATCH", "/api/settings")].surface == "settings"
 
     assert endpoints[("POST", "/api/register")].auth == "local-or-remote-agent-token"
     assert endpoints[("GET", "/api/poll/{agent_name}")].auth == "local-or-agent-bearer"
-    assert endpoints[("GET", "/api/terminal/{agent_name}")].auth == "session-or-agent-bearer"
+    assert endpoints[("GET", "/api/terminal/{agent_name}")].auth == "user-session-or-agent-bearer"
 
     assert endpoints[("GET", "/uploads/{filename}")].auth == "public"
     assert endpoints[("GET", "/uploads/{filename}")].proxy == "uploads"
 
-    assert endpoints[("GET", "/api/roles")].auth == "session-or-local-agent-bearer"
-    assert endpoints[("POST", "/api/roles/{agent_name}")].auth == "session-or-local-agent-bearer"
-    assert endpoint_policy_for_path("GET", "/api/roles-extra").auth == "session"
+    assert endpoints[("GET", "/api/roles")].auth == "user-session-or-local-agent-bearer"
+    assert endpoints[("POST", "/api/roles/{agent_name}")].auth == "user-session-or-local-agent-bearer"
+    assert endpoint_policy_for_path("GET", "/api/roles-extra").auth == "user-session"
 
-    assert endpoints[("GET", "/api/git/repositories/search")].auth == "session"
+    assert endpoints[("GET", "/api/git/repositories/search")].auth == "user-session"
     assert endpoints[("GET", "/api/git/repositories/search")].surface == "home-start"
     assert endpoints[("GET", "/api/git/branches/search")].surface == "home-start"
     assert endpoints[("GET", "/api/model-providers")].surface == "board"
     assert endpoints[("POST", "/api/model-providers")].surface == "board"
-    assert endpoints[("PATCH", "/api/model-providers/{provider_id}")].auth == "session"
+    assert endpoints[("PATCH", "/api/model-providers/{provider_id}")].auth == "user-session"
 
 
 def test_observability_catalog_exposes_contract_metadata(tmp_path) -> None:
@@ -131,7 +131,7 @@ def test_observability_catalog_exposes_contract_metadata(tmp_path) -> None:
         for item in response.json()
         if item["method"] == "PATCH" and item["path"] == "/api/settings"
     )
-    assert endpoint["auth"] == "session"
+    assert endpoint["auth"] == "user-session"
     assert endpoint["proxy"] == "api"
     assert endpoint["route_name"] == "patch_settings"
     assert endpoint["surface"] == "settings"

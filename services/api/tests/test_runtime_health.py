@@ -11,6 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import conftest  # noqa: E402
+
 from app import main as app  # noqa: E402
 from conftest import chattr_test_configure  # noqa: E402
 
@@ -43,19 +45,19 @@ class RuntimePortsTests(unittest.TestCase):
     def test_runtime_ports_listed_in_openapi(self):
         schema = self.client.get(
             "/openapi.json",
-            headers={"X-Session-Token": "ui-test-token"},
+            headers=conftest.session_headers(),
         )
         self.assertEqual(schema.status_code, 200)
         self.assertIn("/api/runtime/ports", schema.json()["paths"])
 
     def test_api_does_not_serve_frontend_routes_or_static_assets(self):
-        headers = {"X-Session-Token": "ui-test-token"}
+        headers = conftest.session_headers()
         self.assertEqual(self.client.get("/workbench", headers=headers).status_code, 404)
         self.assertEqual(self.client.get("/workbench/", headers=headers).status_code, 404)
         self.assertEqual(self.client.get("/static/app.js", headers=headers).status_code, 404)
 
     def test_browser_session_endpoint_is_not_exposed(self):
-        headers = {"X-Session-Token": "ui-test-token"}
+        headers = conftest.session_headers()
         self.assertEqual(self.client.get("/api/session", headers=headers).status_code, 404)
 
 

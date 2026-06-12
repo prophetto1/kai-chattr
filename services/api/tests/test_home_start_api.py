@@ -12,6 +12,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import conftest  # noqa: E402
+
 
 def _make_client(config_overrides=None):
     from app import main as app_module
@@ -34,12 +36,16 @@ def _make_client(config_overrides=None):
     if config_overrides:
         cfg.update(config_overrides)
     app_module.configure(cfg, session_token="home-test-token")
+    import conftest
+    conftest.mint_test_session(app_module)
+
     client = TestClient(app_module.app)
     return client, tmp
 
 
 def _headers():
-    return {"X-Session-Token": "home-test-token"}
+    import conftest
+    return {"X-Session-Token": conftest.TEST_SESSION_TOKEN}
 
 
 def test_home_start_endpoints_return_typed_empty_states():

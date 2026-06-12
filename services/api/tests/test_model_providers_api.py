@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import conftest  # noqa: E402
+
 from fastapi.testclient import TestClient
 
 from app import main as api_main
@@ -9,7 +11,7 @@ from conftest import chattr_test_configure
 def test_model_providers_http_crud_flow(tmp_path):
     chattr_test_configure(tmp_path)
     client = TestClient(api_main.app)
-    headers = {"X-Session-Token": "ui-test-token"}
+    headers = conftest.session_headers()
 
     list_blank = client.get("/api/model-providers", headers=headers)
     assert list_blank.status_code == 200
@@ -75,7 +77,7 @@ def test_model_providers_http_crud_flow(tmp_path):
 def test_model_providers_reject_invalid_payloads(tmp_path):
     chattr_test_configure(tmp_path)
     client = TestClient(api_main.app)
-    headers = {"X-Session-Token": "ui-test-token"}
+    headers = conftest.session_headers()
 
     bad = client.post(
         "/api/model-providers",

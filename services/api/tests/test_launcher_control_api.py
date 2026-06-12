@@ -11,12 +11,15 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import conftest  # noqa: E402
+
 _CLIENTS = []
 _TEMPDIRS = []
 
 
-def session_headers(token: str = "settings-test-token"):
-    return {"X-Session-Token": token}
+def session_headers(token: str | None = None):
+    # Late-bound: the kcs_ token is minted per-test by chattr_test_configure.
+    return {"X-Session-Token": token if token is not None else conftest.TEST_SESSION_TOKEN}
 
 
 @pytest.fixture(autouse=True)
@@ -56,6 +59,9 @@ def make_client(client=("127.0.0.1", 50000)):
         "mcp": {"http_port": 8841, "sse_port": 8842},
     }
     app_module.configure(cfg, session_token="settings-test-token")
+    import conftest
+    conftest.mint_test_session(app_module)
+
     test_client = TestClient(app_module.app, client=client)
     _CLIENTS.append(test_client)
     return test_client
@@ -64,13 +70,13 @@ def make_client(client=("127.0.0.1", 50000)):
 def test_profiles_endpoint_requires_session_token():
     client = make_client()
     res = client.get("/api/launchers/profiles")
-    assert res.status_code == 403
+    assert res.status_code == 401
 
 
 def test_profiles_endpoint_rejects_bad_session_token():
     client = make_client()
     res = client.get("/api/launchers/profiles", headers=session_headers("bad-token"))
-    assert res.status_code == 403
+    assert res.status_code == 401
 
 
 def test_profiles_lists_whitelisted_profiles_with_session_token():

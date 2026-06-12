@@ -10,12 +10,15 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import conftest  # noqa: E402
+
 from app import main as app_module  # noqa: E402
 from conftest import chattr_test_configure  # noqa: E402
 
 
 def _headers():
-    return {"X-Session-Token": "theme-test-token"}
+    import conftest
+    return {"X-Session-Token": conftest.TEST_SESSION_TOKEN}
 
 
 class ThemeSettingsApiTests(unittest.TestCase):

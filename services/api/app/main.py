@@ -334,6 +334,14 @@ def _session_token_provider() -> str:
     return _session_token_holder[0]
 
 
+def _validate_user_session(raw_token: str):
+    """Phase 0 auth gate: the only user credential is an active auth_session."""
+    store = getattr(app.state, "identity_store", None)
+    if store is None:
+        return None
+    return store.validate_session(raw_token)
+
+
 def _chattr_version_provider() -> str:
     return chattr_version
 
@@ -380,6 +388,7 @@ def _install_security_middleware(token: str, cfg: dict):
         resolve_authenticated_agent=_resolve_authenticated_agent,
         remote_agent_token=_remote_agent_token,
         request_remote_agent_token=_request_remote_agent_token,
+        validate_user_session=_validate_user_session,
     )
 
     app.add_middleware(SecurityMiddleware)
