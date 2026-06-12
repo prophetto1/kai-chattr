@@ -114,6 +114,9 @@ def test_endpoint_contract_classifies_auth_and_proxy_surfaces() -> None:
     assert endpoints[("GET", "/api/git/repositories/search")].auth == "session"
     assert endpoints[("GET", "/api/git/repositories/search")].surface == "home-start"
     assert endpoints[("GET", "/api/git/branches/search")].surface == "home-start"
+    assert endpoints[("GET", "/api/model-providers")].surface == "board"
+    assert endpoints[("POST", "/api/model-providers")].surface == "board"
+    assert endpoints[("PATCH", "/api/model-providers/{provider_id}")].auth == "session"
 
 
 def test_observability_catalog_exposes_contract_metadata(tmp_path) -> None:

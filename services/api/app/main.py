@@ -16,7 +16,12 @@ from pydantic import ValidationError
 
 from app.stores.messages import MessageStore
 from app.stores.rules import RuleStore
-from app.stores.factory import create_identity_store, create_job_store, create_rule_store
+from app.stores.factory import (
+    create_identity_store,
+    create_job_store,
+    create_model_provider_store,
+    create_rule_store,
+)
 from app.stores.summaries import SummaryStore
 from app.stores.jobs import JobStore
 from app.stores.schedules import ScheduleStore, parse_schedule_spec
@@ -111,6 +116,7 @@ store: MessageStore | None = None
 rules: RuleStore | None = None
 summaries: SummaryStore | None = None
 jobs: JobStore | None = None
+model_providers: object | None = None
 locked: LockedStore | None = None
 schedules: ScheduleStore | None = None
 router: Router | None = None
@@ -382,7 +388,7 @@ def _install_security_middleware(token: str, cfg: dict):
 
 
 def configure(cfg: dict, session_token: str = ""):
-    global store, rules, summaries, jobs, locked, schedules, router, agents, registry, session_store, session_engine, config
+    global store, rules, summaries, jobs, model_providers, locked, schedules, router, agents, registry, session_store, session_engine, config
     global runtime_event_stream
     config = cfg
     _session_token_holder[0] = session_token
@@ -440,6 +446,10 @@ def configure(cfg: dict, session_token: str = ""):
 
     jobs = create_job_store(cfg, str(jobs_path))
     jobs.on_change(_on_job_change)
+
+    # Model providers for agent-capable backends (file mode: JSON, postgres: SQL)
+    model_providers = create_model_provider_store(cfg, str(Path(data_dir) / "model_providers.json"))
+    model_providers.on_change(lambda action, _provider: log.debug("model_provider %s", action))
 
     locked = LockedStore(str(Path(data_dir) / "locked.json"))
     locked.on_change(_on_locked_change)
@@ -1899,6 +1909,86 @@ async def get_jobs(channel: str = "", status: str = ""):
     return jobs.list_all(channel=ch, status=st)
 
 
+async def get_model_providers(include_inactive: bool = True):
+    if model_providers is None:
+        return JSONResponse({"error": "model provider store not configured"}, status_code=503)
+    return JSONResponse(model_providers.list_all(include_inactive=include_inactive))
+
+
+async def get_model_provider(provider_id: int):
+    if model_providers is None:
+        return JSONResponse({"error": "model provider store not configured"}, status_code=503)
+    provider = model_providers.get(provider_id)
+    if provider is None:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return JSONResponse(provider)
+
+
+async def create_model_provider(request: Request):
+    if model_providers is None:
+        return JSONResponse({"error": "model provider store not configured"}, status_code=503)
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "invalid json"}, status_code=400)
+    created = model_providers.create(
+        name=body.get("name", ""),
+        provider=body.get("provider", ""),
+        model=body.get("model", ""),
+        base_url=body.get("base_url", ""),
+        api_key_env=body.get("api_key_env", ""),
+        enabled=bool(body.get("enabled", True)),
+        created_by=body.get("created_by", room_settings.get("username", "user")),
+    )
+    if created is None:
+        return JSONResponse({"error": "invalid or duplicate provider payload"}, status_code=400)
+    return JSONResponse(created)
+
+
+async def update_model_provider(provider_id: int, request: Request):
+    if model_providers is None:
+        return JSONResponse({"error": "model provider store not configured"}, status_code=503)
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "invalid json"}, status_code=400)
+
+    if not body:
+        return JSONResponse({"error": "no update fields"}, status_code=400)
+    updated_by = body.get("updated_by") or body.get("sender") or room_settings.get("username", "user")
+    normalized = {
+        "name": body.get("name") if "name" in body else None,
+        "provider": body.get("provider") if "provider" in body else None,
+        "model": body.get("model") if "model" in body else None,
+        "base_url": body.get("base_url") if "base_url" in body else None,
+        "api_key_env": body.get("api_key_env") if "api_key_env" in body else None,
+        "enabled": body.get("enabled") if "enabled" in body else None,
+        "updated_by": updated_by,
+    }
+    updated = model_providers.update(
+        provider_id,
+        name=normalized["name"],
+        provider=normalized["provider"],
+        model=normalized["model"],
+        base_url=normalized["base_url"],
+        api_key_env=normalized["api_key_env"],
+        enabled=normalized["enabled"],
+        updated_by=updated_by,
+    )
+    if updated is None:
+        return JSONResponse({"error": "not found or invalid"}, status_code=404)
+    return JSONResponse(updated)
+
+
+async def delete_model_provider(provider_id: int):
+    if model_providers is None:
+        return JSONResponse({"error": "model provider store not configured"}, status_code=503)
+    removed = model_providers.delete(provider_id)
+    if removed is None:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return JSONResponse({"ok": True, "removed_id": provider_id})
+
+
 async def get_mcp_tools():
     """Expose MCP tool metadata to the browser for compatibility-driven UI."""
     from app.mcp import bridge as mcp_bridge
@@ -3145,6 +3235,7 @@ def _include_main_route_modules() -> None:
         archive as archive_routes,
         hats as hat_routes,
         jobs as job_routes,
+        model_providers as model_provider_routes,
         locked as locked_routes,
         messages as message_routes,
         pins as pins_routes,
@@ -3166,6 +3257,7 @@ def _include_main_route_modules() -> None:
         hat_routes,
         schedule_routes,
         job_routes,
+        model_provider_routes,
         right_rail_routes,
         locked_routes,
         pins_routes,
