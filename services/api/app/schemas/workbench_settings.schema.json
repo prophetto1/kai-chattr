@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kai-chattr.local/schemas/workbench-settings.schema.json",
+  "title": "Workbench Settings",
+  "type": "object",
+  "required": ["selected_theme", "font", "contrast"],
+  "properties": {
+    "selected_theme": {
+      "title": "Theme",
+      "description": "Theme token palette applied to the workbench surface.",
+      "type": "string",
+      "enum": ["day", "night", "catppuccin", "ember"],
+      "default": "night",
+      "x-options": [
+        {
+          "value": "day",
+          "label": "Day",
+          "description": "Light token palette",
+          "color_scheme": "light",
+          "html_classes": []
+        },
+        {
+          "value": "night",
+          "label": "Night",
+          "description": "Default dark token palette",
+          "color_scheme": "dark",
+          "html_classes": ["dark"]
+        },
+        {
+          "value": "catppuccin",
+          "label": "Catppuccin",
+          "description": "Mocha token palette",
+          "color_scheme": "dark",
+          "html_classes": ["dark", "catppuccin"]
+        },
+        {
+          "value": "ember",
+          "label": "Ember",
+          "description": "Warm dark token palette",
+          "color_scheme": "dark",
+          "html_classes": ["dark", "ember"]
+        }
+      ]
+    },
+    "font": {
+      "title": "Font family",
+      "description": "Primary family for UI surfaces.",
+      "type": "string",
+      "enum": ["sans", "serif", "mono"],
+      "default": "sans",
+      "x-options": [
+        {
+          "value": "sans",
+          "label": "Sans",
+          "description": "System UI + Inter",
+          "html_classes": ["font-family-sans"]
+        },
+        {
+          "value": "serif",
+          "label": "Serif",
+          "description": "Readable display prose",
+          "html_classes": ["font-family-serif"]
+        },
+        {
+          "value": "mono",
+          "label": "Mono",
+          "description": "Monospace text and code",
+          "html_classes": ["font-family-mono"]
+        }
+      ]
+    },
+    "contrast": {
+      "title": "Contrast",
+      "description": "Contrast level for body tokens.",
+      "type": "string",
+      "enum": ["normal", "high"],
+      "default": "normal",
+      "x-options": [
+        {
+          "value": "normal",
+          "label": "Normal",
+          "description": "Default contrast for normal viewing conditions.",
+          "html_classes": ["contrast-normal"]
+        },
+        {
+          "value": "high",
+          "label": "High",
+          "description": "Raised contrast for stronger readability.",
+          "html_classes": ["contrast-high"]
+        }
+      ]
+    }
+  },
+  "additionalProperties": true
+}

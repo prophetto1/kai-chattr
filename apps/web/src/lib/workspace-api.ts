@@ -30,6 +30,37 @@ export type WorkspaceDiff = {
   status: 'added' | 'modified' | 'deleted' | string
 }
 
+export type WorkspaceDiffLine = {
+  kind: 'context' | 'add' | 'delete'
+  oldLine: number | null
+  newLine: number | null
+  content: string
+}
+
+export type WorkspaceDiffHunk = {
+  oldStart: number
+  oldLines: number
+  newStart: number
+  newLines: number
+  section?: string | null
+  lines: WorkspaceDiffLine[]
+}
+
+export type WorkspaceDiffFile = WorkspaceChange & {
+  binary: boolean
+  tooLarge: boolean
+  hunks: WorkspaceDiffHunk[]
+}
+
+export type WorkspaceDiffDocument = {
+  root: string
+  baseRef: string
+  compareRef: string
+  contextLines: number
+  interHunkContext: number
+  files: WorkspaceDiffFile[]
+}
+
 export function getWorkspaceTree() {
   return chattrJson<WorkspaceTree>('/api/workspace/tree')
 }
@@ -46,6 +77,20 @@ export function getWorkspaceFile(path: string) {
 
 export function getWorkspaceDiff(path: string) {
   return chattrJson<WorkspaceDiff>(`/api/workspace/diff?path=${encodeURIComponent(path)}`)
+}
+
+export function getWorkspaceDiffDocument({
+  context = 3,
+  interHunkContext = 0,
+}: {
+  context?: number
+  interHunkContext?: number
+} = {}) {
+  const params = new URLSearchParams({
+    context: String(context),
+    interHunkContext: String(interHunkContext),
+  })
+  return chattrJson<WorkspaceDiffDocument>(`/api/workspace/diff-document?${params}`)
 }
 
 export function saveWorkspaceFile(path: string, content: string) {

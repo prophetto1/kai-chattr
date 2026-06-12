@@ -186,7 +186,13 @@ function AppearanceSettings() {
     isLoading: themesLoading,
     isSaving: themeSaving,
     selectedTheme,
+    selectedFont,
+    selectedContrast,
+    fontOptions,
+    contrastOptions,
     setTheme,
+    setFont,
+    setContrast,
     themes,
   } = useAppTheme()
 
@@ -209,6 +215,54 @@ function AppearanceSettings() {
               {themes.map((theme) => (
                 <SelectItem key={theme.id} value={theme.id}>
                   {theme.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </SettingsRow>
+      </SettingsPanel>
+      <SettingsPanel title="Typography">
+        <SettingsRow
+          description="Sets the primary family used for UI chrome and body copy."
+          label="Font"
+        >
+          <Select
+            disabled={
+              themesLoading || themeSaving || fontOptions.length === 0
+            }
+            onValueChange={setFont}
+            value={selectedFont}
+          >
+            <SelectTrigger aria-label="Font" className="w-full min-w-[200px] sm:w-[240px]">
+              <SelectValue placeholder={themesLoading ? 'Loading font options' : 'Select font'} />
+            </SelectTrigger>
+            <SelectContent>
+              {fontOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </SettingsRow>
+        <SettingsRow
+          description="Selects the contrast profile for readability and accessibility."
+          label="Contrast"
+        >
+          <Select
+            disabled={themesLoading || themeSaving || contrastOptions.length === 0}
+            onValueChange={setContrast}
+            value={selectedContrast}
+          >
+            <SelectTrigger aria-label="Contrast" className="w-full min-w-[200px] sm:w-[240px]">
+              <SelectValue
+                placeholder={themesLoading ? 'Loading contrast options' : 'Select contrast'}
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {contrastOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
                 </SelectItem>
               ))}
             </SelectContent>

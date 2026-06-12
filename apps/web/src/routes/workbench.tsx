@@ -12,7 +12,7 @@
 
 import { type ComponentType, useCallback, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { DiffEditor, Editor } from '@monaco-editor/react'
+import { Editor } from '@monaco-editor/react'
 import {
   IconActivityHeartbeat,
   IconArrowLeft,
@@ -120,17 +120,20 @@ import { DockWorkspace } from '@/components/workbench/DockWorkspace'
 import { JobsDock } from '@/components/workbench/JobsDock'
 import { InteractiveTerminal } from '@/components/workbench/InteractiveTerminal'
 import { AgentLauncherDialog } from '@/components/workbench/launcher/AgentLauncherDialog'
-import { WorkspaceFileTree } from '@/components/workbench/WorkspaceFileTree'
+import { WorkspaceFileList, WorkspaceFileTree } from '@/components/workbench/WorkspaceFileTree'
 import {
   DropdownMenuCheckboxItem,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
 import {
   getWorkspaceChanges,
-  getWorkspaceDiff,
+  getWorkspaceDiffDocument,
   getWorkspaceFile,
   getWorkspaceTree,
   monacoLanguageForPath,
+  type WorkspaceDiffDocument,
+  type WorkspaceDiffFile,
+  type WorkspaceDiffLine,
   saveWorkspaceFile,
 } from '@/lib/workspace-api'
 import { AppShell } from '@/components/layout/AppShell'
@@ -888,29 +891,161 @@ function SourceViewerPane({
   )
 }
 
+function diffFileSectionId(path: string) {
+  return `changes-diff-${encodeURIComponent(path).replace(/%/g, '_')}`
+}
+
+function WorkspaceDiffLineRow({ line }: { line: WorkspaceDiffLine }) {
+  const marker = line.kind === 'add' ? '+' : line.kind === 'delete' ? '-' : ' '
+
+  return (
+    <div
+      className={cn(
+        'grid w-full min-w-0 grid-cols-[3rem_3rem_1rem_minmax(0,1fr)] border-b border-border/10 font-mono text-[11px] leading-[18px]',
+        line.kind === 'add' && 'bg-emerald-500/10 text-emerald-950 dark:text-emerald-100',
+        line.kind === 'delete' && 'bg-rose-500/10 text-rose-950 dark:text-rose-100',
+        line.kind === 'context' && 'text-muted-foreground',
+      )}
+    >
+      <span className="select-none border-r border-border/15 px-2 text-right text-muted-foreground/70">
+        {line.oldLine ?? ''}
+      </span>
+      <span className="select-none border-r border-border/15 px-2 text-right text-muted-foreground/70">
+        {line.newLine ?? ''}
+      </span>
+      <span
+        className={cn(
+          'select-none px-1 text-center',
+          line.kind === 'add' && 'text-emerald-500',
+          line.kind === 'delete' && 'text-rose-500',
+        )}
+      >
+        {marker}
+      </span>
+      <span className="min-w-0 whitespace-pre-wrap break-words px-1.5 [overflow-wrap:anywhere]">
+        {line.content || ' '}
+      </span>
+    </div>
+  )
+}
+
+function WorkspaceDiffFileSection({
+  file,
+  selected,
+}: {
+  file: WorkspaceDiffFile
+  selected: boolean
+}) {
+  return (
+    <section
+      className={cn(
+        'min-w-0 border-b border-border/40 bg-background',
+        selected && 'border-l-2 border-l-emerald-500',
+      )}
+      data-testid="changes-diff-file"
+      id={diffFileSectionId(file.path)}
+    >
+      <div className="sticky top-0 z-10 flex h-9 min-w-0 items-center gap-2 border-b border-border/30 bg-background/95 px-2 text-[11px] backdrop-blur">
+        <IconFileText className="size-3.5 shrink-0 text-muted-foreground" />
+        <span className="min-w-0 flex-1 truncate font-medium text-foreground">{file.path}</span>
+        <span className="shrink-0 rounded border border-border/60 px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
+          {file.status}
+        </span>
+        <ChangeCounts additions={file.additions} deletions={file.deletions} />
+      </div>
+
+      {file.binary || file.tooLarge ? (
+        <p className="px-3 py-4 text-[11px] text-muted-foreground">
+          {file.binary ? 'Binary file diff is not shown.' : 'File is too large for inline diff.'}
+        </p>
+      ) : file.hunks.length === 0 ? (
+        <p className="px-3 py-4 text-[11px] text-muted-foreground">
+          No textual hunks available for this file.
+        </p>
+      ) : (
+        <div className="min-w-0 overflow-hidden">
+          {file.hunks.map((hunk) => (
+            <div
+              key={`${file.path}:${hunk.oldStart}:${hunk.newStart}:${hunk.lines.length}`}
+              className="w-full min-w-0"
+            >
+              <div className="w-full min-w-0 break-words border-b border-border/20 bg-muted/25 px-2 py-1 font-mono text-[11px] text-muted-foreground [overflow-wrap:anywhere]">
+                @@ -{hunk.oldStart},{hunk.oldLines} +{hunk.newStart},{hunk.newLines} @@
+                {hunk.section ? ` ${hunk.section}` : ''}
+              </div>
+              {hunk.lines.map((line, index) => (
+                <WorkspaceDiffLineRow
+                  key={`${line.kind}:${line.oldLine ?? 'x'}:${line.newLine ?? 'x'}:${index}`}
+                  line={line}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function WorkspaceDiffDocumentView({
+  document,
+  selectedPath,
+}: {
+  document: WorkspaceDiffDocument
+  selectedPath: string
+}) {
+  if (document.files.length === 0) {
+    return <p className="px-3 py-4 text-[11px] text-muted-foreground">No changes in the working tree.</p>
+  }
+
+  return (
+    <div className="h-full min-h-0 overflow-x-hidden overflow-y-auto bg-background" data-testid="changes-diff-document">
+      <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border/25 bg-muted/15 px-2 text-[11px]">
+        <span className="min-w-0 flex-1 truncate font-medium text-foreground">
+          {document.files.length} changed {document.files.length === 1 ? 'file' : 'files'}
+        </span>
+        <span className="shrink-0 text-muted-foreground">
+          {document.contextLines} context lines
+        </span>
+      </div>
+      {document.files.map((file) => (
+        <WorkspaceDiffFileSection
+          file={file}
+          key={file.path}
+          selected={file.path === selectedPath}
+        />
+      ))}
+    </div>
+  )
+}
+
 function ChangesViewerPane({ onClose }: { onClose?: () => void }) {
-  const monacoTheme = useMonacoTheme()
   const [selectedPath, setSelectedPath] = useState('')
   const changesQuery = useQuery({
     queryKey: ['workspace-changes'],
     queryFn: getWorkspaceChanges,
     refetchInterval: 15000,
   })
+  const diffDocumentQuery = useQuery({
+    queryKey: ['workspace-diff-document', 3, 0],
+    queryFn: () => getWorkspaceDiffDocument({ context: 3, interHunkContext: 0 }),
+    refetchInterval: 15000,
+  })
   const changes = changesQuery.data?.changes ?? []
   const effectivePath = changes.some((change) => change.path === selectedPath)
     ? selectedPath
     : changes[0]?.path ?? ''
-  const selectedChange = changes.find((change) => change.path === effectivePath)
-  const diffQuery = useQuery({
-    enabled: Boolean(effectivePath),
-    queryKey: ['workspace-diff', effectivePath],
-    queryFn: () => getWorkspaceDiff(effectivePath),
-  })
+  const handleSelectChange = useCallback((path: string) => {
+    setSelectedPath(path)
+    requestAnimationFrame(() => {
+      document.getElementById(diffFileSectionId(path))?.scrollIntoView({ block: 'start' })
+    })
+  }, [])
 
   return (
     <DockWorkspace
       title="Changes"
-      path={effectivePath || 'working tree'}
+      path={changes.length > 0 ? `${changes.length} changed files` : 'working tree'}
       icon={IconGitCompare}
       onClose={onClose}
       showSidebarLabel={false}
@@ -919,7 +1054,7 @@ function ChangesViewerPane({ onClose }: { onClose?: () => void }) {
       sidebarDefaultSize="30%"
       sidebarMinSize="20%"
       sidebar={
-        <WorkspaceFileTree
+        <WorkspaceFileList
           emptyText={
             changesQuery.isError
               ? changesQuery.error instanceof Error
@@ -932,58 +1067,35 @@ function ChangesViewerPane({ onClose }: { onClose?: () => void }) {
           entries={changes}
           headerIcon={IconGitCompare}
           headerLabel="All changes"
-          onSelect={setSelectedPath}
-          rootName={changesQuery.data?.root ?? 'workspace'}
+          onSelect={handleSelectChange}
           selectedPath={effectivePath}
           showStats
         />
       }
       main={
-        <div className="flex h-full min-h-0 flex-col bg-background">
-          <div
-            className="flex h-8 shrink-0 items-center gap-2 border-b border-border/25 bg-muted/15 px-2 text-[11px]"
-            data-testid="changes-selected-file"
-          >
-            <div className="min-w-0 flex-1">
-              <div className="truncate font-medium text-foreground">
-                {effectivePath || 'No file selected'}
-              </div>
-            </div>
-            {selectedChange ? (
-              <ChangeCounts
-                additions={selectedChange.additions}
-                deletions={selectedChange.deletions}
-              />
-            ) : null}
-          </div>
-          <div className="min-h-0 flex-1">
-            {diffQuery.isError ? (
-              <p className="px-3 py-4 text-[11px] text-destructive">
-                {diffQuery.error instanceof Error ? diffQuery.error.message : 'Diff unavailable.'}
-              </p>
-            ) : (
-              <DiffEditor
-                theme={monacoTheme}
-                language={monacoLanguageForPath(effectivePath)}
-                modified={diffQuery.data?.modified ?? ''}
-                modifiedModelPath={`file:///${effectivePath}`}
-                original={diffQuery.data?.original ?? ''}
-                originalModelPath={`file:///${effectivePath}.base`}
-                options={{
-                  fontSize: 12,
-                  lineDecorationsWidth: 12,
-                  lineNumbersMinChars: 3,
-                  minimap: { enabled: false },
-                  padding: { top: 12 },
-                  readOnly: true,
-                  renderSideBySide: false,
-                  scrollBeyondLastLine: false,
-                  wordWrap: 'on',
-                }}
-              />
-            )}
-          </div>
-        </div>
+        diffDocumentQuery.isError ? (
+          <p className="px-3 py-4 text-[11px] text-destructive">
+            {diffDocumentQuery.error instanceof Error
+              ? diffDocumentQuery.error.message
+              : 'Diff document unavailable.'}
+          </p>
+        ) : diffDocumentQuery.isLoading ? (
+          <p className="px-3 py-4 text-[11px] text-muted-foreground">Loading diff...</p>
+        ) : (
+          <WorkspaceDiffDocumentView
+            document={
+              diffDocumentQuery.data ?? {
+                baseRef: 'HEAD',
+                compareRef: 'WORKTREE',
+                contextLines: 3,
+                files: [],
+                interHunkContext: 0,
+                root: changesQuery.data?.root ?? 'workspace',
+              }
+            }
+            selectedPath={effectivePath}
+          />
+        )
       }
     />
   )
@@ -1022,6 +1134,7 @@ function CodeEditorPane({
       setDraft(null)
       await queryClient.invalidateQueries({ queryKey: ['workspace-file', selectedPath] })
       await queryClient.invalidateQueries({ queryKey: ['workspace-changes'] })
+      await queryClient.invalidateQueries({ queryKey: ['workspace-diff-document'] })
       await queryClient.invalidateQueries({ queryKey: ['workspace-diff', selectedPath] })
     },
   })
@@ -1058,6 +1171,7 @@ function CodeEditorPane({
           headerLabel={treeQuery.data?.root ?? 'workspace'}
           onSelect={handleTreeSelect}
           rootName={treeQuery.data?.root ?? 'workspace'}
+          searchable
           selectedPath={selectedPath}
         />
       }

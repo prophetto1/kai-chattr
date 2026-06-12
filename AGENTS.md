@@ -24,6 +24,11 @@ port the legacy `static/` UI as-is.
 - AI, chat, prompt, terminal, file-tree, code, and workbench surfaces come from Vercel AI Elements
   / AI SDK React source components.
 - Local components may compose those approved source components.
+- Approved third-party engines may power a surface inside a locally composed component when they
+  are strictly stronger than the equivalent AI Element: Monaco for code/diff editors,
+  react-arborist for large/virtualized file trees (ratified by Jon, 2026-06-12). The local
+  component still owns the surface; the engine replaces only the rendering core. This is not a
+  license to handroll.
 - Local components must not replace them with bespoke approximations, placeholder primitives, or
   handrolled components named as if they were shadcn or Vercel AI Elements.
 
@@ -55,3 +60,5 @@ No manual step.
   `uv run python -m pytest`). Never invoke a bare global interpreter with `-m app.cli` — it does
   not resolve the project venv and the server fails to bind.
 - Rebuild a broken environment by deleting `.venv` and running `uv sync`; do not patch it in place.
+
+@RTK.md

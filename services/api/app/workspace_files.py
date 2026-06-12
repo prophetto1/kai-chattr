@@ -8,12 +8,20 @@ Git access is subprocess-based (no shell) with timeouts.
 
 from __future__ import annotations
 
+import re
 import subprocess
 from pathlib import Path
 
 MAX_FILE_BYTES = 512 * 1024
 MAX_TREE_ENTRIES = 8000
 GIT_TIMEOUT_SECONDS = 10
+MAX_DIFF_CONTEXT_LINES = 20
+MAX_INTER_HUNK_CONTEXT_LINES = 20
+
+HUNK_HEADER_RE = re.compile(
+    r"^@@ -(?P<old_start>\d+)(?:,(?P<old_lines>\d+))? "
+    r"\+(?P<new_start>\d+)(?:,(?P<new_lines>\d+))? @@ ?(?P<section>.*)$"
+)
 
 _repo_root: Path | None = None
 
@@ -128,6 +136,195 @@ def list_changes() -> dict:
             {"path": path, "status": status, "additions": additions, "deletions": deletions}
         )
     return {"root": root.name, "changes": changes}
+
+
+def _bounded_diff_option(value: int, maximum: int, default: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(0, min(parsed, maximum))
+
+
+def _change_map() -> dict[str, dict]:
+    return {change["path"]: change for change in list_changes()["changes"]}
+
+
+def _parse_hunk_header(line: str) -> dict | None:
+    match = HUNK_HEADER_RE.match(line)
+    if not match:
+        return None
+    return {
+        "oldStart": int(match.group("old_start")),
+        "oldLines": int(match.group("old_lines") or "1"),
+        "newStart": int(match.group("new_start")),
+        "newLines": int(match.group("new_lines") or "1"),
+        "section": match.group("section") or None,
+        "lines": [],
+    }
+
+
+def _parse_git_patch(patch: str, changes: dict[str, dict]) -> list[dict]:
+    files: list[dict] = []
+    current_file: dict | None = None
+    current_hunk: dict | None = None
+    old_line = 0
+    new_line = 0
+
+    for line in patch.splitlines():
+        if line.startswith("diff --git "):
+            current_file = None
+            current_hunk = None
+            old_line = 0
+            new_line = 0
+            continue
+
+        if line.startswith("+++ "):
+            raw_path = line[4:].strip()
+            if raw_path == "/dev/null":
+                continue
+            path = raw_path[2:] if raw_path.startswith("b/") else raw_path
+            change = changes.get(path, {})
+            current_file = {
+                "path": path,
+                "status": change.get("status", "modified"),
+                "additions": change.get("additions", 0),
+                "deletions": change.get("deletions", 0),
+                "binary": False,
+                "tooLarge": False,
+                "hunks": [],
+            }
+            files.append(current_file)
+            continue
+
+        if current_file is None:
+            continue
+
+        if line.startswith("Binary files "):
+            current_file["binary"] = True
+            continue
+
+        hunk = _parse_hunk_header(line)
+        if hunk:
+            current_hunk = hunk
+            current_file["hunks"].append(current_hunk)
+            old_line = hunk["oldStart"]
+            new_line = hunk["newStart"]
+            continue
+
+        if current_hunk is None:
+            continue
+
+        if line.startswith("\\"):
+            continue
+
+        marker = line[:1]
+        content = line[1:]
+        if marker == " ":
+            current_hunk["lines"].append(
+                {"kind": "context", "oldLine": old_line, "newLine": new_line, "content": content}
+            )
+            old_line += 1
+            new_line += 1
+        elif marker == "-":
+            current_hunk["lines"].append(
+                {"kind": "delete", "oldLine": old_line, "newLine": None, "content": content}
+            )
+            old_line += 1
+        elif marker == "+":
+            current_hunk["lines"].append(
+                {"kind": "add", "oldLine": None, "newLine": new_line, "content": content}
+            )
+            new_line += 1
+
+    return files
+
+
+def _added_file_diff(path: str, change: dict) -> dict:
+    file = {
+        "path": path,
+        "status": "added",
+        "additions": change.get("additions", 0),
+        "deletions": 0,
+        "binary": False,
+        "tooLarge": False,
+        "hunks": [],
+    }
+    try:
+        target = resolve_workspace_path(path)
+        content = _read_text(target)
+    except WorkspaceFilesError as error:
+        if error.status == 413:
+            file["tooLarge"] = True
+        elif error.status == 415:
+            file["binary"] = True
+        return file
+
+    lines = content.splitlines()
+    file["additions"] = len(lines)
+    file["hunks"] = [
+        {
+            "oldStart": 0,
+            "oldLines": 0,
+            "newStart": 1,
+            "newLines": len(lines),
+            "section": None,
+            "lines": [
+                {"kind": "add", "oldLine": None, "newLine": index + 1, "content": line}
+                for index, line in enumerate(lines)
+            ],
+        }
+    ]
+    return file
+
+
+def read_diff_document(context: int = 3, inter_hunk_context: int = 0) -> dict:
+    root = repo_root()
+    context_lines = _bounded_diff_option(context, MAX_DIFF_CONTEXT_LINES, 3)
+    inter_hunk_lines = _bounded_diff_option(
+        inter_hunk_context, MAX_INTER_HUNK_CONTEXT_LINES, 0
+    )
+    changes = _change_map()
+    patch = _git(
+        [
+            "diff",
+            f"--unified={context_lines}",
+            f"--inter-hunk-context={inter_hunk_lines}",
+            "HEAD",
+            "--",
+        ],
+        cwd=root,
+    )
+    files = _parse_git_patch(patch, changes)
+    present_paths = {file["path"] for file in files}
+
+    for path, change in sorted(changes.items()):
+        if path in present_paths:
+            continue
+        if change.get("status") == "added":
+            files.append(_added_file_diff(path, change))
+        else:
+            files.append(
+                {
+                    "path": path,
+                    "status": change.get("status", "modified"),
+                    "additions": change.get("additions", 0),
+                    "deletions": change.get("deletions", 0),
+                    "binary": False,
+                    "tooLarge": False,
+                    "hunks": [],
+                }
+            )
+
+    files.sort(key=lambda file: file["path"])
+    return {
+        "root": root.name,
+        "baseRef": "HEAD",
+        "compareRef": "WORKTREE",
+        "contextLines": context_lines,
+        "interHunkContext": inter_hunk_lines,
+        "files": files,
+    }
 
 
 def _read_text(target: Path) -> str:

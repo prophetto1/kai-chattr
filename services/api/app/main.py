@@ -50,6 +50,15 @@ from app.database import (
     create_database_engine,
     database_settings,
 )
+from app.schemas.workbench_settings import (
+    DEFAULT_ROOM_SETTINGS,
+    DEFAULT_THEME_ID,
+    WORKBENCH_CONTRAST_IDS,
+    WORKBENCH_FONT_IDS,
+    WORKBENCH_THEME_OPTIONS,
+    WORKBENCH_THEME_IDS,
+    WORKBENCH_SETTINGS_SCHEMA,
+)
 from app.schemas.board_workflows import (
     BoardWorkflowCreateRequest,
     BoardWorkflowMessageCreateRequest,
@@ -66,37 +75,6 @@ _SESSION_DRAFT_RE = _re.compile(r"```session\s*\n(.*?)\n```", _re.DOTALL)
 # Fewer WS frames than one-per-row history; chunked so payload size stays bounded.
 _WS_HISTORY_BATCH_SIZE = 80
 
-DEFAULT_THEME_ID = "night"
-AVAILABLE_THEMES = (
-    {
-        "id": "day",
-        "label": "Day",
-        "description": "Light token palette",
-        "color_scheme": "light",
-        "html_classes": [],
-    },
-    {
-        "id": "night",
-        "label": "Night",
-        "description": "Default dark token palette",
-        "color_scheme": "dark",
-        "html_classes": ["dark"],
-    },
-    {
-        "id": "catppuccin",
-        "label": "Catppuccin",
-        "description": "Mocha token palette",
-        "color_scheme": "dark",
-        "html_classes": ["dark", "catppuccin"],
-    },
-    {
-        "id": "ember",
-        "label": "Ember",
-        "description": "Warm dark token palette",
-        "color_scheme": "dark",
-        "html_classes": ["dark", "ember"],
-    },
-)
 
 
 def _resolve_chattr_version() -> str:
@@ -158,17 +136,7 @@ session_token: str = ""
 _security_middleware_installed = False
 
 # Room settings (persisted to data/settings.json)
-room_settings: dict = {
-    "title": "noname",
-    "username": "user",
-    "font": "sans",
-    "selected_theme": DEFAULT_THEME_ID,
-    "channels": ["general"],
-    "history_limit": "all",
-    "contrast": "normal",
-    "custom_roles": [],
-    "default_mention": "none",
-}
+room_settings: dict = dict(DEFAULT_ROOM_SETTINGS)
 
 # Channel validation
 _CHANNEL_NAME_RE = _re.compile(r'^[a-z0-9][a-z0-9\-]{0,19}$')
@@ -264,7 +232,7 @@ def _settings_path() -> Path:
 
 
 def _available_theme_ids() -> set[str]:
-    return {str(theme["id"]) for theme in AVAILABLE_THEMES}
+    return {str(theme_id) for theme_id in WORKBENCH_THEME_IDS}
 
 
 def _normalize_theme_id(value) -> str | None:
@@ -1418,7 +1386,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     room_settings["title"] = new["title"].strip() or "noname"
                 if "username" in new and isinstance(new["username"], str):
                     room_settings["username"] = new["username"].strip() or "user"
-                if "font" in new and new["font"] in ("mono", "serif", "sans"):
+                if "font" in new and new["font"] in WORKBENCH_FONT_IDS:
                     room_settings["font"] = new["font"]
                 if "max_agent_hops" in new:
                     try:
@@ -1434,7 +1402,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     if mention in ("all", "both", "none") or mention in agent_names:
                         router.set_default_mention(mention)
                         room_settings["default_mention"] = router.default_mention
-                if "contrast" in new and new["contrast"] in ("normal", "high"):
+                if "contrast" in new and new["contrast"] in WORKBENCH_CONTRAST_IDS:
                     room_settings["contrast"] = new["contrast"]
                 if "selected_theme" in new:
                     selected_theme = _normalize_theme_id(new["selected_theme"])
@@ -1801,11 +1769,17 @@ async def patch_settings(request: Request):
     if not isinstance(body, dict):
         return JSONResponse({"error": "settings payload must be an object"}, status_code=400)
 
-    if "selected_theme" not in body:
-        return JSONResponse({"error": "selected_theme is required"}, status_code=400)
+    selected_theme = body.get("selected_theme")
+    font = body.get("font")
+    contrast = body.get("contrast")
+    if selected_theme is None and font is None and contrast is None:
+        return JSONResponse(
+            {"error": "selected_theme, font, or contrast is required"},
+            status_code=400,
+        )
 
-    selected_theme = _normalize_theme_id(body.get("selected_theme"))
-    if not selected_theme:
+    normalized_theme = _normalize_theme_id(selected_theme)
+    if selected_theme is not None and not normalized_theme:
         return JSONResponse(
             {
                 "error": "selected_theme is not available",
@@ -1813,8 +1787,29 @@ async def patch_settings(request: Request):
             },
             status_code=400,
         )
+    if font is not None and font not in WORKBENCH_FONT_IDS:
+        return JSONResponse(
+            {
+                "error": "font is not available",
+                "available": sorted(WORKBENCH_FONT_IDS),
+            },
+            status_code=400,
+        )
+    if contrast is not None and contrast not in WORKBENCH_CONTRAST_IDS:
+        return JSONResponse(
+            {
+                "error": "contrast is not available",
+                "available": sorted(WORKBENCH_CONTRAST_IDS),
+            },
+            status_code=400,
+        )
 
-    room_settings["selected_theme"] = selected_theme
+    if normalized_theme:
+        room_settings["selected_theme"] = normalized_theme
+    if font is not None:
+        room_settings["font"] = font
+    if contrast is not None:
+        room_settings["contrast"] = contrast
     _save_settings()
     _schedule_runtime_coroutine(broadcast_settings())
     return room_settings
@@ -1822,9 +1817,14 @@ async def patch_settings(request: Request):
 
 async def get_themes():
     return {
-        "items": list(AVAILABLE_THEMES),
+        "items": list(WORKBENCH_THEME_OPTIONS),
         "selected_theme": _selected_theme_id(),
     }
+
+
+@app.get("/api/settings/schema")
+def get_settings_schema():
+    return WORKBENCH_SETTINGS_SCHEMA
 
 
 async def delete_hat(agent_name: str):
@@ -2359,6 +2359,18 @@ async def get_workspace_file(path: str = ""):
 async def get_workspace_diff(path: str = ""):
     try:
         return JSONResponse(workspace_files.read_diff(path))
+    except workspace_files.WorkspaceFilesError as error:
+        return JSONResponse({"error": str(error)}, status_code=error.status)
+
+
+async def get_workspace_diff_document(context: int = 3, interHunkContext: int = 0):
+    try:
+        return JSONResponse(
+            workspace_files.read_diff_document(
+                context=context,
+                inter_hunk_context=interHunkContext,
+            )
+        )
     except workspace_files.WorkspaceFilesError as error:
         return JSONResponse({"error": str(error)}, status_code=error.status)
 

@@ -10,6 +10,9 @@ Use the approved component foundation from the start.
 - Use Vercel AI Elements / AI SDK React source components for AI, chat, prompt, terminal, file-tree,
   code, model, and workbench surfaces.
 - Local components may compose approved source components.
+- Approved engines inside composed components: Monaco (code/diff), react-arborist (virtualized
+  file trees) — ratified by Jon, 2026-06-12. Do not "correct" these back to handrolled trees or
+  non-virtualized primitives.
 - Do not handroll replacement primitives such as local-only `button`, `card`, `badge`, or
   prompt/composer components and describe them as shadcn or Vercel AI patterns.
 - Do not copy the legacy `E:/chattr/static` UI. Treat legacy chattr as behavior reference only.

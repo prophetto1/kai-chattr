@@ -7,18 +7,7 @@ import threading
 from typing import Any
 
 from fastapi import WebSocket
-
-
-DEFAULT_ROOM_SETTINGS = {
-    "title": "noname",
-    "username": "user",
-    "font": "sans",
-    "channels": ["general"],
-    "history_limit": "all",
-    "contrast": "normal",
-    "custom_roles": [],
-    "default_mention": "none",
-}
+from app.schemas.workbench_settings import DEFAULT_ROOM_SETTINGS
 
 
 @dataclass

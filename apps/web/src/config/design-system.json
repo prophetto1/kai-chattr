@@ -1,0 +1,67 @@
+{
+  "$schema": "./design-system.schema.json",
+  "version": 1,
+  "fontFamilies": {
+    "ui": {
+      "cssVariable": "--bd-font-ui",
+      "stack": ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+      "purpose": "Default product UI text and dense workbench chrome."
+    },
+    "display": {
+      "cssVariable": "--bd-font-display",
+      "stack": ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+      "purpose": "Product headings until a distinct display face is assigned."
+    },
+    "mono": {
+      "cssVariable": "--bd-font-mono",
+      "stack": ["JetBrains Mono", "IBM Plex Mono", "ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
+      "purpose": "Code, terminal, diff, and tabular technical text."
+    }
+  },
+  "typography": {
+    "roles": {
+      "workbench.fileListHeader": {
+        "fontFamily": "ui",
+        "fontSize": "11px",
+        "lineHeight": "16px",
+        "fontWeight": 500,
+        "letterSpacing": "normal",
+        "purpose": "Compact header row above workbench file/navigation lists."
+      },
+      "workbench.fileRow": {
+        "fontFamily": "ui",
+        "fontSize": "12px",
+        "lineHeight": "16px",
+        "fontWeight": 400,
+        "selectedFontWeight": 500,
+        "rowHeight": "22px",
+        "letterSpacing": "normal",
+        "purpose": "Default selectable workbench file row across Changes, Code, and Files sidebars."
+      },
+      "workbench.fileRowMeta": {
+        "fontFamily": "ui",
+        "fontSize": "11px",
+        "lineHeight": "16px",
+        "fontWeight": 400,
+        "letterSpacing": "normal",
+        "purpose": "Secondary path/context text inside compact workbench file rows."
+      },
+      "workbench.fileTreeStat": {
+        "fontFamily": "mono",
+        "fontSize": "10px",
+        "lineHeight": "14px",
+        "fontWeight": 500,
+        "letterSpacing": "normal",
+        "purpose": "Compact addition/deletion counters and file status markers."
+      },
+      "workbench.diffCode": {
+        "fontFamily": "mono",
+        "fontSize": "11px",
+        "lineHeight": "18px",
+        "fontWeight": 400,
+        "letterSpacing": "normal",
+        "purpose": "Unified diff code rows and hunk headers."
+      }
+    }
+  }
+}

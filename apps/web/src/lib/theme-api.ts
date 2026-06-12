@@ -15,7 +15,33 @@ export type ThemeCatalog = {
 
 export type WorkbenchSettings = {
   selected_theme?: string
+  font?: string
+  contrast?: string
   [key: string]: unknown
+}
+
+export type SettingsSchemaOption = {
+  value: string
+  label: string
+  description?: string
+  color_scheme?: 'light' | 'dark'
+  html_classes?: string[]
+}
+
+export type SettingsSchemaField = {
+  type?: string
+  enum?: string[]
+  default?: string
+  'x-options'?: SettingsSchemaOption[]
+}
+
+export type WorkbenchSettingsSchema = {
+  properties: {
+    selected_theme?: SettingsSchemaField
+    font?: SettingsSchemaField
+    contrast?: SettingsSchemaField
+  }
+  required?: string[]
 }
 
 export function listThemes() {
@@ -26,9 +52,20 @@ export function getSettings() {
   return chattrJson<WorkbenchSettings>('/api/settings')
 }
 
+export function getSettingsSchema() {
+  return chattrJson<WorkbenchSettingsSchema>('/api/settings/schema')
+}
+
 export function updateSelectedTheme(selectedTheme: string) {
   return chattrJson<WorkbenchSettings>('/api/settings', {
     method: 'PATCH',
     body: JSON.stringify({ selected_theme: selectedTheme }),
+  })
+}
+
+export function patchSettings(settings: WorkbenchSettings) {
+  return chattrJson<WorkbenchSettings>('/api/settings', {
+    method: 'PATCH',
+    body: JSON.stringify(settings),
   })
 }

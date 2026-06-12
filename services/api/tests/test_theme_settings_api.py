@@ -53,6 +53,42 @@ class ThemeSettingsApiTests(unittest.TestCase):
         saved = json.loads(settings_path.read_text("utf-8"))
         self.assertEqual(saved["selected_theme"], "ember")
 
+    def test_patch_settings_updates_font_and_contrast(self):
+        response = self.client.patch(
+            "/api/settings",
+            headers=_headers(),
+            json={"font": "mono", "contrast": "high"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["font"], "mono")
+        self.assertEqual(response.json()["contrast"], "high")
+        settings_path = Path(self.tmp.name) / "settings.json"
+        saved = json.loads(settings_path.read_text("utf-8"))
+        self.assertEqual(saved["font"], "mono")
+        self.assertEqual(saved["contrast"], "high")
+
+    def test_patch_settings_rejects_unknown_font(self):
+        response = self.client.patch(
+            "/api/settings",
+            headers=_headers(),
+            json={"font": "comic-sans"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"], "font is not available")
+        self.assertEqual(app_module.room_settings["font"], "sans")
+
+    def test_patch_settings_schema(self):
+        response = self.client.get("/api/settings/schema", headers=_headers())
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["required"], ["selected_theme", "font", "contrast"])
+        self.assertIn("selected_theme", body["properties"])
+        self.assertIn("font", body["properties"])
+        self.assertIn("contrast", body["properties"])
+
     def test_patch_settings_rejects_unknown_theme(self):
         response = self.client.patch(
             "/api/settings",
