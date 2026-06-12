@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { IconLoader2, IconRocket, IconTerminal2 } from '@tabler/icons-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -25,10 +25,24 @@ import {
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import {
+  agentNameFromProfileId,
+  getAgentRuntimeConfigs,
+  setAgentTransport,
+  type AgentRuntimeConfig,
+  type AgentTransport,
+} from '@/lib/agent-runtime-api'
 import {
   getAgentLauncherPreflight,
   startAgentLauncher,
@@ -61,6 +75,7 @@ export function AgentLauncherDialog({
   }
   const [confirmedRisky, setConfirmedRisky] = useState<Record<string, boolean>>({})
   const [launchState, setLaunchState] = useState<Record<string, LaunchState>>({})
+  const queryClient = useQueryClient()
   const preflight = useQuery({
     enabled: open,
     queryKey: ['agent-launcher-preflight'],
@@ -71,6 +86,25 @@ export function AgentLauncherDialog({
     () => preflight.data?.profiles ?? [],
     [preflight.data?.profiles]
   )
+  const runtimeConfigs = useQuery({
+    enabled: open,
+    queryKey: ['agent-runtime-config'],
+    queryFn: getAgentRuntimeConfigs,
+  })
+  const runtimeByAgent = useMemo(() => {
+    const map = new Map<string, AgentRuntimeConfig>()
+    for (const entry of runtimeConfigs.data?.agents ?? []) {
+      map.set(entry.agent, entry)
+    }
+    return map
+  }, [runtimeConfigs.data?.agents])
+  const transportMutation = useMutation({
+    mutationFn: (input: { agent: string; transport: AgentTransport }) =>
+      setAgentTransport(input.agent, input.transport),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ['agent-runtime-config'] })
+    },
+  })
   const launch = useMutation({
     mutationFn: (input: { profileId: string; confirmRisky: boolean }) =>
       startAgentLauncher(input.profileId, input.confirmRisky),
@@ -162,16 +196,31 @@ export function AgentLauncherDialog({
                 Checking profiles
               </div>
             ) : null}
-            {profiles.map((profile) => (
-              <AgentLaunchCard
-                confirmedRisky={confirmedRisky[profile.profile_id] ?? false}
-                key={profile.profile_id}
-                launchState={launchState[profile.profile_id]}
-                onLaunch={() => onLaunch(profile)}
-                pending={launch.isPending && launch.variables?.profileId === profile.profile_id}
-                profile={profile}
-              />
-            ))}
+            {profiles.map((profile) => {
+              const agentName = agentNameFromProfileId(profile.profile_id)
+              const runtime = agentName ? runtimeByAgent.get(agentName) : undefined
+              return (
+                <AgentLaunchCard
+                  confirmedRisky={confirmedRisky[profile.profile_id] ?? false}
+                  key={profile.profile_id}
+                  launchState={launchState[profile.profile_id]}
+                  onLaunch={() => onLaunch(profile)}
+                  onTransportChange={
+                    runtime
+                      ? (transport) =>
+                          transportMutation.mutate({ agent: runtime.agent, transport })
+                      : undefined
+                  }
+                  pending={launch.isPending && launch.variables?.profileId === profile.profile_id}
+                  profile={profile}
+                  runtime={runtime}
+                  transportPending={
+                    transportMutation.isPending
+                    && transportMutation.variables?.agent === runtime?.agent
+                  }
+                />
+              )
+            })}
           </div>
         </ScrollArea>
       </DialogContent>
@@ -197,10 +246,22 @@ function AgentLaunchCard(props: {
   confirmedRisky: boolean
   launchState?: LaunchState
   onLaunch: () => void
+  onTransportChange?: (transport: AgentTransport) => void
   pending: boolean
   profile: AgentLauncherProfile
+  runtime?: AgentRuntimeConfig
+  transportPending?: boolean
 }) {
-  const { confirmedRisky, launchState, onLaunch, pending, profile } = props
+  const {
+    confirmedRisky,
+    launchState,
+    onLaunch,
+    onTransportChange,
+    pending,
+    profile,
+    runtime,
+    transportPending,
+  } = props
   const buttonLabel = profile.requires_explicit_confirmation && !confirmedRisky
     ? 'Confirm'
     : pending
@@ -245,7 +306,33 @@ function AgentLaunchCard(props: {
         {launchState?.error ? (
           <div className="text-xs text-destructive">{launchState.error}</div>
         ) : null}
-        <div className="flex justify-end">
+        <div className="flex items-center justify-between gap-3">
+          {runtime && onTransportChange ? (
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="text-xs text-muted-foreground">Transport</span>
+              <Select
+                disabled={transportPending}
+                onValueChange={(value) => onTransportChange(value as AgentTransport)}
+                value={runtime.transport}
+              >
+                <SelectTrigger className="h-7 w-[104px] text-xs" size="sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {runtime.available_transports.map((transport) => (
+                    <SelectItem className="text-xs" key={transport} value={transport}>
+                      {transport === 'pty' ? 'PTY' : 'Console'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="truncate text-[11px] text-muted-foreground/70">
+                applies on next launch
+              </span>
+            </div>
+          ) : (
+            <span />
+          )}
           <Button
             className="h-7 px-3 text-xs"
             disabled={!profile.ready || pending}

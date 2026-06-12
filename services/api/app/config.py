@@ -32,6 +32,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# Runtime tuning keys a config.local.toml entry may overlay onto an agent that
+# already exists in config.toml. Everything else (command, cwd, label, mcp_*)
+# is identity-level and stays protected from local override.
+LOCAL_AGENT_RUNTIME_KEYS = {"transport", "inject_delay", "enter_backend"}
+
 
 # Mapping: env var name → (config section, key, is_int)
 _ENV_OVERRIDES = [
@@ -174,15 +179,31 @@ def load_config(root: Path | None = None) -> dict:
         with open(local_path, "rb") as f:
             local = tomllib.load(f)
 
-        # Merge [agents] section — local agents are added ONLY if they don't already exist.
-        # This protects the "holy trinity" (claude, codex, gemini) from being overridden.
+        # Merge [agents] section — local agents are added if they don't already
+        # exist. For agents that DO exist in config.toml, only runtime tuning
+        # keys overlay (LOCAL_AGENT_RUNTIME_KEYS); identity keys like command/
+        # cwd/label stay protected so the "holy trinity" (claude, codex, gemini)
+        # cannot be repointed from a local file.
         local_agents = local.get("agents", {})
         config_agents = config.setdefault("agents", {})
         for name, agent_cfg in local_agents.items():
             if name not in config_agents:
                 config_agents[name] = agent_cfg
-            else:
+                continue
+            if not isinstance(agent_cfg, dict) or not isinstance(config_agents[name], dict):
                 print(f"  Warning: Ignoring local agent '{name}' (already defined in config.toml)")
+                continue
+            ignored = []
+            for key, value in agent_cfg.items():
+                if key in LOCAL_AGENT_RUNTIME_KEYS:
+                    config_agents[name][key] = value
+                else:
+                    ignored.append(key)
+            if ignored:
+                print(
+                    f"  Warning: Ignoring local agent '{name}' keys {sorted(ignored)} "
+                    f"(identity keys are protected; only {sorted(LOCAL_AGENT_RUNTIME_KEYS)} overlay)"
+                )
 
         # Merge [server] — optional local overrides for bind address, ports, paths, etc.
         local_server = local.get("server")

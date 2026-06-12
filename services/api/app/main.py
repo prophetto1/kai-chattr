@@ -28,6 +28,7 @@ from app.runtime.session_engine import SessionEngine
 from app.routes.platform import router as platform_router
 from app.routes.terminal import TerminalApiState, create_terminal_router
 from app.events import JsonlEventStream, RUNTIME_EVENT_SCHEMA_VERSION
+from app.routes.agent_runtime import create_agent_runtime_router
 from app.routes.launchers import router as launcher_control_router
 from app.routes.home_start import router as home_start_router
 from app.routes.auth import router as identity_auth_router
@@ -120,6 +121,7 @@ def _resolve_chattr_version() -> str:
 
 app = create_app(title="noname")
 app.include_router(launcher_control_router)
+app.include_router(create_agent_runtime_router())
 app.include_router(platform_router)
 app.include_router(home_start_router)
 app.include_router(identity_auth_router)

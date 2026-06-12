@@ -15,4 +15,5 @@ pyte>=0.8
 pywinpty>=2.0 ; sys_platform == 'win32'
 sqladmin>=0.18
 sqlalchemy>=2.0
+tomlkit>=0.13
 uvicorn[standard]>=0.29
