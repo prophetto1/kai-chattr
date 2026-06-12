@@ -328,6 +328,32 @@ app.include_router(create_terminal_router(TerminalApiState(
 )))
 
 
+# --- Interactive human terminal (Phase 1): /ws/terminals + GET /api/terminals ---
+
+from app.terminal.session_manager import TerminalSessionManager  # noqa: E402
+from app.terminal.ws import terminal_stream_endpoint  # noqa: E402
+
+# Shell opens at the repo root (E:\kai-chattr), the workspace the human works in.
+_TERMINAL_CWD = str(Path(__file__).resolve().parents[3])
+
+terminal_session_manager = TerminalSessionManager()
+
+
+@app.get("/api/terminals")
+def list_interactive_terminals():
+    return {"ok": True, "sessions": terminal_session_manager.list_public()}
+
+
+async def terminal_websocket_endpoint(websocket: WebSocket):
+    await terminal_stream_endpoint(
+        websocket,
+        manager=terminal_session_manager,
+        validate_token=lambda token: token == _session_token_provider(),
+        cwd=_TERMINAL_CWD,
+        get_event_stream=lambda: runtime_event_stream,
+    )
+
+
 def _session_token_provider() -> str:
     return _session_token_holder[0]
 

@@ -88,6 +88,8 @@
       "@dnd-kit/core",
       "@dnd-kit/sortable",
       "@dnd-kit/utilities",
+      "@xterm/xterm",
+      "@xterm/addon-fit",
       "@ai-sdk/react",
       "@fontsource/inter",
       "@fontsource/jetbrains-mono",

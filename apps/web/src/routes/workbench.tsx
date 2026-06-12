@@ -117,7 +117,7 @@ import {
 import { BoardDock } from '@/components/workbench/BoardDock'
 import { DockWorkspace } from '@/components/workbench/DockWorkspace'
 import { JobsDock } from '@/components/workbench/JobsDock'
-import { AgentTerminalPane } from '@/components/workbench/AgentTerminalPane'
+import { InteractiveTerminal } from '@/components/workbench/InteractiveTerminal'
 import { AgentLauncherDialog } from '@/components/workbench/launcher/AgentLauncherDialog'
 import { WorkspaceFileTree } from '@/components/workbench/WorkspaceFileTree'
 import {
@@ -1663,10 +1663,10 @@ export default function WorkbenchPage() {
                       <TabsContent value="terminal" className={dockWorkspaceContentClassName}>
                         <DockWorkspace
                           title="Terminal"
-                          path="codex terminal snapshot"
+                          path="interactive · /ws/terminals"
                           icon={IconTerminal2}
                           onClose={closeRightDock}
-                          main={<AgentTerminalPane agentName="codex" />}
+                          main={<InteractiveTerminal />}
                         />
                       </TabsContent>
                   </Sheet>
