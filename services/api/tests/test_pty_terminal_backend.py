@@ -76,6 +76,59 @@ def test_pty_backend_activity_checker_detects_output_change(tmp_path):
         backend.close()
 
 
+def test_pty_module_runner_matches_cli_dispatch_surface(tmp_path):
+    """Drive the module-level transport surface exactly as cli.py does:
+    run_agent with a watcher, module capture_terminal, module inject."""
+    import threading
+
+    from app.wrappers import pty_backend
+
+    injector = [None]
+
+    def start_watcher(fn):
+        injector[0] = fn
+
+    runner = threading.Thread(
+        target=pty_backend.run_agent,
+        kwargs=dict(
+            command=sys.executable,
+            extra_args=[str(_fake_cli())],
+            cwd=str(tmp_path),
+            env={},
+            queue_file=None,
+            agent="fakecli",
+            no_restart=True,
+            start_watcher=start_watcher,
+            pid_holder=[None],
+        ),
+        daemon=True,
+    )
+    runner.start()
+    try:
+        deadline = time.time() + 15
+        while time.time() < deadline:
+            if "KAI_FAKE_CLI_READY" in pty_backend.capture_terminal():
+                break
+            time.sleep(0.25)
+        assert "KAI_FAKE_CLI_READY" in pty_backend.capture_terminal()
+        assert injector[0] is not None
+
+        injector[0]("exit")
+        deadline = time.time() + 10
+        while time.time() < deadline:
+            if "KAI_FAKE_CLI_EXIT" in pty_backend.capture_terminal():
+                break
+            time.sleep(0.25)
+
+        runner.join(timeout=10)
+        assert not runner.is_alive(), "run_agent should return after exit with no_restart"
+    finally:
+        backend = pty_backend._get_active()
+        if backend is not None:
+            backend.close()
+            pty_backend._set_active(None)
+
+
 def test_pty_backend_paste_mode_tracking_handles_split_chunks(tmp_path):
     backend = _make_backend(tmp_path)
     # Feed the DECSET 2004 enable sequence split across two chunks the way a

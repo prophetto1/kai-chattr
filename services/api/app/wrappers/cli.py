@@ -1028,7 +1028,16 @@ def main():
             except Exception:
                 pass
 
-    if sys.platform == "win32":
+    # Transport selection: "console" (default) keeps the platform injection
+    # runners; "pty" runs the agent on an owned pseudoterminal (ConPTY/openpty)
+    # per governance/plans/kai-chattr-pty-ownership.md. Per-agent opt-in.
+    transport = agent_cfg.get("transport", "console")
+    if transport == "pty":
+        from app.wrappers.pty_backend import capture_terminal, get_activity_checker, run_agent
+
+        _set_activity_checker(get_activity_checker(trigger_flag=_trigger_flag))
+        _set_terminal_capture(lambda: capture_terminal(max_lines=120))
+    elif sys.platform == "win32":
         from app.wrappers.windows import capture_terminal, get_activity_checker, run_agent
 
         _set_activity_checker(get_activity_checker(_agent_pid, agent_name=assigned_name, trigger_flag=_trigger_flag))
@@ -1056,10 +1065,12 @@ def main():
         inject_env=inject_env,
         inject_delay=agent_cfg.get("inject_delay", 0.3),
     )
-    # Windows-only injection tuning (no-op on other platforms).
-    if sys.platform == "win32":
+    if transport == "pty":
+        run_kwargs["session_name"] = f"kai-pty-{assigned_name}"
+    elif sys.platform == "win32":
+        # Windows-only injection tuning (no-op on other platforms).
         run_kwargs["enter_backend"] = agent_cfg.get("enter_backend", "console_input")
-    if sys.platform != "win32":
+    else:
         run_kwargs["session_name"] = unix_session_name
 
     try:

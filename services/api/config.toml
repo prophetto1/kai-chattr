@@ -81,6 +81,10 @@ mcp_settings_path = "~/.copilot/mcp-config.json"
 mcp_transport = "http"
 mcp_http_key = "url"
 enter_backend = "wm_setfocus"
+# Per-agent transport switch: "console" (default) = legacy injection runners;
+# "pty" = owned pseudoterminal (ConPTY/openpty), no injection, no enter_backend.
+# See governance/plans/kai-chattr-pty-ownership.md.
+# transport = "pty"
 
 [agents.minimax]
 type = "api"

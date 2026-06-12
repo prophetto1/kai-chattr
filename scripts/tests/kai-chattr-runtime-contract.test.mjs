@@ -33,7 +33,8 @@ test('root package exposes runtime contract scripts', () => {
   assert.equal(scripts['observability:canaries'], 'node scripts/observability-local-canaries.mjs');
   assert.equal(scripts['check:npm-deps'], 'node governance/scripts/check-deps.mjs');
   assert.equal(scripts['check:python-deps'], 'python governance/scripts/check-python-deps.py');
-  assert.equal(scripts['check:deps'], 'pnpm run check:npm-deps && pnpm run check:python-deps');
+  assert.equal(scripts['check:python-requirements-sync'], 'python governance/scripts/check-python-requirements-sync.py');
+  assert.equal(scripts['check:deps'], 'pnpm run check:npm-deps && pnpm run check:python-deps && pnpm run check:python-requirements-sync');
   assert.equal(scripts['test:runtime-contract'], 'node --test scripts/tests/kai-chattr-runtime-contract.test.mjs');
   assert.equal(scripts['test:port-drift-contract'], 'node --test scripts/tests/kai-chattr-port-drift-contract.test.mjs');
   assert.equal(scripts['test:no-api-session-contract'], 'node --test scripts/tests/kai-chattr-no-api-session-contract.test.mjs');

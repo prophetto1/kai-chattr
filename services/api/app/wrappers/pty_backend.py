@@ -225,6 +225,18 @@ class PtyTerminalBackend:
             return self._posix_proc.poll() is None
         return False
 
+    @property
+    def pid(self) -> int | None:
+        """OS pid of the child CLI, or None when not running."""
+        if self._winpty is not None:
+            try:
+                return self._winpty.pid
+            except Exception:
+                return None
+        if self._posix_proc is not None:
+            return self._posix_proc.pid
+        return None
+
     def resize(self, cols: int, rows: int) -> None:
         """Resize the pseudoterminal and the mirrored screen."""
         self.cols, self.rows = int(cols), int(rows)
@@ -389,3 +401,127 @@ class PtyTerminalBackend:
             return changed
 
         return check
+
+
+# ----------------------------------------------------------------------
+# Module-level transport surface — mirrors app.wrappers.windows/unix so
+# cli.py can select `transport = "pty"` per agent as a drop-in second
+# method beside the console-injection runners.
+# ----------------------------------------------------------------------
+
+_active_lock = threading.Lock()
+_active_backend: PtyTerminalBackend | None = None
+
+
+def _set_active(backend: PtyTerminalBackend | None) -> None:
+    global _active_backend
+    with _active_lock:
+        _active_backend = backend
+
+
+def _get_active() -> PtyTerminalBackend | None:
+    with _active_lock:
+        return _active_backend
+
+
+def inject(text: str, *, settle: float = 0.05) -> None:
+    """Inject text + Enter into the active PTY session (watcher entrypoint)."""
+    backend = _get_active()
+    if backend is None:
+        raise PtyError("no active PTY session to inject into")
+    backend.inject(text, settle=settle)
+
+
+def capture_terminal(max_lines: int = 120) -> str:
+    """Render the active PTY screen; empty string when no session is live."""
+    backend = _get_active()
+    if backend is None:
+        return ""
+    return backend.capture_terminal(max_lines=max_lines)
+
+
+def get_activity_checker(trigger_flag=None):
+    """Screen-hash activity checker over whichever session is active.
+
+    Resilient to restarts: reads the active backend at every poll instead
+    of binding one instance, so the checker survives the run_agent restart
+    loop swapping sessions underneath it.
+    """
+    last_hash = [None]
+
+    def check() -> bool:
+        if trigger_flag is not None and trigger_flag[0]:
+            trigger_flag[0] = False
+            return True
+        backend = _get_active()
+        if backend is None:
+            return False
+        try:
+            text = backend.capture_terminal()
+        except Exception:
+            return False
+        current_hash = hash(text)
+        changed = last_hash[0] is not None and current_hash != last_hash[0]
+        last_hash[0] = current_hash
+        return changed
+
+    return check
+
+
+def run_agent(
+    command,
+    extra_args,
+    cwd,
+    env,
+    queue_file,
+    agent,
+    no_restart,
+    start_watcher,
+    strip_env=None,
+    pid_holder=None,
+    session_name=None,
+    inject_env=None,
+    inject_delay: float = 0.3,
+    **_ignored,
+):
+    """Run the agent CLI on an owned PTY. Same contract as the platform runners.
+
+    The injection runners' `enter_backend` knob does not exist here — Enter
+    is a carriage return on the pipe. `inject_delay` maps to the paste
+    settle. Restart semantics mirror windows.run_agent: respawn after exit
+    unless no_restart; KeyboardInterrupt stops.
+    """
+    if inject_env:
+        env = {**env, **inject_env}
+    start_watcher(lambda text: inject(text, settle=inject_delay))
+
+    name = session_name or f"kai-pty-{agent}"
+    argv = [command] + list(extra_args)
+    while True:
+        backend = PtyTerminalBackend(session_name=name, cwd=cwd, env=env)
+        try:
+            backend.start(argv)
+            _set_active(backend)
+            if pid_holder is not None:
+                pid_holder[0] = backend.pid
+            while backend.session_exists():
+                time.sleep(0.5)
+            returncode = "?"
+            if backend._posix_proc is not None:
+                returncode = backend._posix_proc.poll()
+        except KeyboardInterrupt:
+            break
+        finally:
+            if pid_holder is not None:
+                pid_holder[0] = None
+            _set_active(None)
+            backend.close()
+
+        if no_restart:
+            break
+        print(f"\n  {agent.capitalize()} exited (code {returncode}).")
+        print("  Restarting in 3s... (Ctrl+C to quit)")
+        try:
+            time.sleep(3)
+        except KeyboardInterrupt:
+            break
