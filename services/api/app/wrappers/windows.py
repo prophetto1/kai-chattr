@@ -1,6 +1,10 @@
 """Windows agent injection — uses Win32 WriteConsoleInput to type into the agent CLI.
 
 Called by wrapper.py on Windows. Not imported on other platforms.
+
+FROZEN — keystroke-injection regime, slated for replacement by PTY ownership
+(ConPTY/openpty: the wrapper owns the pseudoconsole and the CLI's stdio pipes).
+Do not extend or "fix" this module; see governance/plans/kai-chattr-pty-ownership.md.
 """
 
 import ctypes

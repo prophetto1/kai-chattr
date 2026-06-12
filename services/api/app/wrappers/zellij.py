@@ -4,6 +4,10 @@ This adapter intentionally mirrors the platform wrappers' small surface:
 start a visible terminal host, inject text, capture the visible pane, and
 clean up owned sessions. On Windows, Zellij currently needs a real terminal
 host; launching it as a hidden child process does not create a usable session.
+
+FROZEN — send-keys control paths are part of the keystroke-injection regime,
+slated for replacement by PTY ownership; multiplexers become optional human
+views only. Do not extend; see governance/plans/kai-chattr-pty-ownership.md.
 """
 
 from __future__ import annotations
