@@ -85,6 +85,7 @@
       "pytest"
     ],
     "apps/web": [
+      "react-arborist",
       "@dnd-kit/core",
       "@dnd-kit/sortable",
       "@dnd-kit/utilities",
