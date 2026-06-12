@@ -12,6 +12,7 @@ export type ChattrRoomMessage = {
   time?: string
   channel?: string
   attachments?: unknown[]
+  metadata?: Record<string, unknown>
 }
 
 type ChattrConnectionState = 'closed' | 'connecting' | 'open'
@@ -70,6 +71,7 @@ function normalizeMessage(value: unknown): ChattrRoomMessage | null {
     attachments: Array.isArray(rawAttachments) ? rawAttachments : [],
     channel,
     id: typeof value.id === 'number' || typeof value.id === 'string' ? value.id : undefined,
+    metadata: isObject(value.metadata) ? value.metadata : undefined,
     sender,
     text,
     time: typeof value.time === 'string' ? value.time : undefined,
