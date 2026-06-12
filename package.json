@@ -19,6 +19,7 @@
     "test:no-supabase-contract": "node --test scripts/tests/kai-chattr-no-supabase-contract.test.mjs",
     "test:workbench-browser": "playwright test tests/e2e/workbench-runtime.spec.ts",
     "test:endpoint-contracts": "powershell -NoProfile -Command \"Set-Location services/api; uv run pytest -q tests/test_endpoint_contract_registry.py tests/test_observability_contract.py\"",
+    "test:endpoint-contract-boundary": "node --test scripts/tests/kai-chattr-endpoint-contract-boundary.test.mjs",
     "verify-local": "pnpm run check:contracts && pnpm run check:deps && pnpm run test:runtime-contract && pnpm run test:port-drift-contract && pnpm run test:no-api-session-contract && pnpm run test:no-supabase-contract && powershell -NoProfile -Command \"Set-Location services/api; uv run python -m compileall app -q; uv run pytest -q\" && pnpm --dir apps/web run build && node scripts/dev/verify-runtime.mjs",
     "check:contracts": "node governance/scripts/check-contracts.mjs",
     "check:npm-deps": "node governance/scripts/check-deps.mjs",
