@@ -1,7 +1,12 @@
 import { useMemo, useState } from 'react'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDownToLine, Check, CircleAlert, Eye } from 'lucide-react'
+import {
+  IconAlertCircle,
+  IconCheck,
+  IconCornerDownLeft,
+  IconEye,
+} from '@tabler/icons-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -99,9 +104,9 @@ export function ChatApprovalCard({ message }: { message: ChattrRoomMessage }) {
     >
       <div className="flex items-center gap-2">
         {status === 'resolved' ? (
-          <Check aria-hidden className="size-4 text-emerald-500" />
+          <IconCheck aria-hidden className="size-4 text-emerald-500" />
         ) : (
-          <CircleAlert aria-hidden className="size-4 text-amber-500" />
+          <IconAlertCircle aria-hidden className="size-4 text-amber-500" />
         )}
         <span className="text-sm font-medium">
           {meta.reason === 'stuck'
@@ -134,7 +139,7 @@ export function ChatApprovalCard({ message }: { message: ChattrRoomMessage }) {
           size="sm"
           variant="outline"
         >
-          <ArrowDownToLine className="size-4" />
+          <IconCornerDownLeft className="size-4" />
         </Button>
         <Input
           className="h-8 w-28"
@@ -152,7 +157,7 @@ export function ChatApprovalCard({ message }: { message: ChattrRoomMessage }) {
         <Popover onOpenChange={setScreenOpen} open={screenOpen}>
           <PopoverTrigger asChild>
             <Button size="sm" variant="ghost">
-              <Eye className="mr-1 size-4" />
+              <IconEye className="mr-1 size-4" />
               View screen
             </Button>
           </PopoverTrigger>
