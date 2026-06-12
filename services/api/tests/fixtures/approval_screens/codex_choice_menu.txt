@@ -1,0 +1,16 @@
+
+  Introducing GPT-5.5
+
+  GPT-5.5 is now available in Codex. It's our strongest agentic coding model yet, built to reason through large
+  codebases, check assumptions with tools, and keep going until the work is done.
+
+  Learn more: https://openai.com/index/introducing-gpt-5-5/
+
+  You can always keep using GPT-5.4 if you prefer.
+
+  Choose how you'd like Codex to proceed.
+
+› 1. Try new model
+  2. Use existing model
+
+  Use ↑/↓ to move, press enter to confirm
