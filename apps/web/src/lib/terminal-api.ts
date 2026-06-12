@@ -29,6 +29,8 @@ export type AgentRuntimeCard = {
   approval_needed: boolean
   approval_hint: string
   screen_tail: string
+  last_change_ms: number
+  stuck: boolean
 }
 
 export type TerminalRuntimesResponse = {

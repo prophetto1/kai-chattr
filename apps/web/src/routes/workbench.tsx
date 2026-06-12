@@ -114,7 +114,9 @@ import {
   WebPreviewNavigationButton,
   WebPreviewUrl,
 } from '@/components/ai-elements/web-preview'
+import { AgentJoinMenu } from '@/components/workbench/AgentJoinMenu'
 import { AgentRuntimeOverlay } from '@/components/workbench/AgentRuntimeOverlay'
+import { ChatApprovalCard } from '@/components/workbench/ChatApprovalCard'
 import { BoardDock } from '@/components/workbench/BoardDock'
 import { DockWorkspace } from '@/components/workbench/DockWorkspace'
 import { JobsDock } from '@/components/workbench/JobsDock'
@@ -173,6 +175,7 @@ type WorkbenchMessage = {
     input: Record<string, unknown>
     output: Record<string, unknown>
   }
+  raw?: ChattrRoomMessage
 }
 
 const CHAT_CHANNEL = 'general'
@@ -1268,6 +1271,7 @@ function BrowserPreviewPane() {
 function toWorkbenchMessage(message: ChattrRoomMessage): WorkbenchMessage {
   return {
     id: message.uid ?? message.id ?? `${message.sender}-${message.timestamp ?? message.text}`,
+    raw: message,
     role: message.sender === 'user' ? 'user' : 'assistant',
     sender: message.sender,
     text: message.text,
@@ -1281,6 +1285,21 @@ function WorkbenchChatMessage({
   index: number
   message: WorkbenchMessage
 }) {
+  const kind = message.raw?.type
+  if (kind === 'approval_card' && message.raw) {
+    return (
+      <div className="flex w-full justify-start">
+        <ChatApprovalCard message={message.raw} />
+      </div>
+    )
+  }
+  if (kind === 'join' || kind === 'leave') {
+    return (
+      <div className="py-0.5 text-center text-xs text-muted-foreground">
+        {message.text}
+      </div>
+    )
+  }
   return (
     <Message className="gap-1.5" from={message.role} key={`${message.role}-${index}`}>
       <MessageContent className="gap-1.5 text-[13px] leading-[1.45] group-[.is-user]:px-3.5 group-[.is-user]:py-2.5">
@@ -1556,11 +1575,12 @@ export default function WorkbenchPage() {
                       <span className="min-w-0 truncate text-xs font-medium text-foreground">
                         Workbench session
                       </span>
+                      <AgentJoinMenu className="ml-auto" />
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             aria-label={lowerPaneOpen ? 'Hide lower pane' : 'Show lower pane'}
-                            className="ml-auto size-8 rounded-[5px] text-muted-foreground hover:bg-accent hover:text-foreground active:scale-95"
+                            className="size-8 rounded-[5px] text-muted-foreground hover:bg-accent hover:text-foreground active:scale-95"
                             data-testid="workbench-lower-pane-toggle"
                             onClick={toggleLowerPane}
                             size="icon"
