@@ -114,6 +114,7 @@ import {
   WebPreviewNavigationButton,
   WebPreviewUrl,
 } from '@/components/ai-elements/web-preview'
+import { AgentRuntimeOverlay } from '@/components/workbench/AgentRuntimeOverlay'
 import { BoardDock } from '@/components/workbench/BoardDock'
 import { DockWorkspace } from '@/components/workbench/DockWorkspace'
 import { JobsDock } from '@/components/workbench/JobsDock'
@@ -1675,7 +1676,7 @@ export default function WorkbenchPage() {
               <div className="-mr-[5px] flex h-full w-10 shrink-0 flex-col">
                 <TabsList
                   aria-label="Workbench dock"
-                  className="flex h-full w-full flex-col justify-start gap-1 rounded-none bg-transparent px-1.5 pb-1.5 pt-[67px]"
+                  className="flex w-full flex-1 flex-col justify-start gap-1 rounded-none bg-transparent px-1.5 pb-1.5 pt-[67px]"
                   variant="line"
                 >
                   {dockTabs.map((tab) => {
@@ -1695,6 +1696,9 @@ export default function WorkbenchPage() {
                     )
                   })}
                 </TabsList>
+                <div className="flex justify-center px-1.5">
+                  <AgentRuntimeOverlay />
+                </div>
               </div>
             </div>
         </Tabs>

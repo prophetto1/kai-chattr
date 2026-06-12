@@ -540,6 +540,32 @@ def _post_terminal_snapshot(server_port: int, agent_name: str, token: str, text:
         return False
 
 
+def _drain_raw_input(input_file) -> list[str]:
+    """Drain human raw-input entries (approval keystrokes queued by the API
+    via POST /api/terminal/{agent}/input). Returns the raw key strings in
+    order; the caller injects them verbatim — no MCP task composition."""
+    try:
+        if not input_file.exists() or input_file.stat().st_size == 0:
+            return []
+        with open(input_file, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        input_file.write_text("", "utf-8")
+    except OSError:
+        return []
+    keys: list[str] = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            data = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(data, dict) and isinstance(data.get("keys"), str):
+            keys.append(data["keys"])
+    return keys
+
+
 def _queue_watcher(get_identity_fn, inject_fn, *, is_multi_instance: bool = False, trigger_flag=None,
                    server_port: int = 8840, agent_name: str = "", get_token_fn=None,
                    refresh_interval: int = 10):
@@ -554,6 +580,16 @@ def _queue_watcher(get_identity_fn, inject_fn, *, is_multi_instance: bool = Fals
     while True:
         try:
             current_identity, queue_file = get_identity_fn()
+
+            # Human raw-input lane (approval keystrokes from the app): inject
+            # verbatim, ahead of any trigger/MCP-task composition.
+            for raw_keys in _drain_raw_input(
+                queue_file.parent / f"{current_identity}_input.jsonl"
+            ):
+                if trigger_flag is not None:
+                    trigger_flag[0] = True
+                inject_fn(raw_keys)
+
             if use_remote_poll:
                 token = get_token_fn() if get_token_fn else ""
                 entries = _poll_remote_queue(server_port, current_identity, token)
