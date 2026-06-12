@@ -118,3 +118,19 @@ def test_canonical_routes_declare_scope_discipline() -> None:
         and not c.tenant_param
     ]
     assert not broken, f"Canonical tenant-scoped routes must declare tenant_param: {broken}"
+
+
+def test_canonical_routes_lock_public_identifier_names() -> None:
+    from app.endpoint_contract_registry import all_contracts
+
+    broken = []
+    for c in all_contracts():
+        if c.canonical_status != "canonical":
+            continue
+        if "user_id" in c.path:
+            broken.append((c.method, c.path, "user identifier in path"))
+        if c.scope in {"workspace", "workspace_session"} and c.tenant_param != "workspace_public_id":
+            broken.append((c.method, c.path, f"tenant_param must be workspace_public_id, got {c.tenant_param!r}"))
+        if c.scope == "workspace_session" and c.session_param != "session_hash":
+            broken.append((c.method, c.path, f"session_param must be session_hash, got {c.session_param!r}"))
+    assert not broken, f"Canonical route identifier rules violated: {broken}"
