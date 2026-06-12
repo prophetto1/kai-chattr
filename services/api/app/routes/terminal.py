@@ -205,8 +205,12 @@ def create_terminal_router(state: TerminalApiState) -> APIRouter:
                     detected_at=float(snapshot["received_at"]),
                 )
             elif action[0] == "resolved":
-                # terminal.approval.resolved emission lands with the R-B task.
-                pass
+                _append_runtime_event(
+                    state,
+                    "terminal.approval.resolved",
+                    actor=canonical_name,
+                    details={"agent_name": canonical_name, "pending_ms": action[1]},
+                )
         _append_runtime_event(
             state,
             "terminal.snapshot.write",
@@ -297,6 +301,15 @@ def create_terminal_router(state: TerminalApiState) -> APIRouter:
             actor="browser",
             details={"byte_count": len(keys.encode("utf-8")), "direction": "in"},
         )
+        with state.snapshots_lock:
+            latest = state.snapshots.get(canonical_name)
+        if latest and latest.get("approval_needed"):
+            _append_runtime_event(
+                state,
+                "terminal.approval.actioned",
+                actor="browser",
+                details={"agent_name": canonical_name, "keys_length": len(keys)},
+            )
         return JSONResponse({"ok": True, "name": canonical_name})
 
     @router.get("/api/terminal/{agent_name}")

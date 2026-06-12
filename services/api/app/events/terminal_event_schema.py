@@ -27,6 +27,8 @@ KNOWN_EVENT_TYPES: frozenset[str] = frozenset(
         "terminal.snapshot.write",
         "terminal.snapshot.read",
         "terminal.attention_needed",
+        "terminal.approval.actioned",
+        "terminal.approval.resolved",
         "terminal.exited",
         "terminal.closed",
         "runtime.events.dropped",
@@ -136,6 +138,8 @@ _PAYLOAD_REQUIREMENTS: dict[str, tuple[tuple[str, type], ...]] = {
         ("snapshot_age_ms", int),
     ),
     "terminal.attention_needed": (("reason", str),),
+    "terminal.approval.actioned": (("agent_name", str), ("keys_length", int)),
+    "terminal.approval.resolved": (("agent_name", str), ("pending_ms", int)),
     "terminal.exited": (("exit_code", int),),
     "terminal.closed": (("cleanup_result", str),),
     "runtime.events.dropped": (
