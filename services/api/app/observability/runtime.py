@@ -181,6 +181,9 @@ def _set_endpoint_span_attributes(span: trace.Span, endpoint: EndpointDefinition
     span.set_attribute("kai_chattr.endpoint.path_template", endpoint.path)
     span.set_attribute("kai_chattr.endpoint.proxy", endpoint.proxy)
     span.set_attribute("kai_chattr.endpoint.surface", endpoint.surface)
+    span.set_attribute("kai_chattr.endpoint.scope", endpoint.scope)
+    span.set_attribute("kai_chattr.endpoint.canonical_status", endpoint.canonical_status)
+    span.set_attribute("kai_chattr.endpoint.data_owner", endpoint.data_owner)
     span.set_attribute("http.request.method", endpoint.method)
     span.set_attribute("http.route", endpoint.path)
 

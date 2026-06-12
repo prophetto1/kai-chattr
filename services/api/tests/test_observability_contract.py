@@ -216,3 +216,65 @@ def test_otlp_exporter_uses_default_endpoint_when_config_is_blank(
 def test_unsupported_trace_exporter_fails_closed() -> None:
     with pytest.raises(RuntimeError, match="unsupported OTEL_TRACES_EXPORTER"):
         observability._build_span_exporter(Settings(OTEL_TRACES_EXPORTER="zipkin"))
+
+
+def test_registry_metadata_reaches_endpoint_catalog() -> None:
+    endpoints = {
+        (e.method, e.path): e for e in endpoint_definitions_for_app(api_main.app)
+    }
+
+    settings = endpoints[("PATCH", "/api/settings")]
+    assert settings.scope == "global"
+    assert settings.canonical_status == "legacy"
+    assert settings.data_owner == "settings store"
+
+    send = endpoints[("POST", "/api/send")]
+    assert send.scope == "global"
+    assert send.canonical_status == "legacy"
+    assert send.data_owner == "MessageStore JSONL"
+
+    observed = endpoints[("GET", "/observability/endpoints")]
+    assert observed.scope == "public"
+    assert observed.canonical_status == "internal"
+
+    status = endpoints[("GET", "/schemas/endpoint-contracts/status")]
+    assert status.canonical_status == "internal"
+    assert status.response_model == "coverage_status dict"
+
+    account = endpoints[("GET", "/api/user/account")]
+    assert account.scope == "user"
+    assert account.canonical_status == "canonical"
+
+    catalog_entry = next(
+        item
+        for item in observability_runtime.observed_endpoint_catalog()
+        if item["method"] == "PATCH" and item["path"] == "/api/settings"
+    )
+    for key in ("scope", "canonical_status", "data_owner", "request_model", "response_model"):
+        assert key in catalog_entry
+
+
+class _RecordingSpan:
+    def __init__(self) -> None:
+        self.attributes: dict[str, object] = {}
+
+    def set_attribute(self, key: str, value: object) -> None:
+        self.attributes[key] = value
+
+
+def test_endpoint_span_attributes_exclude_forbidden_identifiers() -> None:
+    definition = next(
+        e
+        for e in endpoint_definitions_for_app(api_main.app)
+        if e.path == "/api/send"
+    )
+    span = _RecordingSpan()
+    observability_runtime._set_endpoint_span_attributes(span, definition)
+
+    forbidden_fragments = ("user_id", "session_hash", "email", "token", "filename")
+    for key in span.attributes:
+        for fragment in forbidden_fragments:
+            assert fragment not in key.lower(), f"forbidden attribute key: {key}"
+    allowed_prefixes = ("kai_chattr.endpoint.", "http.request.method", "http.route")
+    for key in span.attributes:
+        assert key.startswith(allowed_prefixes), f"unexpected span attribute: {key}"

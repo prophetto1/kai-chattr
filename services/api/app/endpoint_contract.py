@@ -78,17 +78,29 @@ class EndpointDefinition:
     auth: EndpointAuth
     proxy: EndpointProxy
     surface: EndpointSurface
+    # Registry-backed contract metadata (defaults apply only to the heuristic
+    # fallback path, which the registry coverage gate drives to zero).
+    scope: str = "global"
+    canonical_status: str = "legacy"
+    data_owner: str = "unclassified"
+    request_model: str = "untyped"
+    response_model: str = "untyped"
 
     def to_observability_dict(self) -> dict[str, str]:
         return {
             "area": self.area,
             "auth": self.auth,
+            "canonical_status": self.canonical_status,
+            "data_owner": self.data_owner,
             "method": self.method,
             "operation": self.operation,
             "path": self.path,
             "proxy": self.proxy,
             "purpose": self.purpose,
+            "request_model": self.request_model,
+            "response_model": self.response_model,
             "route_name": self.route_name,
+            "scope": self.scope,
             "span_name": self.span_name,
             "surface": self.surface,
         }
@@ -116,8 +128,16 @@ def endpoint_definition_from_route(method: str, path: str, route_name: str) -> E
     contract = contract_for(safe_method, path)
     if contract is not None:
         policy = EndpointPolicy(contract.auth, contract.proxy, contract.surface)
+        extra = {
+            "scope": contract.scope,
+            "canonical_status": contract.canonical_status,
+            "data_owner": contract.data_owner,
+            "request_model": contract.request_model,
+            "response_model": contract.response_model,
+        }
     else:
         policy = endpoint_policy_for_path(safe_method, path)
+        extra = {}
     area = _area_for_path(path)
     operation = _operation_for_route(safe_method, path)
     noun = _noun_for_path(path)
@@ -132,6 +152,7 @@ def endpoint_definition_from_route(method: str, path: str, route_name: str) -> E
         auth=policy.auth,
         proxy=policy.proxy,
         surface=policy.surface,
+        **extra,
     )
 
 
