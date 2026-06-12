@@ -1,0 +1,55 @@
+{
+  "$comment": "SOURCE OF TRUTH for the Endpoint Contracts rules. Ratified by Jon 2026-06-12 ('let's get the contract implemented') executing the sim-style endpoint contract plan (Planned: kai-chattr-sim-style-endpoint-contract-implementation-plan-draft.md, rev 3).",
+  "id": "endpoint-contracts",
+  "title": "Endpoint Contracts",
+  "status": "locked",
+  "summary": "Contract-first endpoint registry: every safe HTTP route owns exactly one explicit EndpointContract; canonical URL rules and observability attribute rules are test-enforced.",
+  "covers": ["api-routes", "url-canon", "observability-attributes", "frontend-boundary"],
+  "rules": [
+    {
+      "key": "every-route-contracted",
+      "locked": true,
+      "text": "Every safe-method FastAPI route (DELETE/GET/PATCH/POST/PUT, excluding OpenAPI docs) must own exactly one EndpointContract in services/api/app/endpoint_contract_registry.py keyed by (method, path_template), declaring auth, proxy, surface, scope, canonical_status, data_owner, and request/response model names. No orphan contracts."
+    },
+    {
+      "key": "inventory-drift-lock",
+      "locked": true,
+      "text": "services/api/tests/fixtures/endpoint_route_inventory.txt is the canonical route inventory. Adding or removing a route without updating the fixture (and its contract) fails tests in both directions."
+    },
+    {
+      "key": "no-user-id-in-paths",
+      "locked": true,
+      "text": "No route path may contain a user identifier (user_id or equivalent). Authentication determines the user; URLs carry only opaque tenant and session identifiers."
+    },
+    {
+      "key": "workspace-session-scope-params",
+      "locked": true,
+      "text": "Any contract with scope workspace_session must declare tenant_param and session_param, and both must appear as template tokens in the path."
+    },
+    {
+      "key": "canonical-status-vocabulary",
+      "locked": true,
+      "text": "canonical_status is one of: canonical (conforms to target product canon), legacy (live pre-tenancy surface awaiting rescope), internal (infra/agent-wrapper lane), redirect_helper (alias permitted by canon rule 7). New product routes must be canonical; new legacy entries require explicit ratification."
+    },
+    {
+      "key": "forbidden-span-attributes",
+      "locked": true,
+      "text": "Endpoint span/metric attributes carry registry metadata only (kai_chattr.endpoint.*, http.request.method, http.route). user_id, session_hash, email, tokens, raw filenames, request payloads, and message text are forbidden in trace and metric attributes."
+    },
+    {
+      "key": "registry-backed-observability",
+      "locked": true,
+      "text": "GET /observability/endpoints and endpoint span attributes read from the endpoint contract registry, not from path-prefix heuristics. GET /schemas/endpoint-contracts/status reports coverage and must show zero uncontracted routes and zero orphans."
+    }
+  ],
+  "enforcedBy": "services/api/tests/test_endpoint_contract_registry.py, services/api/tests/test_observability_contract.py, pnpm run test:endpoint-contracts",
+  "enforcement": [
+    "pytest: tests/test_endpoint_contract_registry.py (coverage, drift-lock, URL canon gates)",
+    "pytest: tests/test_observability_contract.py (registry-backed catalog, forbidden span attributes)",
+    "runtime: GET /schemas/endpoint-contracts/status coverage endpoint"
+  ],
+  "openItems": [
+    "Frontend raw-call boundary test lands with plan Task 7 and extends enforcedBy.",
+    "Legacy-scoped routes are rescoped to workspace/session canon by the route-promotion program; each promotion flips canonical_status."
+  ]
+}

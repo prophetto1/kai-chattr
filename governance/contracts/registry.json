@@ -1,12 +1,13 @@
 {
-  "$comment": "SOURCE OF TRUTH index for the contracts registry. kai-chattr uses THREE contract containers: frontend, backend, and architecture. Dependency allowlist data is folded into architecture.json. Rules stay empty until a migrated slice needs one and Jon ratifies it.",
+  "$comment": "SOURCE OF TRUTH index for the contracts registry. kai-chattr uses FOUR contract containers: frontend, backend, architecture, and endpoint-contracts (ratified 2026-06-12). Dependency allowlist data is folded into architecture.json.",
   "categories": [
     {
       "name": "Contracts",
       "contracts": [
         { "id": "frontend", "title": "Frontend", "status": "planned", "enforcedBy": "Pending Jon-ratified rules", "page": true },
         { "id": "backend", "title": "Backend", "status": "planned", "enforcedBy": "Pending Jon-ratified rules", "page": true },
-        { "id": "architecture", "title": "Architecture", "status": "planned", "enforcedBy": "Pending Jon-ratified rules", "page": true }
+        { "id": "architecture", "title": "Architecture", "status": "planned", "enforcedBy": "Pending Jon-ratified rules", "page": true },
+        { "id": "endpoint-contracts", "title": "Endpoint Contracts", "status": "locked", "enforcedBy": "pytest endpoint registry gates + observability contract tests", "page": true }
       ]
     }
   ]
