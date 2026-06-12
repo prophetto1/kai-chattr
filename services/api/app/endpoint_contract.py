@@ -108,7 +108,16 @@ def endpoint_definitions_for_app(app: FastAPI) -> list[EndpointDefinition]:
 
 def endpoint_definition_from_route(method: str, path: str, route_name: str) -> EndpointDefinition:
     safe_method = method.upper()
-    policy = endpoint_policy_for_path(safe_method, path)
+    # Registry-first: explicit contracts are authoritative; the path-prefix
+    # heuristic below survives only as a fallback for not-yet-contracted
+    # routes (which the registry coverage test drives to zero).
+    from app.endpoint_contract_registry import contract_for
+
+    contract = contract_for(safe_method, path)
+    if contract is not None:
+        policy = EndpointPolicy(contract.auth, contract.proxy, contract.surface)
+    else:
+        policy = endpoint_policy_for_path(safe_method, path)
     area = _area_for_path(path)
     operation = _operation_for_route(safe_method, path)
     noun = _noun_for_path(path)
