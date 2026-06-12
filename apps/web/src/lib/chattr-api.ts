@@ -57,6 +57,12 @@ export function chattrApiUrl(path: string) {
   return `${origin}${path.startsWith('/') ? path : `/${path}`}`
 }
 
+/**
+ * Low-level transport ONLY. Product code should call contract-bound helpers
+ * (see `chattr-api-contracts.ts` and the per-area `lib/*-api.ts` modules)
+ * rather than passing raw '/api/...' string literals from components.
+ * The endpoint-contracts governance boundary test enforces this.
+ */
 export async function chattrJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = await chattrHeaders(init.headers)
 
