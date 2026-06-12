@@ -50,6 +50,68 @@ def _store(request: Request):
     return store
 
 
+# --- Local-mode bootstrap (Phase 0 auth plan v2, Task 0) ---
+
+LOCAL_OWNER_EMAIL = "owner@local.kai"
+LOCAL_WORKSPACE_PUBLIC_ID = "local"
+
+
+def _is_loopback(request: Request) -> bool:
+    host = request.client.host if request.client else ""
+    return host in ("127.0.0.1", "::1", "localhost", "testclient")
+
+
+def _runtime_mode(request: Request) -> str:
+    return str(getattr(request.app.state, "runtime_mode", "local") or "local")
+
+
+def _session_payload(store, user: dict[str, Any], workspace: dict[str, Any]) -> dict[str, Any]:
+    issued = store.issue_session(user_id=user["id"])
+    return {
+        "token": issued["token"],
+        "expires_at": issued["expires_at"],
+        "user": {
+            "id": user["id"],
+            "email": user["email_normalized"],
+            "display_name": user["display_name"],
+        },
+        "workspace": {
+            "public_id": workspace["public_id"],
+            "name": workspace["name"],
+            "tier": workspace["tier"],
+        },
+    }
+
+
+@router.post("/auth/local-session")
+def local_session(request: Request) -> dict[str, Any]:
+    """Mint the local owner's session. Loopback + local runtime mode only.
+
+    Idempotently ensures the owner user and the 'local' workspace exist;
+    response shape matches signup/login (AuthSession). The launcher token is
+    never a product credential — local mode bootstraps a real auth session.
+    """
+    if _runtime_mode(request) != "local":
+        raise HTTPException(status_code=403, detail="local bootstrap is local-mode only")
+    if not _is_loopback(request):
+        raise HTTPException(status_code=403, detail="local bootstrap requires a loopback client")
+    store = _store(request)
+
+    user = store.find_user_by_email(LOCAL_OWNER_EMAIL)
+    if user is None:
+        user = store.create_user(email=LOCAL_OWNER_EMAIL, display_name="Owner")
+    workspace = store.get_workspace_by_public_id(LOCAL_WORKSPACE_PUBLIC_ID)
+    if workspace is None:
+        workspace = store.create_workspace(
+            name="Local",
+            created_by_user_id=user["id"],
+            public_id=LOCAL_WORKSPACE_PUBLIC_ID,
+        )
+    if store.get_membership(workspace_id=workspace["id"], user_id=user["id"]) is None:
+        store.add_membership(workspace_id=workspace["id"], user_id=user["id"], role="owner")
+    return _session_payload(store, user, workspace)
+
+
 @router.post("/auth/signup", status_code=201)
 def signup(payload: SignupRequest, request: Request) -> dict[str, Any]:
     store = _store(request)

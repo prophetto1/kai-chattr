@@ -122,6 +122,7 @@ def _c(
 # --- identity (canonical: follows auth/user-scope canon) ---
 _c("POST", "/auth/signup", "public", "identity", "user", "canonical", "identity_db.auth")
 _c("POST", "/auth/login", "public", "identity", "user", "canonical", "identity_db.auth")
+_c("POST", "/auth/local-session", "public", "identity", "user", "internal", "identity_db.auth (loopback + local-mode guarded)", res="AuthSession")
 _c("POST", "/auth/logout", "user-bearer", "identity", "user", "canonical", "identity_db.auth")
 _c("GET", "/auth/oauth/{provider_name}", "public", "identity", "user", "canonical", "identity_db.auth")
 _c("GET", "/auth/oauth/{provider_name}/callback", "public", "identity", "user", "canonical", "identity_db.auth")

@@ -105,6 +105,7 @@ POST /api/terminal/{agent_name}
 POST /api/terminal/{agent_name}/input
 POST /api/trigger-agent
 POST /api/upload
+POST /auth/local-session
 POST /auth/login
 POST /auth/logout
 POST /auth/signup
