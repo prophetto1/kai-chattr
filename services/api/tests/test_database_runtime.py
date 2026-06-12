@@ -226,3 +226,52 @@ def test_job_store_factory_uses_sqlalchemy_when_database_configured(tmp_path):
     store = create_job_store(config, str(tmp_path / "jobs.json"))
 
     assert isinstance(store, SqlAlchemyJobStore)
+
+
+def test_model_provider_store_factory_uses_sqlalchemy_when_database_configured(tmp_path):
+    from app.stores.factory import create_model_provider_store
+    from app.stores.model_providers_db import SqlAlchemyModelProviderStore
+
+    config = {
+        "database": {
+            "mode": "postgres",
+            "url": f"sqlite:///{tmp_path / 'model_providers.db'}",
+        }
+    }
+
+    store = create_model_provider_store(config, str(tmp_path / "model_providers.json"))
+
+    assert isinstance(store, SqlAlchemyModelProviderStore)
+
+
+def test_sqlalchemy_model_provider_store_supports_crud(tmp_path):
+    from app.stores.model_providers_db import SqlAlchemyModelProviderStore
+
+    store = SqlAlchemyModelProviderStore(f"sqlite:///{tmp_path / 'model_providers.db'}")
+
+    created = store.create(
+        name="Primary OpenAI",
+        provider="openai",
+        model="gpt-4o-mini",
+        base_url="https://api.openai.com/v1",
+        api_key_env="OPENAI_API_KEY",
+        created_by="codex",
+    )
+    assert created is not None
+    assert created["id"] == 1
+
+    listed = store.list_all()
+    assert len(listed) == 1
+    assert listed[0]["name"] == "Primary OpenAI"
+
+    fetched = store.get(created["id"])
+    assert fetched is not None and fetched["uid"] == created["uid"]
+
+    updated = store.update(created["id"], name="Primary OpenAI 2", enabled=False)
+    assert updated is not None
+    assert updated["name"] == "Primary OpenAI 2"
+    assert updated["enabled"] is False
+
+    deleted = store.delete(created["id"])
+    assert deleted["id"] == created["id"]
+    assert store.get(created["id"]) is None

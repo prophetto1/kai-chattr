@@ -187,7 +187,7 @@ def identify_endpoint(
 def _surface_for_api_path(path: str) -> EndpointSurface:
     parts = _static_path_parts(path)
     area = parts[1] if len(parts) > 1 and parts[0] == "api" else ""
-    if area in {"jobs", "locked", "pins", "rules", "schedules", "sessions"}:
+    if area in {"jobs", "locked", "model-providers", "pins", "rules", "schedules", "sessions"}:
         return "board"
     if area in {"terminal"}:
         return "terminal"

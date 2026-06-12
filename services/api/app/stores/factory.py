@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from app.database import database_settings
+from app.stores.model_providers import ModelProviderStore
 from app.stores.home_start import HomeStartStore
 from app.stores.home_start_db import SqlAlchemyHomeStartStore
 from app.stores.identity_db import SqlAlchemyIdentityStore
@@ -14,6 +15,7 @@ from app.stores.jobs_db import SqlAlchemyJobStore
 from app.stores.routing_decisions_db import SqlAlchemyRoutingDecisionStore
 from app.stores.rules import RuleStore
 from app.stores.rules_db import SqlAlchemyRuleStore
+from app.stores.model_providers_db import SqlAlchemyModelProviderStore
 
 
 SERVICE_ROOT = Path(__file__).resolve().parents[2]
@@ -49,6 +51,18 @@ def create_job_store(config: dict[str, Any], file_path: str) -> JobStore | SqlAl
         return JobStore(file_path)
     if settings.mode == "postgres":
         return SqlAlchemyJobStore(settings.url)
+    raise ValueError(f"Unsupported database.mode={settings.mode!r}")
+
+
+def create_model_provider_store(
+    config: dict[str, Any],
+    file_path: str,
+) -> ModelProviderStore | SqlAlchemyModelProviderStore:
+    settings = database_settings(config)
+    if settings.mode == "file":
+        return ModelProviderStore(file_path)
+    if settings.mode == "postgres":
+        return SqlAlchemyModelProviderStore(settings.url)
     raise ValueError(f"Unsupported database.mode={settings.mode!r}")
 
 
