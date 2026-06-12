@@ -25,6 +25,7 @@ def evaluate(
     *,
     now: float,
     stuck_ms: int = STUCK_MS,
+    idle: bool = False,
 ) -> dict:
     actions: list[Action] = []
 
@@ -49,6 +50,7 @@ def evaluate(
         stuck_notified = False
     elif (
         not new_appr
+        and not idle  # an agent resting at its input prompt is not stuck
         and not stuck_notified
         and (now - last_change_at) * 1000 >= stuck_ms
     ):

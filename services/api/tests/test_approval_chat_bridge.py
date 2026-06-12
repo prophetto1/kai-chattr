@@ -85,6 +85,30 @@ def test_text_change_resets_stuck_tracking():
     assert state(r)["stuck_notified"] is False
 
 
+def test_idle_agent_never_goes_stuck():
+    prev = snap("idle screen", last_change_at=70.0, stuck_notified=False)
+    r = evaluate(prev, snap("idle screen"), now=100.0, stuck_ms=20000, idle=True)
+    assert actions(r) == []
+    assert state(r)["stuck_notified"] is False
+
+
+def test_idle_marker_detection():
+    from pathlib import Path
+
+    from app.routes.terminal import looks_idle
+
+    # Claude Code resting at its input prompt shows the shortcuts footer.
+    assert looks_idle("❯\n────\n  ? for shortcuts · ← for agents") is True
+
+    fixtures = Path(__file__).parent / "fixtures" / "approval_screens"
+    # The recorded negative fixture is a BUSY screen ('esc to interrupt'),
+    # and a live permission menu is not idle either.
+    busy_text = (fixtures / "negative_idle.txt").read_text(encoding="utf-8")
+    menu_text = (fixtures / "claude_menu_approval.txt").read_text(encoding="utf-8")
+    assert looks_idle(busy_text) is False
+    assert looks_idle(menu_text) is False
+
+
 def test_no_stuck_while_approval_pending():
     prev = snap("prompt", approval=True, hint="h", last_change_at=70.0,
                 stuck_notified=False, approval_since=70.0)

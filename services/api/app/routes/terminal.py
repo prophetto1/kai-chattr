@@ -46,6 +46,20 @@ APPROVAL_PATTERNS: tuple[re.Pattern, ...] = (
 # history must not re-flag.
 _APPROVAL_SCAN_LINES = 25
 
+# Idle-at-input-prompt markers (provider footers). An unchanged screen showing
+# one of these is a resting agent, not a stuck one — suppresses stuck cards.
+# Live-acceptance finding 2026-06-12: without this, every idle agent earned a
+# stuck card 20s after finishing its task.
+IDLE_MARKERS: tuple[str, ...] = (
+    "? for shortcuts",  # Claude Code idle footer ('esc to interrupt' while running)
+)
+_IDLE_SCAN_LINES = 5
+
+
+def looks_idle(text: str) -> bool:
+    tail = "\n".join(text.splitlines()[-_IDLE_SCAN_LINES:])
+    return any(marker in tail for marker in IDLE_MARKERS)
+
 
 def detect_approval(text: str) -> tuple[bool, str]:
     """Return (approval_needed, matching_line) for a snapshot's screen text."""
@@ -180,7 +194,10 @@ def create_terminal_router(state: TerminalApiState) -> APIRouter:
         with state.snapshots_lock:
             previous = state.snapshots.get(canonical_name)
             decision = approval_bridge.evaluate(
-                previous, snapshot, now=snapshot["received_at"]
+                previous,
+                snapshot,
+                now=snapshot["received_at"],
+                idle=looks_idle(trimmed),
             )
             snapshot.update(decision["state"])
             state.snapshots[canonical_name] = snapshot
@@ -262,6 +279,7 @@ def create_terminal_router(state: TerminalApiState) -> APIRouter:
                     and snapshot is not None
                     and not approval_needed
                     and last_change_ms >= approval_bridge.STUCK_MS
+                    and not looks_idle((snapshot or {}).get("text", ""))
                 ),
             })
         return JSONResponse({
