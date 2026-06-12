@@ -99,6 +99,47 @@ def start_visible_agent(profile_id: str) -> dict[str, Any]:
     }
 
 
+def start_headless_agent(profile_id: str) -> dict[str, Any]:
+    """Launch the wrapper with NO console window (the user's stated objective:
+    terminals don't spawn externally). Forces the PTY transport via env
+    override — console injection requires a console, which headless lacks.
+    Visibility comes from the workbench (snapshots now, live attach later);
+    input flows through the chat/queue injection path.
+    """
+    command = build_command(profile_id)
+    _require_visible_cli(command)
+
+    check = _preflight(command)
+    if not check.ready:
+        raise VisibleAgentPreflightError(check.blocked_reason or "agent preflight failed")
+
+    env = dict(os.environ)
+    env.pop("VIRTUAL_ENV", None)
+    env["KAI_CHATTR_TRANSPORT_OVERRIDE"] = "pty"
+    creationflags = 0
+    if platform.system() == "Windows":
+        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+    proc = subprocess.Popen(
+        command.argv,
+        cwd=str(command.cwd),
+        env=env,
+        shell=False,
+        creationflags=creationflags,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return {
+        "profile_id": command.profile_id,
+        "accepted": True,
+        "detail": "headless start (no window, pty transport)",
+        "pid": proc.pid,
+        "expected_base": check.base,
+        "registration_deadline_ms": REGISTRATION_DEADLINE_MS,
+    }
+
+
 def _require_visible_cli(command: BuiltCommand) -> None:
     if command.kind != "cli-agent" or not command.visible_terminal:
         raise VisibleAgentLaunchError(f"Profile {command.profile_id} is not a visible CLI profile")

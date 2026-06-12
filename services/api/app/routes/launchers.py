@@ -22,6 +22,7 @@ from app.launch.visible_agent_launcher import (
     VisibleAgentLaunchError,
     VisibleAgentPreflightError,
     preflight_visible_cli_profiles,
+    start_headless_agent,
     start_visible_agent,
 )
 
@@ -70,6 +71,7 @@ class LauncherStartRequest(BaseModel):
 
     profile_id: str = Field(min_length=1)
     confirm_risky: bool = False
+    headless: bool = False
 
 
 class LauncherStartResponse(BaseModel):
@@ -333,7 +335,10 @@ def start_agent_launcher(req: LauncherStartRequest, request: Request) -> AgentLa
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=reason)
 
     try:
-        result = start_visible_agent(command.profile_id)
+        if req.headless:
+            result = start_headless_agent(command.profile_id)
+        else:
+            result = start_visible_agent(command.profile_id)
     except (UnknownProfileError, InvalidProfileIdError, VisibleAgentLaunchError) as exc:
         _log_launcher_event(
             "chattr.launcher.agent_start_rejected",

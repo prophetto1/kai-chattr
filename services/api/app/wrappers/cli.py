@@ -1031,7 +1031,9 @@ def main():
     # Transport selection: "console" (default) keeps the platform injection
     # runners; "pty" runs the agent on an owned pseudoterminal (ConPTY/openpty)
     # per governance/plans/kai-chattr-pty-ownership.md. Per-agent opt-in.
-    transport = agent_cfg.get("transport", "console")
+    # Headless launches force PTY: console injection needs a console window,
+    # which a CREATE_NO_WINDOW wrapper process does not have.
+    transport = os.environ.get("KAI_CHATTR_TRANSPORT_OVERRIDE") or agent_cfg.get("transport", "console")
     if transport == "pty":
         from app.wrappers.pty_backend import capture_terminal, get_activity_checker, run_agent
 

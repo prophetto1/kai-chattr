@@ -106,8 +106,8 @@ export function AgentLauncherDialog({
     },
   })
   const launch = useMutation({
-    mutationFn: (input: { profileId: string; confirmRisky: boolean }) =>
-      startAgentLauncher(input.profileId, input.confirmRisky),
+    mutationFn: (input: { profileId: string; confirmRisky: boolean; headless?: boolean }) =>
+      startAgentLauncher(input.profileId, input.confirmRisky, input.headless ?? false),
     onError: (error, input) => {
       setLaunchState((current) => ({
         ...current,
@@ -125,7 +125,7 @@ export function AgentLauncherDialog({
     },
   })
 
-  const onLaunch = (profile: AgentLauncherProfile) => {
+  const onLaunch = (profile: AgentLauncherProfile, headless = false) => {
     const confirmed = confirmedRisky[profile.profile_id] ?? false
     if (profile.requires_explicit_confirmation && !confirmed) {
       setConfirmedRisky((current) => ({
@@ -135,8 +135,9 @@ export function AgentLauncherDialog({
       return
     }
     launch.mutate({
-      profileId: profile.profile_id,
       confirmRisky: profile.requires_explicit_confirmation,
+      headless,
+      profileId: profile.profile_id,
     })
   }
 
@@ -205,6 +206,7 @@ export function AgentLauncherDialog({
                   key={profile.profile_id}
                   launchState={launchState[profile.profile_id]}
                   onLaunch={() => onLaunch(profile)}
+                  onLaunchHeadless={() => onLaunch(profile, true)}
                   onTransportChange={
                     runtime
                       ? (transport) =>
@@ -246,6 +248,7 @@ function AgentLaunchCard(props: {
   confirmedRisky: boolean
   launchState?: LaunchState
   onLaunch: () => void
+  onLaunchHeadless: () => void
   onTransportChange?: (transport: AgentTransport) => void
   pending: boolean
   profile: AgentLauncherProfile
@@ -256,6 +259,7 @@ function AgentLaunchCard(props: {
     confirmedRisky,
     launchState,
     onLaunch,
+    onLaunchHeadless,
     onTransportChange,
     pending,
     profile,
@@ -333,15 +337,27 @@ function AgentLaunchCard(props: {
           ) : (
             <span />
           )}
-          <Button
-            className="h-7 px-3 text-xs"
-            disabled={!profile.ready || pending}
-            onClick={onLaunch}
-            size="sm"
-          >
-            {pending ? <IconLoader2 className="mr-1.5 size-3.5 animate-spin" /> : null}
-            {buttonLabel}
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Button
+              className="h-7 px-3 text-xs"
+              disabled={!profile.ready || pending}
+              onClick={onLaunchHeadless}
+              size="sm"
+              title="Launch with no terminal window (PTY transport)"
+              variant="outline"
+            >
+              Headless
+            </Button>
+            <Button
+              className="h-7 px-3 text-xs"
+              disabled={!profile.ready || pending}
+              onClick={onLaunch}
+              size="sm"
+            >
+              {pending ? <IconLoader2 className="mr-1.5 size-3.5 animate-spin" /> : null}
+              {buttonLabel}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

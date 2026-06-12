@@ -41,10 +41,11 @@ export function getAgentLauncherPreflight() {
   return chattrJson<AgentLauncherPreflight>('/api/launchers/agent/preflight')
 }
 
-export function startAgentLauncher(profileId: string, confirmRisky = false) {
+export function startAgentLauncher(profileId: string, confirmRisky = false, headless = false) {
   return chattrJson<AgentLauncherStartResult>('/api/launchers/agent', {
     body: JSON.stringify({
       confirm_risky: confirmRisky,
+      headless,
       profile_id: profileId,
     }),
     method: 'POST',
