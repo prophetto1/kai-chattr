@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.exc import IntegrityError
 
+from app.auth import throttle
 from app.auth.deps import current_session
 from app.auth.passwords import hash_password, verify_password
 
@@ -152,14 +153,27 @@ def login(payload: LoginRequest, request: Request) -> dict[str, Any]:
     store = _store(request)
     invalid = HTTPException(status_code=401, detail="invalid credentials")
 
+    retry_after = throttle.retry_after_seconds(store, payload.email)
+    if retry_after is not None:
+        raise HTTPException(
+            status_code=429,
+            detail="too many login attempts",
+            headers={"Retry-After": str(retry_after)},
+        )
+
+    def _failed() -> HTTPException:
+        throttle.note_login_failure(store, payload.email)
+        return invalid
+
     credential = store.find_password_credential(payload.email)
     if credential is None or not credential.get("password_hash"):
-        raise invalid
+        raise _failed()
     if not verify_password(credential["password_hash"], payload.password):
-        raise invalid
+        raise _failed()
     user = store.get_user(credential["user_id"])
     if user is None or user.get("status") != "active":
-        raise invalid
+        raise _failed()
+    throttle.note_login_success(store, payload.email)
     issued = store.issue_session(user_id=user["id"])
     return {
         "token": issued["token"],

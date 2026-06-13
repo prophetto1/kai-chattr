@@ -82,6 +82,24 @@ class AuthCredential(Base):
     )
 
 
+class AuthLoginAttempt(Base):
+    """Password-login throttle state (Phase 0 auth plan v2, Task 4).
+
+    One row per hashed identifier (the submitted email — existence-agnostic,
+    so throttle behavior leaks nothing about accounts). Distinct from
+    auth_oauth_attempts, which is OAuth state/PKCE storage.
+    """
+
+    __tablename__ = "auth_login_attempts"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(), primary_key=True, default=uuid.uuid4)
+    identifier_hash: Mapped[str] = mapped_column(String(128), unique=True, nullable=False, index=True)
+    window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    failure_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
+
+
 class AuthSession(Base):
     __tablename__ = "auth_sessions"
 
@@ -238,6 +256,7 @@ _IDENTITY_TABLES = [
     AuthCredential.__table__,
     AuthSession.__table__,
     AuthOAuthAttempt.__table__,
+    AuthLoginAttempt.__table__,
     Workspace.__table__,
     WorkspaceMembership.__table__,
     ChatSession.__table__,
@@ -495,6 +514,58 @@ class SqlAlchemyIdentityStore:
                 "provider": record.provider,
                 "code_verifier": record.code_verifier,
             }
+
+    # --- login throttling (Phase 0 auth plan v2, Task 4) ---
+
+    LOGIN_ATTEMPT_WINDOW_SECONDS = 15 * 60
+    LOGIN_ATTEMPT_THRESHOLD = 10
+    LOGIN_LOCKOUT_SECONDS = 15 * 60
+
+    def login_locked_until(self, identifier_hash: str) -> datetime | None:
+        with self._lock, self._sessions() as session:
+            row = session.scalar(
+                select(AuthLoginAttempt).where(AuthLoginAttempt.identifier_hash == identifier_hash)
+            )
+            if row is None or row.locked_until is None:
+                return None
+            locked_until = row.locked_until
+            if locked_until.tzinfo is None:
+                locked_until = locked_until.replace(tzinfo=UTC)
+            return locked_until if locked_until > _now() else None
+
+    def register_login_failure(self, identifier_hash: str) -> datetime | None:
+        """Record a failed login; returns locked_until when the threshold trips."""
+        now = _now()
+        with self._lock, self._sessions() as session:
+            row = session.scalar(
+                select(AuthLoginAttempt).where(AuthLoginAttempt.identifier_hash == identifier_hash)
+            )
+            if row is None:
+                row = AuthLoginAttempt(
+                    identifier_hash=identifier_hash, window_start=now, failure_count=0
+                )
+                session.add(row)
+            window_start = row.window_start
+            if window_start.tzinfo is None:
+                window_start = window_start.replace(tzinfo=UTC)
+            if (now - window_start).total_seconds() > self.LOGIN_ATTEMPT_WINDOW_SECONDS:
+                row.window_start = now
+                row.failure_count = 0
+            row.failure_count += 1
+            row.updated_at = now
+            if row.failure_count >= self.LOGIN_ATTEMPT_THRESHOLD:
+                row.locked_until = now + timedelta(seconds=self.LOGIN_LOCKOUT_SECONDS)
+            session.commit()
+            return row.locked_until
+
+    def clear_login_failures(self, identifier_hash: str) -> None:
+        with self._lock, self._sessions() as session:
+            row = session.scalar(
+                select(AuthLoginAttempt).where(AuthLoginAttempt.identifier_hash == identifier_hash)
+            )
+            if row is not None:
+                session.delete(row)
+                session.commit()
 
     def find_credential_by_provider_account(
         self, *, provider: str, provider_account_id: str
