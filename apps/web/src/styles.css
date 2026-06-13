@@ -4,10 +4,19 @@
 @source "../node_modules/streamdown/dist/*.js";
 
 @import "./styles/design-tokens.css";
-@import "./styles/fumadocs-theme.css";
 @import "./styles/shadcn-tokens.css";
 
 @custom-variant dark (&:is(.dark *));
+
+/* Tailwind v4's `border` utility defaults to currentColor unless a base rule
+ * sets one; this app-wide default was migrated from the old fumadocs-ui preset. */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+}
 
 /*
  * Entry stylesheet. Every COLOR + TYPE token lives in the imported files — one
@@ -16,13 +25,13 @@
  *                        --sidebar*, --wb-tab-icon*, and the --bd-* docs palette,
  *                        declared per theme (:root = day, .dark = night,
  *                        .catppuccin = mocha).
- *   fumadocs-theme.css → --color-fd-* derived FROM the semantic palette.
  *   shadcn-tokens.css  → shadcn util registration + radius + --destructive.
  *
- * This file keeps only what isn't a token value: base element styling, the
- * workbench shell sizing, and the Tailwind sidebar-utility registration — the
- * one util group the token files don't register, since --sidebar* are app-shell
- * only. (It mirrors the @theme inline block in shadcn-tokens.css.)
+ * This file keeps only what isn't a token value: base element styling (incl. the
+ * Tailwind v4 default border-color + the --font-sans mapping, both migrated here
+ * when fumadocs-theme.css was removed), the workbench shell sizing, and the
+ * Tailwind sidebar-utility registration — the one util group the token files
+ * don't register, since --sidebar* are app-shell only.
  */
 
 html {
@@ -37,8 +46,8 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100dvh;
-  background: var(--color-fd-background);
-  color: var(--color-fd-foreground);
+  background: var(--background);
+  color: var(--foreground);
   font-family: var(--bd-font-ui);
   font-size: var(--bd-fs-body);
   line-height: 1.43;
@@ -86,6 +95,9 @@ select {
 /* Register the Tailwind sidebar color utilities from the --sidebar* tokens
  * (values defined per theme in design-tokens.css). */
 @theme inline {
+  /* Default UI sans family (migrated from fumadocs-theme.css). */
+  --font-sans: var(--bd-font-ui);
+
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);

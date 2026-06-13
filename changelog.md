@@ -4,6 +4,15 @@ Repo-root changelog (decision 2026-06-11: lives here, not in the Planned store).
 
 ## 2026-06-13
 
+### refactor(web): remove fumadocs-theme.css (Fumadocs fully retired), collapse the token stack to 3 files
+- Deleted `apps/web/src/styles/fumadocs-theme.css` and its `@import` in `styles.css`. Fumadocs UI was already gone (no `apps/devdocs`, no `fumadocs*` deps, no `.mdx`, no `fd-*` class usage), so the file was a vestigial shim — except for four load-bearing pieces, migrated to the canonical files FIRST to avoid regressions:
+  - body `background`/`color` repointed from `var(--color-fd-background/foreground)` to `var(--background)`/`var(--foreground)` (`styles.css`).
+  - the Tailwind v4 default border-color (`*,::before,::after { border-color }`) moved into a `@layer base` block in `styles.css`, repointed to `var(--border)` (without it, `border` utilities fall back to `currentColor`).
+  - `--font-sans: var(--bd-font-ui)` moved into the `styles.css` `@theme inline` block.
+  - `--destructive` in `shadcn-tokens.css` repointed from `var(--color-fd-error)` to the literal `oklch(0.63 0.24 25)`.
+- Dropped the genuinely dead parts (unused `fd-*` color utilities, the info/warning/success/idea callout colors, the docs-shell width vars, and the `.jwc-docs-sidebar` overrides — all verified zero-usage in `apps/web`).
+- Tests: `pnpm --dir apps/web run build` (exit 0, 54.2s; CSS bundle unchanged at ~246.7 kB); grep confirms no residual `var(--color-fd-*)` or `fd-*` class usage in `apps/web/src`.
+
 ### feat(web): design-system token upgrade, graphite theme, compact approval card
 - Applied the Phase 1 design-system token layer: full rewrite of `apps/web/src/styles/design-tokens.css` and `shadcn-tokens.css` — new surface ladder (`--surface-base/-sunken/-raised/-overlay/-hover/-highlight`), ink ramp (`--ink-1..4`), `--divider`, elevation (`--elevation-1..3`), the `--ui-text-*` type ramp, and `--space-*`/`--radius-control/card/pill` scales. All legacy token names are preserved and rerouted through the new ramp for a free contrast bump. Registered the matching Tailwind utilities (`bg-surface-*`, `text-ink-*`, `border-divider`, `rounded-control/card/pill`, `shadow-e1..3/highlight/focus`, `text-ui-*`).
 - Added the selectable `.graphite` theme (true achromatic gray, chroma 0) to the served theme catalog: `services/api/app/schemas/workbench_settings.schema.json` (`selected_theme` enum + `x-options`), its `workbench_settings.py` fallback mirror, and `apps/web/src/components/theme/AppThemeProvider.tsx` `FALLBACK_THEMES`. It surfaces via `GET /api/themes` (items[4]) and the Appearance switcher applies `.dark .graphite`. Updated `test_theme_settings_api.py` to assert graphite at `items[4]`.
