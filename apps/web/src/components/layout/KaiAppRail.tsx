@@ -14,6 +14,7 @@ import {
 } from '@/components/workbench/WorkbenchCompactRail'
 import { APP_ROUTES } from '@/lib/app-routes'
 import { AGENT_FIXTURES } from '@/lib/agent-fixtures'
+import { logout } from '@/lib/auth-api'
 
 const AGENT_STATUS_COLORS: Record<string, string> = {
   idle: '#f59e0b',
@@ -167,6 +168,11 @@ export function KaiAppRail({
         agentEntries={activeAgentEntries}
         defaultExpanded={false}
         onAccount={() => navigate(APP_ROUTES.settings)}
+        onLogOut={() => {
+          // logout() always clears the stored token (even if the server call
+          // fails); land on the public page so RequireAuth doesn't re-bootstrap.
+          void logout().finally(() => navigate('/'))
+        }}
         onBilling={() => navigate(APP_ROUTES.settings)}
         onBrand={() => navigate(APP_ROUTES.home)}
         onCreateAgent={() => navigate(APP_ROUTES.agentsNew)}
