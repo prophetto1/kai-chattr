@@ -51,6 +51,13 @@ const FALLBACK_THEMES: ThemeSummary[] = [
     color_scheme: 'dark',
     html_classes: ['dark', 'ember'],
   },
+  {
+    id: 'graphite',
+    label: 'Graphite',
+    description: 'Achromatic gray dark palette',
+    color_scheme: 'dark',
+    html_classes: ['dark', 'graphite'],
+  },
 ]
 
 const FALLBACK_FONT_OPTIONS: SettingsSchemaOption[] = [

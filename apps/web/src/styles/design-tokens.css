@@ -1,37 +1,37 @@
 /*
  * JWC Global design tokens — single source of color + type truth.
  *
- * Structure (refactored, behaviour-preserving):
- *   1. PRIMITIVES  — theme-independent: fonts, type scales, fixed brand accents, sizes.
- *   2. THEME: DAY        (:root)        — light. Default when no theme class is present.
- *   3. THEME: NIGHT      (.dark)        — the base experience (the app ships with .dark).
- *   4. THEME: CATPPUCCIN (.catppuccin)  — mocha, now a complete theme.
+ * Structure:
+ *   1.  PRIMITIVES        — theme-independent: fonts, fixed brand accents.
+ *   1b. PRIMITIVE SCALES  — theme-independent system scales (NEW): UI type ramp,
+ *                           spacing, radius family, motion, focus geometry.
+ *   2.  THEME: DAY        (:root)        — light. Default when no theme class.
+ *   3.  THEME: NIGHT      (.dark)        — the base experience (app ships .dark).
+ *   4.  THEME: CATPPUCCIN (.catppuccin)  — mocha.
+ *   5.  THEME: EMBER      (.ember)       — warm dark, amber accent.
+ *   6.  THEME: GRAPHITE   (.graphite)    — NEW. Night, but every neutral is true
+ *                                          achromatic gray (chroma 0). Zero hue.
  *
- * Each theme block defines ONE canonical semantic palette (--background … --ring,
- * --sidebar*, --wb-tab-icon*) in oklch, PLUS the --bd-* docs prose/code palette.
- * fumadocs --color-fd-* derive FROM the semantic palette (see fumadocs-theme.css),
- * and the shadcn bridge registers utilities from it (see shadcn-tokens.css). Nothing
- * redefines the semantic palette a second time, so there is no load-order conflict.
+ * Each theme defines ONE canonical semantic palette (--background … --ring,
+ * --sidebar*, --wb-tab-icon*) PLUS the new surface/ink/elevation roles and the
+ * --bd-* docs palette. fumadocs --color-fd-* derive FROM the semantic palette;
+ * the shadcn bridge registers utilities from it (shadcn-tokens.css). No token
+ * name was removed; the upgraded values widen the surface ladder, raise muted
+ * contrast, add elevation, and route legacy names through the new ink ramp:
+ *     --muted-foreground → var(--ink-3)   (contrast bump everywhere, for free)
+ *     --text-2 → var(--ink-2) · --text-4 → var(--ink-4)
  *
- * Values are the ones that previously won after the full cascade — relocated here,
- * deduped, and completed for every theme. No token name was removed.
- *
- * WORKBENCH SURFACE ROLES (which token drives which area of the redesign):
- *   shell rail + 5px underlay gaps .... --sidebar (+ --sidebar-border)
- *   chat scroll / inner work areas .... --background
- *   dock + message / composer cards ... --card / --popover
- *   hover + lane separators ........... --accent / --border / --border-strong
- *   primary accent + active tab ....... --primary (+ --ring)
- *   dock-tab icons .................... --wb-tab-icon / --wb-tab-icon-active
- * Flip the whole look by swapping the theme class (.dark = night, none = day,
- * .catppuccin = mocha, .ember = warm); every surface re-themes from these tokens.
+ * SURFACE LADDER (dark themes), low → high:
+ *   --surface-base  (canvas / gaps)  <  --background (work area)
+ *     <  --card / --surface-raised   <  --popover / --surface-overlay
+ *     <  --accent / --surface-hover
  */
 
 /* ════════════════════════════════════════════════════════════════════════
- * 1. PRIMITIVES — theme-independent (fonts, type scales, fixed accents, sizes)
+ * 1. PRIMITIVES — theme-independent (fonts, fixed accents)
  * ════════════════════════════════════════════════════════════════════════ */
 :root {
-  /* Sim-style app fonts: Inter/system UI for all product surfaces, JetBrains Mono code. */
+  /* Product fonts: Inter/system UI for product surfaces, JetBrains Mono code. */
   --bd-font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --bd-font-prose: var(--bd-font-ui);
   --bd-font-display: var(--bd-font-ui);
@@ -48,7 +48,7 @@
   --app-font-sans: var(--bd-font-ui);
   --bd-font-serif: var(--kai-font-serif);
 
-  /* KAI fixed content accents (theme-independent, retained for home content). */
+  /* KAI fixed content accents (theme-independent, home/marketing content). */
   --kai-brand-k: #f06138;
   --kai-brand-a: #2e6bff;
   --kai-brand-i: #a87cf7;
@@ -65,9 +65,7 @@
   --layer-a-bg: rgba(46, 107, 255, 0.16);
   --layer-i-bg: rgba(168, 124, 247, 0.18);
 
-  --bd-radius: 0.625rem;
-
-  /* KAI A8 typography roles */
+  /* KAI A8 typography roles (display/marketing scale — retained, unchanged). */
   --type-a8-display-size: 56px;
   --type-a8-display-lh: 1.07;
   --type-a8-display-tracking: -0.03em;
@@ -82,7 +80,7 @@
   --type-a8-eyebrow-lh: 1.18;
   --type-a8-eyebrow-tracking: 0.16em;
 
-  /* Workbench prose scale (web/src/tailwind.css) */
+  /* Workbench prose scale (retained, unchanged). */
   --workbench-prose-font-size: 1rem;
   --workbench-prose-line-height: 1.6;
   --workbench-prose-block-gap: 0.8rem;
@@ -97,10 +95,7 @@
   --workbench-prose-heading-bottom: 0.5rem;
   --workbench-prose-code-inline-padding: 0.02rem 0.18rem;
 
-  /*
-   * Docs article scale — one step tighter than workbench MD preview so content
-   * reads closer to sidebar density (13–14px UI) without shrinking chrome.
-   */
+  /* Docs article scale (retained, unchanged). */
   --bd-docs-page-title-size: clamp(1.25rem, 1.5vw, 1.375rem);
   --bd-docs-page-title-weight: 600;
   --bd-docs-description-size: 0.875rem;
@@ -119,10 +114,65 @@
   --bd-docs-code-block-size: 0.8125rem;
   --bd-docs-table-size: 0.8125rem;
 
-  /* UI chrome */
+  /* UI chrome (retained). --bd-fs-body now equals the --text-ui-sm role. */
   --bd-fs-body: 14px;
   --bd-fs-label: 12px;
   --bd-fs-sidebar: 14px;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+ * 1b. PRIMITIVE SCALES — theme-independent system scales (NEW)
+ *     One source of truth for type / space / radius / motion. These replace the
+ *     inline magic numbers (text-[11.5px], rounded-[5px], py-2.5, …). Registered
+ *     as Tailwind utilities in shadcn-tokens.css (text-ui-*, rounded-*, …).
+ * ════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* — UI type ramp: 6 steps + overline, each size paired with lh + tracking — */
+  --ui-text-2xs: 0.6875rem;  --ui-lh-2xs: 1rem;     --ui-track-2xs: 0.005em;  /* 11/16  micro meta, mono caption */
+  --ui-text-xs:  0.75rem;    --ui-lh-xs:  1rem;     --ui-track-xs:  0em;       /* 12/16  notes, secondary */
+  --ui-text-sm:  0.8125rem;  --ui-lh-sm:  1.125rem; --ui-track-sm:  -0.006em;  /* 13/18  WORKHORSE: rows, labels, dense body */
+  --ui-text-md:  0.875rem;   --ui-lh-md:  1.25rem;  --ui-track-md:  -0.01em;   /* 14/20  input text, emphasis */
+  --ui-text-lg:  1rem;       --ui-lh-lg:  1.375rem; --ui-track-lg:  -0.011em;  /* 16/22  card + section + page titles */
+  --ui-text-xl:  1.25rem;    --ui-lh-xl:  1.625rem; --ui-track-xl:  -0.018em;  /* 20/26  metric numbers, hero */
+  --ui-text-overline: 0.6875rem; --ui-lh-overline: 0.875rem; --ui-track-overline: 0.12em; /* 11/14 +0.12em uppercase 600 */
+  --ui-weight-overline: 600;
+  --ui-numeric: tabular-nums; /* apply to any cell that holds a value/number */
+
+  /* — Spacing scale (raw; use directly or via aligned numeric utilities) — */
+  --space-1: 0.25rem;  /* 4  */
+  --space-2: 0.375rem; /* 6  */
+  --space-3: 0.5rem;   /* 8  */
+  --space-4: 0.75rem;  /* 12 */
+  --space-5: 1rem;     /* 16 */
+  --space-6: 1.25rem;  /* 20 */
+  --space-7: 1.5rem;   /* 24 */
+  --space-8: 2rem;     /* 32 */
+
+  /* — Density: component heights + paddings derived from the scale — */
+  --row-h: 2.125rem;        /* 34  properties / key-value row */
+  --row-h-compact: 2rem;    /* 32 */
+  --control-h: 2.125rem;    /* 34  input / select / button (was the ad-hoc h-8/h-9 mix) */
+  --control-h-sm: 1.875rem; /* 30 */
+  --card-pad: 1rem;         /* 16 */
+  --card-pad-lg: 1.25rem;   /* 20 */
+  --rail-pad-x: 1rem;       /* 16  right-rail row inset */
+
+  /* — Radius family (one system; replaces the 5/8/10/12 mix) — */
+  --radius: 0.5rem;            /* 8  legacy base, kept */
+  --radius-control: 0.4375rem; /* 7  inputs, buttons, tabs, chips-as-controls */
+  --radius-card: 0.625rem;     /* 10 cards, sheets, sections */
+  --radius-pill: 9999px;       /* status pills, swatches */
+  --bd-radius: var(--radius-card);
+
+  /* — Motion — */
+  --ease-out: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 160ms;
+  --dur-slow: 240ms;
+
+  /* — Focus ring: resolves against the ACTIVE theme's --background + --ring — */
+  --focus-ring: 0 0 0 2px var(--background), 0 0 0 4px color-mix(in oklab, var(--ring) 62%, transparent);
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -131,37 +181,55 @@
 :root {
   color-scheme: light;
 
+  /* — Surface roles (light: lower number = lighter chrome, cards = pure white) — */
+  --surface-base: oklch(0.93 0.003 270);   /* canvas behind panels / gaps */
+  --surface-sunken: oklch(0.915 0.003 270);/* wells, inset tracks */
+  --surface-raised: #ffffff;               /* = --card */
+  --surface-overlay: #ffffff;              /* = --popover */
+  --surface-hover: #e9eaec;                /* = --accent */
+  --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+
   /* — Canonical semantic palette (shadcn) — */
-  --background: oklch(0.95 0.003 270);
-  --foreground: #202020;
-  --card: #ffffff;
+  --background: oklch(0.955 0.003 270);
+  --foreground: #1b1c1f;
+  --card: var(--surface-raised);
   --card-foreground: var(--foreground);
-  --popover: #ffffff;
+  --popover: var(--surface-overlay);
   --popover-foreground: var(--foreground);
-  --secondary: #f3f3f3;
+  --secondary: #f1f2f4;
   --secondary-foreground: var(--foreground);
-  --muted: #f5f5f5;
-  --muted-foreground: #666666;
-  --accent: #ececec;
+  --muted: #f4f5f6;
+  --muted-foreground: var(--ink-3);
+  --accent: var(--surface-hover);
   --accent-foreground: var(--foreground);
-  --border: #dedede;
-  --border-strong: #c9c9c9;
-  --input: #d8d8d8;
+  --border: #e2e3e6;
+  --border-strong: #ccced3;
+  --divider: #ebecef;
+  --input: #d6d8dc;
   --primary: #20c878;
   --primary-foreground: #ffffff;
-  --ring: color-mix(in oklab, var(--primary) 42%, transparent);
+  --ring: color-mix(in oklab, var(--primary) 45%, transparent);
 
-  /* — design-system additions · text-1=foreground, text-3=muted-foreground, danger=destructive — */
-  --text-2: oklch(0.40 0.012 270);
-  --text-4: oklch(0.62 0.01 270);
+  /* — Ink ramp (1=strongest → 4=subtle). Legacy names route through it. — */
+  --ink-1: var(--foreground);
+  --ink-2: #44474e;
+  --ink-3: #5b606a; /* muted label — clears 4.5:1 on white/#f4 surfaces */
+  --ink-4: #7d828c; /* meta — solid, no alpha */
+  --text-2: var(--ink-2);
+  --text-4: var(--ink-4);
   --border-hairline: oklch(0 0 0 / 6%);
   --success: oklch(0.55 0.14 162);
   --warning: oklch(0.62 0.13 70);
 
+  /* — Elevation (light: soft neutral shadows) — */
+  --elevation-1: 0 1px 2px rgba(18, 20, 26, 0.06), 0 4px 12px -4px rgba(18, 20, 26, 0.10);
+  --elevation-2: 0 2px 4px rgba(18, 20, 26, 0.07), 0 12px 28px -8px rgba(18, 20, 26, 0.14);
+  --elevation-3: 0 4px 8px rgba(18, 20, 26, 0.08), 0 24px 50px -12px rgba(18, 20, 26, 0.20);
+
   /* — Sidebar — */
   --sidebar: oklch(0.965 0.003 270);
   --sidebar-foreground: #2b2b2b;
-  --sidebar-primary: #202020;
+  --sidebar-primary: #1b1c1f;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #ececec;
   --sidebar-accent-foreground: #1f1f1f;
@@ -172,7 +240,7 @@
   --wb-tab-icon: #303030;
   --wb-tab-icon-active: var(--primary);
 
-  /* — Docs content palette (--bd-*): drives fumadocs prose & code — */
+  /* — Docs content palette (--bd-*) — */
   --brand: #20c878;
   --brand-2: #15a765;
   --brand-bg: rgba(32, 200, 120, 0.14);
@@ -204,41 +272,60 @@
 }
 
 /* ════════════════════════════════════════════════════════════════════════
- * 3. THEME: NIGHT (.dark) — the base experience. App ships with class="dark".
- *    Layered surfaces: bg(editor) < card/dock < popover < accent(hover).
+ * 3. THEME: NIGHT (.dark) — base experience. Cool (hue 270) neutral.
+ *    Upgraded: ladder widened (base .158 → card .216 → overlay .246),
+ *    muted contrast raised (.68 → .745), borders + elevation strengthened.
  * ════════════════════════════════════════════════════════════════════════ */
 .dark {
   color-scheme: dark;
 
+  /* — Surface roles (dark: higher number = lighter / more raised) — */
+  --surface-base: oklch(0.158 0.004 270);   /* deep canvas / inter-panel gaps */
+  --surface-sunken: oklch(0.165 0.004 270); /* wells, inset tracks */
+  --surface-raised: oklch(0.216 0.004 270); /* = --card */
+  --surface-overlay: oklch(0.246 0.004 270);/* = --popover, floats higher */
+  --surface-hover: oklch(0.275 0.005 270);  /* = --accent */
+  --surface-highlight: inset 0 1px 0 oklch(1 0 0 / 6%);
+
   /* — Canonical semantic palette (shadcn) — */
-  --background: oklch(0.185 0.004 270);
-  --foreground: oklch(0.95 0 0);
-  --card: oklch(0.215 0.004 270);
+  --background: oklch(0.182 0.004 270);
+  --foreground: oklch(0.965 0 0);
+  --card: var(--surface-raised);
   --card-foreground: var(--foreground);
-  --popover: oklch(0.235 0.004 270);
+  --popover: var(--surface-overlay);
   --popover-foreground: var(--foreground);
   --secondary: oklch(0.235 0.004 270);
   --secondary-foreground: var(--foreground);
   --muted: oklch(0.235 0.004 270);
-  --muted-foreground: oklch(0.68 0.008 270);
-  --accent: oklch(0.275 0.005 270);
+  --muted-foreground: var(--ink-3);
+  --accent: var(--surface-hover);
   --accent-foreground: var(--foreground);
-  --border: oklch(1 0 0 / 11%);
-  --border-strong: oklch(1 0 0 / 16%);
-  --input: oklch(1 0 0 / 14%);
-  --primary: oklch(0.62 0.17 258);
+  --border: oklch(1 0 0 / 14%);
+  --border-strong: oklch(1 0 0 / 22%);
+  --divider: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 16%);
+  --primary: oklch(0.635 0.165 258);
   --primary-foreground: oklch(0.98 0 0);
-  --ring: oklch(0.62 0.17 258 / 55%);
+  --ring: oklch(0.635 0.165 258 / 60%);
 
-  /* — design-system additions — */
-  --text-2: oklch(0.78 0.006 270);
-  --text-4: oklch(0.55 0.012 270);
+  /* — Ink ramp — */
+  --ink-1: var(--foreground);
+  --ink-2: oklch(0.82 0.006 270);
+  --ink-3: oklch(0.745 0.008 270); /* muted label — clears 4.5:1 on .18 surfaces (was .68) */
+  --ink-4: oklch(0.63 0.01 270);   /* meta — solid, no /70 alpha */
+  --text-2: var(--ink-2);
+  --text-4: var(--ink-4);
   --border-hairline: oklch(1 0 0 / 6%);
   --success: oklch(0.72 0.16 162);
   --warning: oklch(0.80 0.15 80);
 
+  /* — Elevation (dark: ambient + contact black, pair with --surface-highlight) — */
+  --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.40), 0 8px 22px -8px rgba(0, 0, 0, 0.55);
+  --elevation-2: 0 2px 6px rgba(0, 0, 0, 0.45), 0 16px 40px -12px rgba(0, 0, 0, 0.60);
+  --elevation-3: 0 4px 10px rgba(0, 0, 0, 0.50), 0 28px 60px -16px rgba(0, 0, 0, 0.70);
+
   /* — Sidebar — */
-  --sidebar: oklch(0.205 0.004 270);
+  --sidebar: oklch(0.196 0.004 270);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: hsl(224.3 76.3% 48%);
   --sidebar-primary-foreground: hsl(0 0% 100%);
@@ -251,7 +338,7 @@
   --wb-tab-icon: oklch(0.97 0 0);
   --wb-tab-icon-active: var(--primary);
 
-  /* — Docs content palette (--bd-*) — */
+  /* — Docs content palette (--bd-*) — already neutral surfaces + blue brand — */
   --bd-brand: #2e6bff;
   --brand: var(--bd-brand);
   --brand-2: #6f97ff;
@@ -260,7 +347,7 @@
   --bd-heading: rgb(238, 238, 238);
   --bd-on-brand: #ffffff;
   --bd-text: rgb(238, 238, 238);
-  --bd-text-muted: rgba(255, 255, 255, 0.447);
+  --bd-text-muted: rgba(255, 255, 255, 0.55); /* raised from .447 for legibility */
   --bd-border: rgba(255, 255, 255, 0.1);
   --bd-card: rgb(25, 25, 25);
   --bd-background: #0e0e0e;
@@ -283,40 +370,52 @@
 }
 
 /* ════════════════════════════════════════════════════════════════════════
- * 4. THEME: CATPPUCCIN MOCHA (.catppuccin) — completed to a full theme.
- *    Semantic palette mapped from the existing mocha --bd-* values.
+ * 4. THEME: CATPPUCCIN MOCHA (.catppuccin)
  * ════════════════════════════════════════════════════════════════════════ */
 .catppuccin {
   color-scheme: dark;
 
-  /* — Canonical semantic palette (shadcn), mapped from mocha — */
+  --surface-base: #15151f;
+  --surface-sunken: #11111b;
+  --surface-raised: #24243a;
+  --surface-overlay: #2b2b40;
+  --surface-hover: #313248;
+  --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
   --background: #1a1a28;
-  --foreground: #cdd6f4; /* text */
-  --card: #24243a;
+  --foreground: #cdd6f4;
+  --card: var(--surface-raised);
   --card-foreground: var(--foreground);
-  --popover: #15151f;
+  --popover: var(--surface-overlay);
   --popover-foreground: var(--foreground);
   --secondary: #2b2b40;
   --secondary-foreground: var(--foreground);
   --muted: #2b2b40;
-  --muted-foreground: #9ba0b5;
-  --accent: #313248;
+  --muted-foreground: var(--ink-3);
+  --accent: var(--surface-hover);
   --accent-foreground: var(--foreground);
   --border: #3a3c51;
   --border-strong: #585b70;
+  --divider: rgba(255, 255, 255, 0.08);
   --input: #3a3c51;
-  --primary: #cba6f7; /* mauve */
+  --primary: #cba6f7;
   --primary-foreground: #1e1e2e;
-  --ring: #cba6f7;
+  --ring: color-mix(in oklab, #cba6f7 60%, transparent);
 
-  /* — design-system additions — */
-  --text-2: #bac2de;
-  --text-4: #9399b2;
+  --ink-1: var(--foreground);
+  --ink-2: #bac2de;
+  --ink-3: #a6acc4; /* raised from #9ba0b5 */
+  --ink-4: #8389a0;
+  --text-2: var(--ink-2);
+  --text-4: var(--ink-4);
   --border-hairline: rgba(255, 255, 255, 0.06);
   --success: #a6e3a1;
   --warning: #f9e2af;
 
-  /* — Sidebar — */
+  --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.40), 0 8px 22px -8px rgba(0, 0, 0, 0.55);
+  --elevation-2: 0 2px 6px rgba(0, 0, 0, 0.45), 0 16px 40px -12px rgba(0, 0, 0, 0.60);
+  --elevation-3: 0 4px 10px rgba(0, 0, 0, 0.50), 0 28px 60px -16px rgba(0, 0, 0, 0.70);
+
   --sidebar: #1a1a28;
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: #cba6f7;
@@ -326,11 +425,9 @@
   --sidebar-border: #3a3c51;
   --sidebar-ring: var(--ring);
 
-  /* — Workbench dock-tab icon — */
   --wb-tab-icon: #cdd6f4;
   --wb-tab-icon-active: var(--primary);
 
-  /* — Docs content palette (--bd-*) — */
   --bd-brand: #cba6f7;
   --brand: var(--bd-brand);
   --brand-2: #f5c2e7;
@@ -339,7 +436,7 @@
   --bd-heading: #f5e0dc;
   --bd-on-brand: #1e1e2e;
   --bd-text: #cdd6f4;
-  --bd-text-muted: #9ba0b5;
+  --bd-text-muted: #a6acc4;
   --bd-border: #3a3c51;
   --bd-card: #24243a;
   --bd-background: #1a1a28;
@@ -362,54 +459,64 @@
 }
 
 /* ════════════════════════════════════════════════════════════════════════
- * 5. THEME: EMBER (.ember) — warm dark. Warm charcoal surfaces + amber accent.
- *    Same lightness ladder as Night, shifted to a warm hue with a gold accent.
+ * 5. THEME: EMBER (.ember) — warm dark, amber accent (hue ~64).
  * ════════════════════════════════════════════════════════════════════════ */
 .ember {
   color-scheme: dark;
 
-  /* — Canonical semantic palette (shadcn) — */
-  --background: oklch(0.185 0.008 64);
+  --surface-base: oklch(0.158 0.008 64);
+  --surface-sunken: oklch(0.165 0.008 64);
+  --surface-raised: oklch(0.216 0.009 64);
+  --surface-overlay: oklch(0.246 0.01 64);
+  --surface-hover: oklch(0.285 0.015 64);
+  --surface-highlight: inset 0 1px 0 oklch(1 0.02 70 / 7%);
+
+  --background: oklch(0.182 0.008 64);
   --foreground: oklch(0.95 0.01 70);
-  --card: oklch(0.215 0.009 64);
+  --card: var(--surface-raised);
   --card-foreground: var(--foreground);
-  --popover: oklch(0.235 0.01 64);
+  --popover: var(--surface-overlay);
   --popover-foreground: var(--foreground);
   --secondary: oklch(0.235 0.01 64);
   --secondary-foreground: var(--foreground);
   --muted: oklch(0.235 0.01 64);
-  --muted-foreground: oklch(0.7 0.025 70);
-  --accent: oklch(0.28 0.015 64);
+  --muted-foreground: var(--ink-3);
+  --accent: var(--surface-hover);
   --accent-foreground: var(--foreground);
-  --border: oklch(0.9 0.04 70 / 12%);
-  --border-strong: oklch(0.9 0.04 70 / 18%);
-  --input: oklch(0.9 0.04 70 / 15%);
+  --border: oklch(0.9 0.04 70 / 14%);
+  --border-strong: oklch(0.9 0.04 70 / 22%);
+  --divider: oklch(0.9 0.04 70 / 10%);
+  --input: oklch(0.9 0.04 70 / 16%);
   --primary: oklch(0.78 0.14 68);
   --primary-foreground: oklch(0.2 0.03 64);
-  --ring: oklch(0.78 0.14 68 / 50%);
+  --ring: oklch(0.78 0.14 68 / 55%);
 
-  /* — design-system additions — */
-  --text-2: oklch(0.82 0.02 70);
-  --text-4: oklch(0.62 0.02 70);
+  --ink-1: var(--foreground);
+  --ink-2: oklch(0.84 0.02 70);
+  --ink-3: oklch(0.75 0.025 70); /* raised from .70 */
+  --ink-4: oklch(0.64 0.02 70);
+  --text-2: var(--ink-2);
+  --text-4: var(--ink-4);
   --border-hairline: oklch(0.9 0.04 70 / 7%);
   --success: oklch(0.72 0.15 150);
   --warning: oklch(0.82 0.14 80);
 
-  /* — Sidebar — */
-  --sidebar: oklch(0.205 0.009 64);
+  --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.42), 0 8px 22px -8px rgba(0, 0, 0, 0.58);
+  --elevation-2: 0 2px 6px rgba(0, 0, 0, 0.46), 0 16px 40px -12px rgba(0, 0, 0, 0.62);
+  --elevation-3: 0 4px 10px rgba(0, 0, 0, 0.52), 0 28px 60px -16px rgba(0, 0, 0, 0.72);
+
+  --sidebar: oklch(0.196 0.009 64);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: oklch(0.78 0.14 68);
   --sidebar-primary-foreground: oklch(0.2 0.03 64);
-  --sidebar-accent: oklch(0.28 0.015 64);
+  --sidebar-accent: oklch(0.285 0.015 64);
   --sidebar-accent-foreground: var(--foreground);
   --sidebar-border: oklch(0.9 0.04 70 / 10%);
   --sidebar-ring: var(--ring);
 
-  /* — Workbench dock-tab icon — */
   --wb-tab-icon: oklch(0.96 0.012 70);
   --wb-tab-icon-active: var(--primary);
 
-  /* — Docs content palette (--bd-*) — */
   --bd-brand: #e8973a;
   --brand: var(--bd-brand);
   --brand-2: #f4b15c;
@@ -418,7 +525,7 @@
   --bd-heading: rgb(242, 236, 228);
   --bd-on-brand: #1c1408;
   --bd-text: rgb(242, 236, 228);
-  --bd-text-muted: rgba(250, 242, 230, 0.46);
+  --bd-text-muted: rgba(250, 242, 230, 0.55);
   --bd-border: rgba(250, 238, 220, 0.1);
   --bd-card: #211c15;
   --bd-background: #14110b;
@@ -436,6 +543,106 @@
   --bd-code-border: rgba(250, 238, 220, 0.1);
   --bd-inline-code-bg: color-mix(in oklab, rgba(232, 151, 58, 0.14) 88%, #14110b 12%);
   --bd-pre-bg: color-mix(in oklab, #211c15 88%, #14110b 12%);
+  --shiki-light-bg: var(--bd-pre-bg);
+  --shiki-dark-bg: var(--bd-pre-bg);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+ * 6. THEME: GRAPHITE (.graphite) — NEW.
+ *    Night's twin with EVERY neutral at chroma 0 (true achromatic gray) and
+ *    hue 0 — so there is no warm OR cool tint of any kind. Same lightness
+ *    ladder, same blue functional accent, same elevation as .dark. Use this if
+ *    the faint cool tint (or warm-accent simultaneous contrast) reads as "off."
+ * ════════════════════════════════════════════════════════════════════════ */
+.graphite {
+  color-scheme: dark;
+
+  /* — Surface roles: identical L to .dark, chroma 0 (pure gray) — */
+  --surface-base: oklch(0.158 0 0);
+  --surface-sunken: oklch(0.165 0 0);
+  --surface-raised: oklch(0.216 0 0);
+  --surface-overlay: oklch(0.246 0 0);
+  --surface-hover: oklch(0.275 0 0);
+  --surface-highlight: inset 0 1px 0 oklch(1 0 0 / 6%);
+
+  /* — Canonical semantic palette — neutral gray surfaces, blue accent kept — */
+  --background: oklch(0.182 0 0);
+  --foreground: oklch(0.965 0 0);
+  --card: var(--surface-raised);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface-overlay);
+  --popover-foreground: var(--foreground);
+  --secondary: oklch(0.235 0 0);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.235 0 0);
+  --muted-foreground: var(--ink-3);
+  --accent: var(--surface-hover);
+  --accent-foreground: var(--foreground);
+  --border: oklch(1 0 0 / 14%);
+  --border-strong: oklch(1 0 0 / 22%);
+  --divider: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 16%);
+  --primary: oklch(0.635 0.165 258); /* functional accent — identical to .dark */
+  --primary-foreground: oklch(0.98 0 0);
+  --ring: oklch(0.635 0.165 258 / 60%);
+
+  /* — Ink ramp: pure neutral grays (chroma 0) — */
+  --ink-1: var(--foreground);
+  --ink-2: oklch(0.82 0 0);
+  --ink-3: oklch(0.745 0 0);
+  --ink-4: oklch(0.63 0 0);
+  --text-2: var(--ink-2);
+  --text-4: var(--ink-4);
+  --border-hairline: oklch(1 0 0 / 6%);
+  --success: oklch(0.72 0.16 162);
+  --warning: oklch(0.80 0.15 80);
+
+  /* — Elevation: identical to .dark — */
+  --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.40), 0 8px 22px -8px rgba(0, 0, 0, 0.55);
+  --elevation-2: 0 2px 6px rgba(0, 0, 0, 0.45), 0 16px 40px -12px rgba(0, 0, 0, 0.60);
+  --elevation-3: 0 4px 10px rgba(0, 0, 0, 0.50), 0 28px 60px -16px rgba(0, 0, 0, 0.70);
+
+  /* — Sidebar (neutral) — */
+  --sidebar: oklch(0.196 0 0);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: hsl(224.3 76.3% 48%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: oklch(0.275 0 0);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: oklch(1 0 0 / 9%);
+  --sidebar-ring: var(--ring);
+
+  /* — Workbench dock-tab icon — */
+  --wb-tab-icon: oklch(0.97 0 0);
+  --wb-tab-icon-active: var(--primary);
+
+  /* — Docs content palette (--bd-*): neutral surfaces (same as .dark) + blue brand — */
+  --bd-brand: #2e6bff;
+  --brand: var(--bd-brand);
+  --brand-2: #6f97ff;
+  --brand-bg: rgba(46, 107, 255, 0.16);
+  --brand-text: #8fb0ff;
+  --bd-heading: rgb(238, 238, 238);
+  --bd-on-brand: #ffffff;
+  --bd-text: rgb(238, 238, 238);
+  --bd-text-muted: rgba(255, 255, 255, 0.55);
+  --bd-border: rgba(255, 255, 255, 0.1);
+  --bd-card: oklch(0.216 0 0);
+  --bd-background: oklch(0.142 0 0);
+  --bd-muted: oklch(0.235 0 0);
+  --bd-fd-background: var(--bd-background);
+  --bd-fd-muted: var(--bd-card);
+  --bd-fd-popover: var(--bd-card);
+  --bd-fd-card: var(--bd-card);
+  --bd-fd-secondary: var(--bd-muted);
+  --bd-fd-accent: rgba(255, 255, 255, 0.05);
+  --bd-fd-ring: rgba(46, 107, 255, 0.35);
+  --bd-fd-sidebar-muted: oklch(0.165 0 0);
+  --bd-fd-sidebar-secondary: var(--bd-card);
+  --bd-code-text: var(--bd-text);
+  --bd-code-border: rgba(255, 255, 255, 0.1);
+  --bd-inline-code-bg: color-mix(in oklab, rgba(180, 180, 180, 0.14) 88%, #0e0e0e 12%);
+  --bd-pre-bg: oklch(0.20 0 0);
   --shiki-light-bg: var(--bd-pre-bg);
   --shiki-dark-bg: var(--bd-pre-bg);
 }

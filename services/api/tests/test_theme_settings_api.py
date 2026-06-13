@@ -36,12 +36,13 @@ class ThemeSettingsApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.json()
         theme_ids = [theme["id"] for theme in body["items"]]
-        self.assertEqual(theme_ids, ["day", "night", "catppuccin", "ember"])
+        self.assertEqual(theme_ids, ["day", "night", "catppuccin", "ember", "graphite"])
         self.assertEqual(body["selected_theme"], "night")
         self.assertEqual(body["items"][0]["html_classes"], [])
         self.assertEqual(body["items"][1]["html_classes"], ["dark"])
         self.assertEqual(body["items"][2]["html_classes"], ["dark", "catppuccin"])
         self.assertEqual(body["items"][3]["html_classes"], ["dark", "ember"])
+        self.assertEqual(body["items"][4]["html_classes"], ["dark", "graphite"])
 
     def test_patch_settings_persists_selected_theme(self):
         response = self.client.patch(

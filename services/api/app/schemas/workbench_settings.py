@@ -23,7 +23,7 @@ _SCHEMA_FALLBACK: dict[str, Any] = {
             "title": "Theme",
             "description": "Theme token palette applied to the workbench surface.",
             "type": "string",
-            "enum": ["day", "night", "catppuccin", "ember"],
+            "enum": ["day", "night", "catppuccin", "ember", "graphite"],
             "default": "night",
             "x-options": [
                 {
@@ -53,6 +53,13 @@ _SCHEMA_FALLBACK: dict[str, Any] = {
                     "description": "Warm dark token palette",
                     "color_scheme": "dark",
                     "html_classes": ["dark", "ember"],
+                },
+                {
+                    "value": "graphite",
+                    "label": "Graphite",
+                    "description": "Achromatic gray dark palette",
+                    "color_scheme": "dark",
+                    "html_classes": ["dark", "graphite"],
                 },
             ],
         },

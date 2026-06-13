@@ -2,16 +2,16 @@ import { useMemo, useState } from 'react'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  IconAlertCircle,
   IconCheck,
   IconCornerDownLeft,
+  IconDots,
   IconEye,
 } from '@tabler/icons-react'
 
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { cn } from '@/lib/cn'
 import type { ChattrRoomMessage } from '@/hooks/use-chattr-room'
 import {
   getTerminalRuntimes,
@@ -49,6 +49,7 @@ export function ChatApprovalCard({ message }: { message: ChattrRoomMessage }) {
   const meta = parseApprovalCardMeta(message)
   const queryClient = useQueryClient()
   const [customKeys, setCustomKeys] = useState('')
+  const [keysOpen, setKeysOpen] = useState(false)
   const [screenOpen, setScreenOpen] = useState(false)
 
   const runtimes = useQuery({
@@ -87,7 +88,7 @@ export function ChatApprovalCard({ message }: { message: ChattrRoomMessage }) {
   }, [meta, runtimes.data])
 
   if (!meta) {
-    return <div className="text-sm text-muted-foreground">{message.text}</div>
+    return <div className="text-ui-sm text-ink-3">{message.text}</div>
   }
 
   const actionable = status === 'pending'
@@ -96,73 +97,110 @@ export function ChatApprovalCard({ message }: { message: ChattrRoomMessage }) {
       input.mutate(keys)
     }
   }
+  const sendFromMenu = (keys: string) => {
+    send(keys)
+    setKeysOpen(false)
+  }
 
   return (
     <div
-      className="my-1 w-full max-w-xl rounded-lg border border-amber-500/40 bg-amber-500/5 p-3"
+      className="my-1 w-full max-w-md rounded-card border border-border bg-surface-raised px-2.5 py-2 text-ui-sm"
       data-testid="chat-approval-card"
     >
       <div className="flex items-center gap-2">
         {status === 'resolved' ? (
-          <IconCheck aria-hidden className="size-4 text-emerald-500" />
+          <IconCheck aria-hidden className="size-3.5 shrink-0 text-success" />
         ) : (
-          <IconAlertCircle aria-hidden className="size-4 text-amber-500" />
+          <span
+            aria-hidden
+            className={cn(
+              'size-1.5 shrink-0 rounded-full',
+              status === 'pending' ? 'bg-warning' : 'bg-ink-4',
+            )}
+          />
         )}
-        <span className="text-sm font-medium">
+        <span className="min-w-0 flex-1 truncate font-medium text-ink-1">
           {meta.reason === 'stuck'
             ? `${meta.agent} looks stuck`
-            : `${meta.agent} is asking for approval`}
+            : `${meta.agent} needs approval`}
         </span>
-        <Badge variant={status === 'resolved' ? 'secondary' : 'outline'}>
-          {status}
-        </Badge>
+        {status !== 'pending' ? (
+          <span className="shrink-0 text-ui-2xs text-ink-3">{status}</span>
+        ) : null}
       </div>
+
       {meta.hint ? (
-        <p className="mt-2 break-words font-mono text-xs text-muted-foreground">
+        <p
+          className="mt-1 truncate font-mono text-ui-2xs text-ink-3"
+          title={meta.hint}
+        >
           {meta.hint}
         </p>
       ) : null}
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Button disabled={!actionable} onClick={() => send('1')} size="sm">
+
+      <div className="mt-2 flex items-center gap-1.5">
+        <Button className="h-7 px-3" disabled={!actionable} onClick={() => send('1')} size="sm">
           Approve
         </Button>
-        <Button disabled={!actionable} onClick={() => send('2')} size="sm" variant="outline">
-          2
-        </Button>
-        <Button disabled={!actionable} onClick={() => send('y')} size="sm" variant="outline">
-          y
-        </Button>
-        <Button
-          aria-label="Send Enter"
-          disabled={!actionable}
-          onClick={() => send('')}
-          size="sm"
-          variant="outline"
-        >
-          <IconCornerDownLeft className="size-4" />
-        </Button>
-        <Input
-          className="h-8 w-28"
-          disabled={!actionable}
-          onChange={(event) => setCustomKeys(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && customKeys) {
-              send(customKeys)
-              setCustomKeys('')
-            }
-          }}
-          placeholder="keys"
-          value={customKeys}
-        />
-        <Popover onOpenChange={setScreenOpen} open={screenOpen}>
+        <Popover onOpenChange={setKeysOpen} open={keysOpen}>
           <PopoverTrigger asChild>
-            <Button size="sm" variant="ghost">
-              <IconEye className="mr-1 size-4" />
-              View screen
+            <Button
+              aria-label="More keys"
+              className="h-7 gap-1 px-2 text-ink-3"
+              disabled={!actionable}
+              size="sm"
+              variant="ghost"
+            >
+              <IconDots className="size-4" />
+              keys
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-[36rem] max-w-[90vw]">
-            <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-zinc-950 p-2 font-mono text-[11px] leading-snug text-zinc-100">
+          <PopoverContent align="start" className="w-56 p-2">
+            <div className="flex items-center gap-1.5">
+              <Button className="h-7 flex-1" onClick={() => sendFromMenu('2')} size="sm" variant="outline">
+                2
+              </Button>
+              <Button className="h-7 flex-1" onClick={() => sendFromMenu('y')} size="sm" variant="outline">
+                y
+              </Button>
+              <Button
+                aria-label="Send Enter"
+                className="h-7 flex-1"
+                onClick={() => sendFromMenu('')}
+                size="sm"
+                variant="outline"
+              >
+                <IconCornerDownLeft className="size-4" />
+              </Button>
+            </div>
+            <Input
+              className="mt-1.5 h-7"
+              onChange={(event) => setCustomKeys(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && customKeys) {
+                  sendFromMenu(customKeys)
+                  setCustomKeys('')
+                }
+              }}
+              placeholder="custom keys, Enter to send"
+              value={customKeys}
+            />
+          </PopoverContent>
+        </Popover>
+
+        <Popover onOpenChange={setScreenOpen} open={screenOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              aria-label="View screen"
+              className="size-7 text-ink-3"
+              size="icon"
+              variant="ghost"
+            >
+              <IconEye className="size-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-[32rem] max-w-[90vw] p-0">
+            <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-control border border-divider bg-surface-sunken p-2 font-mono text-ui-2xs leading-snug text-ink-1">
               {snapshot.data?.snapshot?.text ?? 'No snapshot available.'}
             </pre>
           </PopoverContent>
