@@ -6,9 +6,32 @@ declare global {
   }
 }
 
+// Phase 0 auth unification: the only user credential is a kcs_ auth session.
+// The transport owns token storage (auth-api re-uses these helpers) so there
+// is exactly one storage source. The dev launcher token is NOT a credential.
+const SESSION_TOKEN_KEY = 'kai_chattr_session_token'
+
+export function getStoredSessionToken(): string {
+  if (typeof window === 'undefined') return ''
+  return window.localStorage.getItem(SESSION_TOKEN_KEY) ?? ''
+}
+
+export function storeSessionToken(token: string) {
+  if (typeof window !== 'undefined') window.localStorage.setItem(SESSION_TOKEN_KEY, token)
+}
+
+export function clearSessionToken() {
+  if (typeof window !== 'undefined') window.localStorage.removeItem(SESSION_TOKEN_KEY)
+}
+
 export function getSessionToken() {
   if (typeof window === 'undefined') {
     return ''
+  }
+
+  const stored = getStoredSessionToken()
+  if (stored) {
+    return stored
   }
 
   if (window.__SESSION_TOKEN__) {
@@ -23,16 +46,50 @@ export function getSessionToken() {
     return window.__CHATTR_SESSION__.token
   }
 
-  const fromEnv = import.meta.env.VITE_KAI_CHATTR_SESSION_TOKEN
-  if (typeof fromEnv === 'string' && fromEnv) {
-    return fromEnv
-  }
-
   return ''
 }
 
-export async function resolveSessionToken() {
-  return getSessionToken()
+let localBootstrap: Promise<string> | null = null
+
+/**
+ * Resolve the session token, bootstrapping the local owner session when no
+ * session is stored (local mode only; the API refuses the bootstrap when not
+ * local/loopback, in which case the caller is unauthenticated until login).
+ */
+export async function resolveSessionToken(): Promise<string> {
+  const existing = getSessionToken()
+  if (existing) {
+    return existing
+  }
+
+  if (!localBootstrap) {
+    localBootstrap = fetch(chattrApiUrl('/auth/local-session'), {
+      method: 'POST',
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          console.warn(`local session bootstrap unavailable (${response.status}); login required`)
+          return ''
+        }
+        const payload = (await response.json()) as { token?: string }
+        if (payload.token) {
+          storeSessionToken(payload.token)
+          return payload.token
+        }
+        return ''
+      })
+      .catch((error) => {
+        console.warn('local session bootstrap failed', error)
+        return ''
+      })
+      .finally(() => {
+        localBootstrap = null
+      })
+  }
+  return localBootstrap
 }
 
 export async function chattrHeaders(init?: HeadersInit) {
@@ -40,7 +97,7 @@ export async function chattrHeaders(init?: HeadersInit) {
   const token = await resolveSessionToken()
 
   if (token) {
-    headers.set('X-Session-Token', token)
+    headers.set('Authorization', `Bearer ${token}`)
   }
 
   return headers

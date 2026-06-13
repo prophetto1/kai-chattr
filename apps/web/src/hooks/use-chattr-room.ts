@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { chattrApiUrl, getSessionToken } from '@/lib/chattr-api'
+import { chattrApiUrl, getSessionToken, resolveSessionToken } from '@/lib/chattr-api'
 
 export type ChattrRoomMessage = {
   id?: number | string
@@ -119,6 +119,7 @@ function websocketUrl(token: string) {
 export function useChattrRoom({ channel = 'general' }: UseChattrRoomOptions = {}) {
   const [connectionState, setConnectionState] = useState<ChattrConnectionState>('connecting')
   const [messages, setMessages] = useState<ChattrRoomMessage[]>([])
+  const [authEpoch, setAuthEpoch] = useState(0)
   const pendingMessagesRef = useRef<SendChattrMessageInput[]>([])
   const socketRef = useRef<WebSocket | null>(null)
 
@@ -126,7 +127,14 @@ export function useChattrRoom({ channel = 'general' }: UseChattrRoomOptions = {}
     const token = getSessionToken()
 
     if (!token || typeof window === 'undefined') {
+      // No stored session yet: trigger the local bootstrap (no-op when the
+      // API refuses it), then re-run this effect once a token exists.
       setConnectionState('closed')
+      if (typeof window !== 'undefined') {
+        void resolveSessionToken().then((resolved) => {
+          if (resolved) setAuthEpoch((epoch) => epoch + 1)
+        })
+      }
       return
     }
 
@@ -230,7 +238,7 @@ export function useChattrRoom({ channel = 'general' }: UseChattrRoomOptions = {}
       }
       socket.close()
     }
-  }, [channel])
+  }, [channel, authEpoch])
 
   const sendMessage = useCallback(
     ({ text, attachments = [] }: SendChattrMessageInput) => {

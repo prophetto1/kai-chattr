@@ -2,9 +2,12 @@
 // /auth/* endpoints (argon2 + revocable DB sessions) — NOT Supabase/GoTrue.
 // The bearer session token is stored client-side and replayed as
 // `Authorization: Bearer <token>`.
-import { chattrApiUrl } from '@/lib/chattr-api'
-
-const SESSION_TOKEN_KEY = 'kai_chattr_session_token'
+import {
+  chattrApiUrl,
+  clearSessionToken,
+  getStoredSessionToken,
+  storeSessionToken,
+} from '@/lib/chattr-api'
 
 export type AuthUser = { id: string; email: string; display_name: string }
 export type AuthWorkspace = { public_id: string; name: string; tier: string }
@@ -15,16 +18,9 @@ export type AuthSession = {
   workspace?: AuthWorkspace
 }
 
-export function storeSessionToken(token: string) {
-  if (typeof window !== 'undefined') window.localStorage.setItem(SESSION_TOKEN_KEY, token)
-}
-export function getStoredSessionToken(): string | null {
-  if (typeof window === 'undefined') return null
-  return window.localStorage.getItem(SESSION_TOKEN_KEY)
-}
-export function clearStoredSessionToken() {
-  if (typeof window !== 'undefined') window.localStorage.removeItem(SESSION_TOKEN_KEY)
-}
+// Single storage source: the transport (chattr-api) owns the token helpers.
+export { getStoredSessionToken, storeSessionToken }
+export const clearStoredSessionToken = clearSessionToken
 
 export class AuthError extends Error {
   status: number
