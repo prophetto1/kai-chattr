@@ -107,6 +107,114 @@ test('home start page renders OpenHands-derived launch surface', async ({ page }
   await expect(page.getByText('Home API error:')).toHaveCount(0)
 })
 
+test('home start page remints local session after stale bearer 401', async ({ page }) => {
+  let repositoryRequests = 0
+  let recentRequests = 0
+  let suggestedTaskRequests = 0
+  let localBootstrapRequests = 0
+
+  await page.route('**/auth/local-session', async (route) => {
+    localBootstrapRequests += 1
+    await route.fulfill({
+      json: {
+        token: 'fresh-home-token',
+      },
+    })
+  })
+  await page.route('**/api/git/repositories/search**', async (route) => {
+    repositoryRequests += 1
+    const auth = route.request().headers().authorization
+
+    if (repositoryRequests === 1) {
+      expect(auth).toBe('Bearer stale-home-token')
+      await route.fulfill({
+        status: 401,
+        json: {
+          error: 'unauthorized: a valid auth session is required',
+        },
+      })
+      return
+    }
+
+    expect(auth).toBe('Bearer fresh-home-token')
+    await route.fulfill({
+      json: {
+        items: [
+          {
+            id: 'github:propreheto/kai-chattr',
+            full_name: 'propreheto/kai-chattr',
+            git_provider: 'github',
+            is_public: false,
+            main_branch: 'main',
+          },
+        ],
+        next_page_id: null,
+      },
+    })
+  })
+  await page.route('**/api/conversations/recent', async (route) => {
+    recentRequests += 1
+    const auth = route.request().headers().authorization
+
+    if (recentRequests === 1) {
+      expect(auth).toBe('Bearer stale-home-token')
+      await route.fulfill({
+        status: 401,
+        json: {
+          error: 'unauthorized: a valid auth session is required',
+        },
+      })
+      return
+    }
+
+    expect(auth).toBe('Bearer fresh-home-token')
+    await route.fulfill({
+      json: {
+        items: [],
+        next_page_id: null,
+      },
+    })
+  })
+  await page.route('**/api/suggested-tasks', async (route) => {
+    suggestedTaskRequests += 1
+    const auth = route.request().headers().authorization
+
+    if (suggestedTaskRequests === 1) {
+      expect(auth).toBe('Bearer stale-home-token')
+      await route.fulfill({
+        status: 401,
+        json: {
+          error: 'unauthorized: a valid auth session is required',
+        },
+      })
+      return
+    }
+
+    expect(auth).toBe('Bearer fresh-home-token')
+    await route.fulfill({
+      json: {
+        items: [],
+        next_page_id: null,
+      },
+    })
+  })
+  await page.addInitScript(() => {
+    window.localStorage.setItem('kai_chattr_session_token', 'stale-home-token')
+  })
+
+  await page.goto('/home')
+
+  await expect(page.getByRole('heading', { name: "Let's Start Building!" })).toBeVisible()
+  await expect(page.getByText('Home API error:')).toHaveCount(0)
+  expect(repositoryRequests).toBe(2)
+  expect(recentRequests).toBe(2)
+  expect(suggestedTaskRequests).toBe(2)
+  expect(localBootstrapRequests).toBe(1)
+  await expect
+    .poll(() => page.evaluate(() => window.localStorage.getItem('kai_chattr_session_token')))
+    .toBe('fresh-home-token')
+})
+
 test('home start page creates a scratch conversation and routes to scoped session', async ({ page }) => {
   await mockHomeStartApi(page)
   await page.addInitScript((token) => {

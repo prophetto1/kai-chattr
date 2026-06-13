@@ -7,32 +7,39 @@ import {
 
 const PROBE_TIMEOUT_MS = 5000;
 const REQUIRED_BOARD_TABS = ['rules', 'jobs', 'decisions', 'pins'];
-const token = (process.env.KAI_CHATTR_SESSION_TOKEN ?? '').trim();
 
 await probeJson(localApiUrl('/api/runtime/ports'), 200, assertRuntimePorts);
 await probeJson(localWebUrl('/api/runtime/ports'), 200, assertRuntimePorts);
 await probeText(localWebUrl('/workbench'), 200);
-await probeJson(localWebUrl('/api/right-rail/capabilities'), 403);
+await probeJson(localWebUrl('/api/right-rail/capabilities'), 401);
 
-if (!token) {
-  fail('KAI_CHATTR_SESSION_TOKEN is required for authenticated Board capability probe.');
-}
-
+const token = await mintLocalSession();
 await probeJson(
   localWebUrl('/api/right-rail/capabilities'),
   200,
   assertBoardCapabilities,
-  { 'X-Session-Token': token },
+  { Authorization: `Bearer ${token}` },
 );
-await probeText(localApiUrl('/workbench'), 404, { 'X-Session-Token': token });
-await probeText(localApiUrl('/static/app.js'), 404, { 'X-Session-Token': token });
-await probeText(localApiUrl('/api/session'), 404, { 'X-Session-Token': token });
+await probeText(localApiUrl('/workbench'), 404, { Authorization: `Bearer ${token}` });
+await probeText(localApiUrl('/static/app.js'), 404, { Authorization: `Bearer ${token}` });
+await probeText(localApiUrl('/api/session'), 404, { Authorization: `Bearer ${token}` });
 
 console.log('kai-chattr runtime probe passed');
 
-async function probeJson(url, expectedStatus, assertion, headers = {}) {
+async function mintLocalSession() {
+  const body = await probeJson(
+    localWebUrl('/auth/local-session'),
+    200,
+    assertAuthSession,
+    {},
+    { method: 'POST' },
+  );
+  return body.token;
+}
+
+async function probeJson(url, expectedStatus, assertion, headers = {}, init = {}) {
   const started = Date.now();
-  const response = await fetchWithTimeout(url, { headers });
+  const response = await fetchWithTimeout(url, { ...init, headers });
   logProbe(url, response.status, Date.now() - started);
   if (response.status !== expectedStatus) {
     fail(`${url} returned ${response.status}; expected ${expectedStatus}`);
@@ -92,6 +99,15 @@ function assertBoardCapabilities(body, url) {
   const decisionsTab = tabs.find((tab) => tab.id === 'decisions');
   if (decisionsTab?.category !== 'locked') {
     fail(`${url} Board capability tab decisions was not backed by locked category`);
+  }
+}
+
+function assertAuthSession(body, url) {
+  if (!body || typeof body !== 'object' || typeof body.token !== 'string') {
+    fail(`${url} did not return an auth session`);
+  }
+  if (!body.token.startsWith('kcs_')) {
+    fail(`${url} did not return a kcs_ auth session`);
   }
 }
 

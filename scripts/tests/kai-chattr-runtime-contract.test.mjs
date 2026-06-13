@@ -130,9 +130,10 @@ test('deploy workflows map branches without browser-exposed session tokens', () 
   assert.doesNotMatch(flySecrets, /RandomNumberGenerator/);
 });
 
-test('web API client and Pages Function keep hosted API auth server-side', () => {
+test('web API client and Pages Function forward user auth sessions', () => {
   const apiClient = fs.readFileSync(path.join(repoRoot, 'apps/web/src/lib/chattr-api.ts'), 'utf8');
   const apiProxy = fs.readFileSync(path.join(repoRoot, 'apps/web/functions/api/[[path]].js'), 'utf8');
+  const authProxy = fs.readFileSync(path.join(repoRoot, 'apps/web/functions/auth/[[path]].js'), 'utf8');
   const observabilityProxy = fs.readFileSync(path.join(repoRoot, 'apps/web/functions/observability/[[path]].js'), 'utf8');
   const uploadsProxy = fs.readFileSync(path.join(repoRoot, 'apps/web/functions/uploads/[[path]].js'), 'utf8');
   const docsProxy = fs.readFileSync(path.join(repoRoot, 'apps/web/functions/docs/[[path]].js'), 'utf8');
@@ -144,13 +145,16 @@ test('web API client and Pages Function keep hosted API auth server-side', () =>
   assert.match(apiClient, /VITE_KAI_CHATTR_API_ORIGIN/);
   assert.match(apiClient, /function chattrApiUrl/);
   assert.match(apiClient, /fetch\(chattrApiUrl\(path\)/);
-  assert.match(apiProxy, /KAI_CHATTR_SESSION_TOKEN/);
-  assert.match(apiProxy, /headers\.set\('X-Session-Token', token\)/);
+  assert.match(apiProxy, /FORWARDS the caller's Authorization/);
+  assert.doesNotMatch(apiProxy, /KAI_CHATTR_SESSION_TOKEN/);
+  assert.doesNotMatch(apiProxy, /headers\.set\('X-Session-Token'/);
+  assert.match(authProxy, /api\/\[\[path\]\]\.js/);
   assert.match(observabilityProxy, /api\/\[\[path\]\]\.js/);
   assert.match(uploadsProxy, /api\/\[\[path\]\]\.js/);
   assert.match(docsProxy, /api\/\[\[path\]\]\.js/);
   assert.match(openapiProxy, /api\/\[\[path\]\]\.js/);
   assert.match(redocProxy, /api\/\[\[path\]\]\.js/);
+  assert.match(viteConfig, /'\/auth'/);
   assert.match(viteConfig, /'\/api'/);
   assert.match(viteConfig, /\^\/observability\/\(status\|endpoints\)/);
   assert.match(viteConfig, /'\/uploads'/);
@@ -159,7 +163,7 @@ test('web API client and Pages Function keep hosted API auth server-side', () =>
   assert.match(viteConfig, /'\/redoc'/);
   assert.deepEqual(routes, {
     version: 1,
-    include: ['/api/*', '/observability/*', '/uploads/*', '/openapi.json', '/docs', '/docs/*', '/redoc'],
+    include: ['/auth/*', '/api/*', '/observability/*', '/uploads/*', '/openapi.json', '/docs', '/docs/*', '/redoc'],
     exclude: [],
   });
 });

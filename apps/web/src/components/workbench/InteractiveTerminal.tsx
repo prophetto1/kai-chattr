@@ -7,13 +7,19 @@ import '@xterm/xterm/css/xterm.css'
 
 import { terminalSocketUrl } from '@/lib/terminal-session-api'
 
+type InteractiveTerminalProps = {
+  active?: boolean
+}
+
 /**
  * Interactive human terminal (Phase 1): backend-owned PTY over /ws/terminals,
  * rendered by xterm.js. The renderer owns the screen; this component only
  * bridges frames (output down; input/resize up).
  */
-export function InteractiveTerminal() {
+export function InteractiveTerminal({ active = true }: InteractiveTerminalProps) {
   const hostRef = useRef<HTMLDivElement>(null)
+  const terminalRef = useRef<Terminal | null>(null)
+  const fitRef = useRef<FitAddon | null>(null)
 
   useEffect(() => {
     const host = hostRef.current
@@ -29,6 +35,8 @@ export function InteractiveTerminal() {
       theme: { background: '#09090b' },
     })
     const fit = new FitAddon()
+    terminalRef.current = term
+    fitRef.current = fit
     term.loadAddon(fit)
     term.open(host)
     fit.fit()
@@ -79,8 +87,30 @@ export function InteractiveTerminal() {
       sendResize.dispose()
       ws.close()
       term.dispose()
+      terminalRef.current = null
+      fitRef.current = null
     }
   }, [])
 
-  return <div className="h-full min-h-0 w-full bg-[#09090b]" ref={hostRef} />
+  useEffect(() => {
+    if (!active) {
+      return
+    }
+
+    const frame = requestAnimationFrame(() => {
+      fitRef.current?.fit()
+      terminalRef.current?.focus()
+    })
+
+    return () => cancelAnimationFrame(frame)
+  }, [active])
+
+  return (
+    <div
+      aria-label="Interactive terminal session"
+      className="h-full min-h-0 w-full bg-[#09090b]"
+      data-testid="interactive-terminal"
+      ref={hostRef}
+    />
+  )
 }

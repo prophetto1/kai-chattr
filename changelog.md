@@ -2,6 +2,17 @@
 
 Repo-root changelog (decision 2026-06-11: lives here, not in the Planned store). Append an entry per codebase change, newest first.
 
+## 2026-06-13
+
+### fix(web): recover stale auth sessions and align workbench runtime shell
+- `apps/web/src/lib/chattr-api.ts` now clears stale browser session material after a protected request returns 401, remints the local owner session through `POST /auth/local-session`, and retries the request once with the fresh `kcs_` bearer. This prevents `/home` from getting stuck on `Home API error: unauthorized: a valid auth session is required` after a local DB/session reset.
+- The 401 retry path now reuses an already-refreshed token across concurrent Home API requests, so one request cannot clear the fresh token bootstrapped by another request during the same load.
+- Added `/auth/*` Vite and Cloudflare Pages Function proxy coverage, updated `runtime:probe` to mint a local `kcs_` session and use bearer auth, and locked the proxy/auth behavior in the runtime contract test.
+- Added `pnpm run neon:dev:runtime` as the SOPS-backed local runtime entrypoint for Neon dev data.
+- Reworked the workbench lower Terminal dock into tabbed interactive PTY sessions, with terminal focus/fit behavior for active tabs, and moved Observability from the compact rail utility area into the account menu.
+- Added Playwright regressions for stale Home session reminting and the workbench runtime shell behavior.
+- Tests: `pnpm run check:contracts`; `pnpm run check:deps`; `pnpm run runtime:probe`; `pnpm run test:runtime-contract`; `pnpm --dir apps/web run build`; `pnpm exec playwright test tests/e2e/home-start.spec.ts`; `pnpm exec playwright test tests/e2e/workbench-runtime.spec.ts`; `git diff --check`.
+
 ## 2026-06-11
 
 ### fix(dev): map Neon SOPS env into the dev orchestrator
@@ -345,4 +356,3 @@ A codebase change includes source code edits, migrations, configuration changes,
 - Frontend: `AgentRuntimeOverlay.tsx` mounted at the bottom of the workbench right dock rail — quiet robot trigger with an amber count circle while approvals are pending (red stays reserved for failures), green dot when agents are live; popup card stack overlays the dock (no layout push), autohides after ~8s without interaction (badge never hides), auto-surfaces on new approvals; expanded card shows the screen tail + Approve (y)/1/2/Enter/custom-keys actions via the raw-input endpoint. `terminal-api.ts` gains `getTerminalRuntimes`/`sendTerminalInput`.
 - Removed dead zellij transport: `app/wrappers/zellij.py`, `tests/test_zellij_terminal_backend.py`, and the vendored `tools/zellij/` binary (kill-list item; console paths remain for non-PTY agents).
 - Verification: `tests/test_agent_runtime_cards.py` — detection patterns incl. scrolled-history negative, snapshot→runtimes round-trip with approval set/clear, input endpoint validation + JSONL append, wrapper drain verbatim/no-op-on-empty. Full suite 265 passed, 0 failed. Web `vite build` green with the overlay mounted.
-

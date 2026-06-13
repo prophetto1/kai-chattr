@@ -1,10 +1,14 @@
 import { expect, test } from '@playwright/test'
 
 test('workbench loads through the kai-chattr runtime contract', async ({ page, request }) => {
-  const token = process.env.KAI_CHATTR_SESSION_TOKEN
-  if (!token) {
-    throw new Error('KAI_CHATTR_SESSION_TOKEN is required for workbench runtime acceptance')
-  }
+  const session = await request.post('/auth/local-session')
+  expect(session.status()).toBe(200)
+  const token = (await session.json()).token as string
+  expect(token).toMatch(/^kcs_/)
+
+  await page.addInitScript((sessionToken) => {
+    window.localStorage.setItem('kai_chattr_session_token', sessionToken)
+  }, token)
 
   await page.goto('/workbench')
   await expect(page.getByText('Board API error')).toHaveCount(0)
@@ -12,12 +16,9 @@ test('workbench loads through the kai-chattr runtime contract', async ({ page, r
   const observabilityStatus = await request.get('/observability/status')
   expect(observabilityStatus.status()).toBe(200)
   const observability = await observabilityStatus.json()
-  await expect(page.getByTestId('otel-traces-exporter')).toBeVisible()
-  await expect(page.getByTestId('otel-traces-exporter')).toContainText('otel_traces_exporter')
-  await expect(page.getByTestId('otel-traces-exporter')).toContainText(
-    observability.otel_traces_exporter
-  )
-  await page.getByLabel('Observability').click()
+  await expect(page.getByTestId('otel-traces-exporter')).toHaveCount(0)
+  await page.getByLabel('Jon account').click()
+  await page.getByRole('menuitem', { name: 'Observability' }).click()
   await expect(page).toHaveURL(/\/observability$/)
   await expect(page.getByRole('heading', { name: 'Observability' })).toBeVisible()
   await expect(page.getByText('Runtime telemetry')).toBeVisible()
@@ -34,10 +35,10 @@ test('workbench loads through the kai-chattr runtime contract', async ({ page, r
   expect(ports.ports.mcp_sse.port).toBe(8842)
 
   const forbiddenCapabilities = await request.get('/api/right-rail/capabilities')
-  expect(forbiddenCapabilities.status()).toBe(403)
+  expect(forbiddenCapabilities.status()).toBe(401)
 
   const capabilities = await request.get('/api/right-rail/capabilities', {
-    headers: { 'X-Session-Token': token },
+    headers: { Authorization: `Bearer ${token}` },
   })
   expect(capabilities.status()).toBe(200)
   const body = await capabilities.json()
@@ -76,19 +77,27 @@ test('workbench loads through the kai-chattr runtime contract', async ({ page, r
   expect(terminalSnapshot.status()).toBe(200)
 
   await page.getByLabel('Terminal').click()
-  await expect(page.getByTestId('terminal-output')).toBeVisible()
-  await expect(page.getByTestId('terminal-status')).not.toContainText('No snapshot')
-  await expect(page.getByTestId('terminal-snapshot-text')).toContainText(terminalText)
+  await expect(page.getByTestId('terminal-tab-list')).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Terminal 1' })).toHaveAttribute('aria-selected', 'true')
+  await page.getByTestId('new-terminal-button').click()
+  await expect(page.getByRole('tab', { name: 'Terminal 2' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByTestId('terminal-session-panel')).toHaveCount(2)
+  await page.getByRole('tab', { name: 'Terminal 1' }).click()
+  await expect(page.getByRole('tab', { name: 'Terminal 1' })).toHaveAttribute('aria-selected', 'true')
+  await page.getByRole('button', { name: 'Close Terminal 2' }).click()
+  await expect(page.getByRole('tab', { name: 'Terminal 2' })).toHaveCount(0)
+  await expect(page.getByTestId('terminal-session-panel')).toHaveCount(1)
+  await expect(page.getByTestId('interactive-terminal')).toBeVisible()
 
   const uniqueText = `@${agentName} runtime-composer-${Date.now()}`
   await page
     .getByPlaceholder('Run task with Claude — type / for commands')
     .fill(uniqueText)
-  await page.keyboard.press('Enter')
+  await page.getByRole('button', { name: 'Submit' }).click()
 
   await expect.poll(async () => {
     const messages = await request.get('/api/messages?limit=25&channel=general', {
-      headers: { 'X-Session-Token': token },
+      headers: { Authorization: `Bearer ${token}` },
     })
     expect(messages.status()).toBe(200)
     const payload = await messages.json()

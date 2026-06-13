@@ -14,7 +14,6 @@ import { type ComponentType, useCallback, useMemo, useRef, useState } from 'reac
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Editor } from '@monaco-editor/react'
 import {
-  IconActivityHeartbeat,
   IconArrowLeft,
   IconArrowRight,
   IconBook,
@@ -27,11 +26,13 @@ import {
   IconLayoutBottombarCollapse,
   IconLayoutBottombarExpand,
   IconLayoutKanban,
+  IconPlus,
   IconRefresh,
   IconRobot,
   IconTerminal2,
   IconWorld,
   IconWorldSearch,
+  IconX,
 } from '@tabler/icons-react'
 import type { PanelImperativeHandle } from 'react-resizable-panels'
 
@@ -144,10 +145,6 @@ import { Sheet } from '@/components/layout/Sheet'
 import { type ChattrRoomMessage, useChattrRoom } from '@/hooks/use-chattr-room'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useMonacoTheme } from '@/hooks/use-monaco-theme'
-import {
-  getObservabilityStatus,
-  type ObservabilityStatus,
-} from '@/lib/observability-api'
 import { cn } from '@/lib/cn'
 import { Button } from '@/components/ui/button'
 import {
@@ -179,6 +176,7 @@ type WorkbenchMessage = {
 }
 
 const CHAT_CHANNEL = 'general'
+const DOCK_EDITOR_FONT_SIZE = 11
 
 const composerModels = [
   {
@@ -877,7 +875,7 @@ function SourceViewerPane({
           defaultLanguage={language === 'tsx' ? 'typescript' : 'markdown'}
           theme={monacoTheme}
           options={{
-            fontSize: 12,
+            fontSize: DOCK_EDITOR_FONT_SIZE,
             lineDecorationsWidth: 12,
             lineNumbersMinChars: 3,
             minimap: { enabled: false },
@@ -1211,13 +1209,17 @@ function CodeEditorPane({
                 </Button>
               ) : null}
             </div>
-            <div className="min-h-0 flex-1">
+            <div
+              className="min-h-0 flex-1"
+              data-dock-editor-font-size={DOCK_EDITOR_FONT_SIZE}
+              data-testid={readOnly ? 'files-code-viewer' : 'code-code-viewer'}
+            >
               <Editor
                 language={monacoLanguageForPath(selectedPath)}
                 theme={monacoTheme}
                 onChange={readOnly ? undefined : (value) => setDraft(value ?? '')}
                 options={{
-                  fontSize: 12,
+                  fontSize: DOCK_EDITOR_FONT_SIZE,
                   lineDecorationsWidth: 12,
                   lineNumbersMinChars: 3,
                   minimap: { enabled: false },
@@ -1238,6 +1240,128 @@ function CodeEditorPane({
         )
       }
     />
+  )
+}
+
+type TerminalTab = {
+  id: string
+  label: string
+}
+
+function TerminalTabsPane() {
+  const nextTerminalIndexRef = useRef(2)
+  const [tabs, setTabs] = useState<TerminalTab[]>([
+    { id: 'terminal-1', label: 'Terminal 1' },
+  ])
+  const [activeTabId, setActiveTabId] = useState('terminal-1')
+
+  const addTerminal = useCallback(() => {
+    const index = nextTerminalIndexRef.current
+    nextTerminalIndexRef.current += 1
+    const nextTab = { id: `terminal-${index}`, label: `Terminal ${index}` }
+    setTabs((current) => [...current, nextTab])
+    setActiveTabId(nextTab.id)
+  }, [])
+
+  const closeTerminal = useCallback((tabId: string) => {
+    setTabs((current) => {
+      if (current.length <= 1) {
+        return current
+      }
+
+      const closedIndex = current.findIndex((tab) => tab.id === tabId)
+      const nextTabs = current.filter((tab) => tab.id !== tabId)
+      setActiveTabId((currentActive) => {
+        if (currentActive !== tabId) {
+          return currentActive
+        }
+        return nextTabs[Math.max(0, closedIndex - 1)]?.id ?? nextTabs[0]?.id ?? currentActive
+      })
+      return nextTabs
+    })
+  }, [])
+
+  return (
+    <div className="flex h-full min-h-0 min-w-0 flex-col bg-[#09090b]" data-testid="terminal-tabs-pane">
+      <div className="flex h-8 shrink-0 items-center gap-1 border-b border-border/30 bg-background px-1.5">
+        <div
+          aria-label="Terminal sessions"
+          className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto"
+          data-testid="terminal-tab-list"
+          role="tablist"
+        >
+          {tabs.map((tab) => {
+            const isActive = tab.id === activeTabId
+
+            return (
+              <div
+                className={cn(
+                  'flex h-6 min-w-0 shrink-0 items-center rounded border border-transparent',
+                  isActive ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted/60',
+                )}
+                key={tab.id}
+              >
+                <button
+                  aria-controls={`${tab.id}-panel`}
+                  aria-label={tab.label}
+                  aria-selected={isActive}
+                  className="flex h-full min-w-0 items-center gap-1.5 px-2 text-[11px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  id={`${tab.id}-tab`}
+                  onClick={() => setActiveTabId(tab.id)}
+                  role="tab"
+                  type="button"
+                >
+                  <IconTerminal2 className="size-3 shrink-0" />
+                  <span className="truncate">{tab.label}</span>
+                </button>
+                {tabs.length > 1 ? (
+                  <button
+                    aria-label={`Close ${tab.label}`}
+                    className="mr-0.5 flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-background/80 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      closeTerminal(tab.id)
+                    }}
+                    type="button"
+                  >
+                    <IconX className="size-3" />
+                  </button>
+                ) : null}
+              </div>
+            )
+          })}
+        </div>
+        <Button
+          aria-label="New terminal"
+          className="size-6 shrink-0 rounded"
+          data-testid="new-terminal-button"
+          onClick={addTerminal}
+          size="icon"
+          type="button"
+          variant="ghost"
+        >
+          <IconPlus className="size-3.5" />
+        </Button>
+      </div>
+      <div className="relative min-h-0 flex-1">
+        {tabs.map((tab) => {
+          const isActive = tab.id === activeTabId
+
+          return (
+            <div
+              aria-labelledby={`${tab.id}-tab`}
+              className={cn('absolute inset-0 min-h-0 min-w-0', !isActive && 'invisible pointer-events-none')}
+              data-testid="terminal-session-panel"
+              id={`${tab.id}-panel`}
+              key={tab.id}
+              role="tabpanel"
+            >
+              <InteractiveTerminal active={isActive} />
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
@@ -1351,60 +1475,6 @@ function WorkbenchLowerPane() {
   )
 }
 
-function ObservabilityStatusChip({
-  compact = false,
-  isError,
-  isLoading,
-  status,
-}: {
-  compact?: boolean
-  isError: boolean
-  isLoading: boolean
-  status?: ObservabilityStatus
-}) {
-  const exporter =
-    status?.otel_traces_exporter?.trim() ||
-    (isError ? 'unavailable' : isLoading ? 'loading' : 'unknown')
-  const serviceName = status?.otel_service_name?.trim() || status?.service_name?.trim() || 'kai-chattr-api'
-  const endpoint = status?.otel_exporter_otlp_endpoint?.trim()
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <div
-          aria-label={`otel_traces_exporter ${exporter}`}
-          aria-live="polite"
-          className={cn(
-            compact
-              ? 'flex size-9 shrink-0 items-center justify-center rounded-[5px] text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-              : 'flex h-7 w-full min-w-0 shrink-0 items-center gap-2 rounded-md border border-border/70 bg-muted/35 px-2.5 text-[11px] text-muted-foreground'
-          )}
-          data-testid="otel-traces-exporter"
-        >
-          <IconActivityHeartbeat aria-hidden="true" className="size-3.5 shrink-0 text-emerald-500" />
-          {compact ? (
-            <span className="sr-only">otel_traces_exporter {exporter}</span>
-          ) : (
-            <>
-              <span className="shrink-0 font-medium text-foreground">otel_traces_exporter</span>
-              <span className="min-w-0 truncate rounded-sm bg-background/80 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
-                {exporter}
-              </span>
-            </>
-          )}
-        </div>
-      </TooltipTrigger>
-      <TooltipContent side={compact ? 'right' : 'bottom'}>
-        <div className="grid gap-1 text-xs">
-          <span>Service: {serviceName}</span>
-          <span>Exporter: {exporter}</span>
-          {endpoint ? <span>Endpoint: {endpoint}</span> : null}
-        </div>
-      </TooltipContent>
-    </Tooltip>
-  )
-}
-
 export default function WorkbenchPage() {
   const chatPanelRef = useRef<PanelImperativeHandle | null>(null)
   const lowerPaneRef = useRef<PanelImperativeHandle | null>(null)
@@ -1429,13 +1499,6 @@ export default function WorkbenchPage() {
     () => composerModels.find((model) => model.id === selectedModel) ?? composerModels[0],
     [selectedModel]
   )
-  const observabilityStatusQuery = useQuery({
-    queryKey: ['observability-status'],
-    queryFn: getObservabilityStatus,
-    refetchInterval: 15000,
-    staleTime: 5000,
-  })
-
   const closeRightDock = useCallback(() => {
     if (isMobile) {
       setMobileDockOpen(false)
@@ -1530,17 +1593,6 @@ export default function WorkbenchPage() {
           <KaiAppRail
             activeItem="conversations"
             onNewSession={handleNewSession}
-            utilities={({ expanded }) => (
-              <>
-                <ObservabilityStatusChip
-                  compact={!expanded}
-                  isError={observabilityStatusQuery.isError}
-                  isLoading={observabilityStatusQuery.isLoading}
-                  status={observabilityStatusQuery.data}
-                />
-                <AgentLauncherDialog compact={!expanded} />
-              </>
-            )}
           />
         )}
       >
@@ -1801,7 +1853,7 @@ export default function WorkbenchPage() {
                           path="interactive · /ws/terminals"
                           icon={IconTerminal2}
                           onClose={closeRightDock}
-                          main={<InteractiveTerminal />}
+                          main={<TerminalTabsPane />}
                         />
                       </TabsContent>
                   </Sheet>

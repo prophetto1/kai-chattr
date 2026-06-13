@@ -463,8 +463,8 @@ def configure(cfg: dict, session_token: str = ""):
     locked = LockedStore(str(Path(data_dir) / "locked.json"))
     locked.on_change(_on_locked_change)
 
-    # Identity/auth store (Plan 1.5): postgres-only; None in file mode, in
-    # which case /auth/* answers 503 instead of falling back to a stub.
+    # Identity/auth store (Plan 1.5 + Phase 0): postgres/Neon-backed only.
+    # File mode has no user identity store; /auth/* fails closed instead.
     app.state.identity_store = create_identity_store(cfg)
     # OAuth providers from SOPS-decrypted env; unconfigured providers -> 503.
     app.state.oauth_providers = load_oauth_providers()

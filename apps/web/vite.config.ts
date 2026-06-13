@@ -4,6 +4,7 @@ import path from 'node:path'
 import { defineConfig } from 'vite'
 
 // apps/web may proxy only to kai-chattr services/api, never to legacy chattr.
+// (config change forces the dev server to reload the /auth proxy rule)
 const apiTarget = (process.env.KAI_CHATTR_API_URL ?? 'http://127.0.0.1:8840').replace(/\/$/, '')
 const wsTarget = apiTarget.replace(/^http/, 'ws')
 
@@ -26,6 +27,10 @@ export default defineConfig({
     port: 8800,
     strictPort: true,
     proxy: {
+      '/auth': {
+        target: apiTarget,
+        changeOrigin: true,
+      },
       '/api': {
         target: apiTarget,
         changeOrigin: true,

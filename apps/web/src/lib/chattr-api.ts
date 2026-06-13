@@ -21,7 +21,12 @@ export function storeSessionToken(token: string) {
 }
 
 export function clearSessionToken() {
-  if (typeof window !== 'undefined') window.localStorage.removeItem(SESSION_TOKEN_KEY)
+  if (typeof window !== 'undefined') {
+    window.localStorage.removeItem(SESSION_TOKEN_KEY)
+    delete window.__SESSION_TOKEN__
+    delete window.__CHATTR_SESSION_TOKEN__
+    delete window.__CHATTR_SESSION__
+  }
 }
 
 export function getSessionToken() {
@@ -51,17 +56,7 @@ export function getSessionToken() {
 
 let localBootstrap: Promise<string> | null = null
 
-/**
- * Resolve the session token, bootstrapping the local owner session when no
- * session is stored (local mode only; the API refuses the bootstrap when not
- * local/loopback, in which case the caller is unauthenticated until login).
- */
-export async function resolveSessionToken(): Promise<string> {
-  const existing = getSessionToken()
-  if (existing) {
-    return existing
-  }
-
+function bootstrapLocalSession(): Promise<string> {
   if (!localBootstrap) {
     localBootstrap = fetch(chattrApiUrl('/auth/local-session'), {
       method: 'POST',
@@ -92,6 +87,20 @@ export async function resolveSessionToken(): Promise<string> {
   return localBootstrap
 }
 
+/**
+ * Resolve the session token, bootstrapping the local owner session when no
+ * session is stored (local mode only; the API refuses the bootstrap when not
+ * local/loopback, in which case the caller is unauthenticated until login).
+ */
+export async function resolveSessionToken(): Promise<string> {
+  const existing = getSessionToken()
+  if (existing) {
+    return existing
+  }
+
+  return bootstrapLocalSession()
+}
+
 export async function chattrHeaders(init?: HeadersInit) {
   const headers = new Headers(init)
   const token = await resolveSessionToken()
@@ -114,14 +123,21 @@ export function chattrApiUrl(path: string) {
   return `${origin}${path.startsWith('/') ? path : `/${path}`}`
 }
 
-/**
- * Low-level transport ONLY. Product code should call contract-bound helpers
- * (see `chattr-api-contracts.ts` and the per-area `lib/*-api.ts` modules)
- * rather than passing raw '/api/...' string literals from components.
- * The endpoint-contracts governance boundary test enforces this.
- */
-export async function chattrJson<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const headers = await chattrHeaders(init.headers)
+function errorFromResponse(response: Response, payload: unknown) {
+  const message =
+    payload && typeof payload === 'object' && 'error' in payload
+      ? String(payload.error)
+      : `Request failed with ${response.status}`
+  return new Error(message)
+}
+
+async function requestJson<T>(path: string, init: RequestInit, tokenOverride?: string) {
+  const headers = new Headers(init.headers)
+  const authToken = tokenOverride ?? await resolveSessionToken()
+
+  if (authToken) {
+    headers.set('Authorization', `Bearer ${authToken}`)
+  }
 
   if (init.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
@@ -133,13 +149,34 @@ export async function chattrJson<T>(path: string, init: RequestInit = {}): Promi
     headers,
   })
   const payload = await response.json().catch(() => null)
+  return { authToken, payload: payload as T, response }
+}
+
+/**
+ * Low-level transport ONLY. Product code should call contract-bound helpers
+ * (see `chattr-api-contracts.ts` and the per-area `lib/*-api.ts` modules)
+ * rather than passing raw '/api/...' string literals from components.
+ * The endpoint-contracts governance boundary test enforces this.
+ */
+export async function chattrJson<T>(path: string, init: RequestInit = {}): Promise<T> {
+  let { authToken, payload, response } = await requestJson<T>(path, init)
+
+  if (response.status === 401 && authToken) {
+    const currentToken = getSessionToken()
+    let refreshedToken = currentToken && currentToken !== authToken ? currentToken : ''
+    if (!refreshedToken) {
+      clearSessionToken()
+      refreshedToken = await bootstrapLocalSession()
+    }
+    if (refreshedToken) {
+      const retry = await requestJson<T>(path, init, refreshedToken)
+      payload = retry.payload
+      response = retry.response
+    }
+  }
 
   if (!response.ok) {
-    const message =
-      payload && typeof payload === 'object' && 'error' in payload
-        ? String(payload.error)
-        : `Request failed with ${response.status}`
-    throw new Error(message)
+    throw errorFromResponse(response, payload)
   }
 
   return payload as T

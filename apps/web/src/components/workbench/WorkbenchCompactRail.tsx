@@ -18,7 +18,6 @@ import {
   IconRobot,
   IconSearch,
   IconSettings2,
-  IconSparkles,
 } from '@tabler/icons-react'
 import { type ComponentType, type CSSProperties, type ReactNode, useCallback, useState } from 'react'
 
@@ -122,7 +121,6 @@ type WorkbenchCompactRailProps = {
   onOpenSettings?: () => void
   onShowConversations?: () => void
   onShowTasks?: () => void
-  onUpgrade?: () => void
 }
 
 type RailItemProps = {
@@ -518,7 +516,6 @@ export function WorkbenchCompactRail({
   onOpenSettings,
   onShowConversations,
   onShowTasks,
-  onUpgrade,
 }: WorkbenchCompactRailProps) {
   const [expanded, setExpandedState] = useState(() => readPersistedRailExpanded(defaultExpanded))
   const setExpanded = useCallback((nextExpanded: boolean) => {
@@ -743,13 +740,6 @@ export function WorkbenchCompactRail({
             {utilities({ expanded })}
           </div>
         ) : null}
-        <RailItem
-          active={activeItem === 'observability'}
-          expanded={expanded}
-          icon={IconActivityHeartbeat}
-          label="Observability"
-          onClick={onOpenObservability}
-        />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             {expanded ? (
@@ -818,9 +808,9 @@ export function WorkbenchCompactRail({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onSelect={onUpgrade}>
-                <IconSparkles />
-                Upgrade workspace
+              <DropdownMenuItem onSelect={onOpenObservability}>
+                <IconActivityHeartbeat />
+                Observability
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
