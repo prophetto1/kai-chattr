@@ -1,23 +1,26 @@
 /*
- * JWC Global design tokens — single source of color + type truth.
+ * kai-chattr design tokens — THE complete, single-source token system.
+ * Values AND their Tailwind registration in one file (formerly split across
+ * design-tokens.css + shadcn-tokens.css).
  *
- * Structure:
+ * Structure (top → bottom):
  *   1.  PRIMITIVES        — theme-independent: fonts, fixed brand accents.
- *   1b. PRIMITIVE SCALES  — theme-independent system scales (NEW): UI type ramp,
+ *   1b. PRIMITIVE SCALES  — theme-independent system scales: UI type ramp,
  *                           spacing, radius family, motion, focus geometry.
  *   2.  THEME: DAY        (:root)        — light. Default when no theme class.
  *   3.  THEME: NIGHT      (.dark)        — the base experience (app ships .dark).
  *   4.  THEME: CATPPUCCIN (.catppuccin)  — mocha.
  *   5.  THEME: EMBER      (.ember)       — warm dark, amber accent.
- *   6.  THEME: GRAPHITE   (.graphite)    — NEW. Night, but every neutral is true
+ *   6.  THEME: GRAPHITE   (.graphite)    — Night, but every neutral is true
  *                                          achromatic gray (chroma 0). Zero hue.
+ *   7.  @THEME REGISTRATION (bottom)     — exposes the tokens above as Tailwind
+ *                                          v4 utilities + the shadcn :root globals.
  *
  * Each theme defines ONE canonical semantic palette (--background … --ring,
- * --sidebar*, --wb-tab-icon*) PLUS the new surface/ink/elevation roles and the
- * --bd-* docs palette. fumadocs --color-fd-* derive FROM the semantic palette;
- * the shadcn bridge registers utilities from it (shadcn-tokens.css). No token
- * name was removed; the upgraded values widen the surface ladder, raise muted
- * contrast, add elevation, and route legacy names through the new ink ramp:
+ * --sidebar*, --wb-tab-icon*) PLUS the surface/ink/elevation roles and the
+ * --bd-* content palette. No token name was removed; the values widen the
+ * surface ladder, raise muted contrast, add elevation, and route legacy names
+ * through the new ink ramp:
  *     --muted-foreground → var(--ink-3)   (contrast bump everywhere, for free)
  *     --text-2 → var(--ink-2) · --text-4 → var(--ink-4)
  *
@@ -124,7 +127,7 @@
  * 1b. PRIMITIVE SCALES — theme-independent system scales (NEW)
  *     One source of truth for type / space / radius / motion. These replace the
  *     inline magic numbers (text-[11.5px], rounded-[5px], py-2.5, …). Registered
- *     as Tailwind utilities in shadcn-tokens.css (text-ui-*, rounded-*, …).
+ *     as Tailwind utilities by the @theme block at the bottom of this file.
  * ════════════════════════════════════════════════════════════════════════ */
 :root {
   /* — UI type ramp: 6 steps + overline, each size paired with lh + tracking — */
@@ -645,4 +648,114 @@
   --bd-pre-bg: oklch(0.20 0 0);
   --shiki-light-bg: var(--bd-pre-bg);
   --shiki-dark-bg: var(--bd-pre-bg);
+}
+/* ════════════════════════════════════════════════════════════════════════
+ * 7. @THEME REGISTRATION — exposes the token VALUES above as Tailwind v4
+ *    utilities (+ the few shadcn-only :root globals with no per-theme variant).
+ *
+ * `@theme inline` is required throughout: values are runtime var() references
+ * that must NOT be flattened at build time, so a utility like `text-ink-3` or
+ * `text-ui-sm` re-resolves per active theme / element.
+ *
+ * NEW utilities registered here (consume these instead of inline magic numbers):
+ *   surfaces ...... bg-surface-base | -raised | -overlay | -hover | -sunken
+ *   ink ........... text-ink-1 | -ink-2 | -ink-3 | -ink-4
+ *   divider ....... border-divider | bg-divider
+ *   type ramp ..... text-ui-2xs | -xs | -sm | -md | -lg | -xl | text-overline
+ *                   (each carries its paired line-height + letter-spacing)
+ *   radius ........ rounded-control | rounded-card | rounded-pill
+ *   elevation ..... shadow-e1 | shadow-e2 | shadow-e3
+ *   surface lift .. shadow-highlight (inset top highlight) · shadow-focus (ring)
+ */
+
+:root {
+  /* Callout-error red, previously sourced from fumadocs-theme.css's --color-fd-error. */
+  --destructive: oklch(0.63 0.24 25);
+  --destructive-foreground: oklch(0.985 0 0);
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  /* — Color: canonical semantic palette — */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-border-hairline: var(--border-hairline);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+
+  /* — Color: NEW surface roles — */
+  --color-surface-base: var(--surface-base);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-surface-hover: var(--surface-hover);
+
+  /* — Color: NEW ink ramp + divider — */
+  --color-ink-1: var(--ink-1);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+  --color-divider: var(--divider);
+
+  /* — Radius family — */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-control: var(--radius-control);
+  --radius-card: var(--radius-card);
+  --radius-pill: var(--radius-pill);
+
+  /* — UI type ramp: text-ui-* utilities, each with paired lh + tracking — */
+  --text-ui-2xs: var(--ui-text-2xs);
+  --text-ui-2xs--line-height: var(--ui-lh-2xs);
+  --text-ui-2xs--letter-spacing: var(--ui-track-2xs);
+  --text-ui-xs: var(--ui-text-xs);
+  --text-ui-xs--line-height: var(--ui-lh-xs);
+  --text-ui-xs--letter-spacing: var(--ui-track-xs);
+  --text-ui-sm: var(--ui-text-sm);
+  --text-ui-sm--line-height: var(--ui-lh-sm);
+  --text-ui-sm--letter-spacing: var(--ui-track-sm);
+  --text-ui-md: var(--ui-text-md);
+  --text-ui-md--line-height: var(--ui-lh-md);
+  --text-ui-md--letter-spacing: var(--ui-track-md);
+  --text-ui-lg: var(--ui-text-lg);
+  --text-ui-lg--line-height: var(--ui-lh-lg);
+  --text-ui-lg--letter-spacing: var(--ui-track-lg);
+  --text-ui-xl: var(--ui-text-xl);
+  --text-ui-xl--line-height: var(--ui-lh-xl);
+  --text-ui-xl--letter-spacing: var(--ui-track-xl);
+  --text-overline: var(--ui-text-overline);
+  --text-overline--line-height: var(--ui-lh-overline);
+  --text-overline--letter-spacing: var(--ui-track-overline);
+  --text-overline--font-weight: var(--ui-weight-overline);
+
+  /* — Elevation + surface lift + focus — */
+  --shadow-e1: var(--elevation-1);
+  --shadow-e2: var(--elevation-2);
+  --shadow-e3: var(--elevation-3);
+  --shadow-highlight: var(--surface-highlight);
+  --shadow-focus: var(--focus-ring);
+
+  /* — Motion — */
+  --ease-out: var(--ease-out);
+  --ease-in-out: var(--ease-in-out);
 }

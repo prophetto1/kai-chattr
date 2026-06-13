@@ -4,6 +4,10 @@ Repo-root changelog (decision 2026-06-11: lives here, not in the Planned store).
 
 ## 2026-06-13
 
+### refactor(web): merge token CSS into one honestly-named tokens.css (2 files, not 3)
+- Renamed `apps/web/src/styles/design-tokens.css` → `styles/tokens.css` (via `git mv`, history preserved) and merged the misleadingly-named `shadcn-tokens.css` (which was the Tailwind `@theme` registration, not a theme) into it. The token CSS is now **2 files with self-evident names**: `tokens.css` (theme-independent primitives + every theme palette + the `@theme` registration) and `styles.css` (entry + base element styles + the app-shell sidebar-utility registration). Deleted `shadcn-tokens.css`; repointed the `styles.css` `@import` and rewrote every stale comment that named the old files.
+- Nothing-breaks proof: `pnpm --dir apps/web run build` exit 0, and the emitted CSS bundle is **byte-identical at 246.73 kB / gzip 64.44 kB** (same as before the merge → no token or utility lost). Grep confirms zero live references to the old filenames under `apps/web/src` (only an intentional provenance note in `tokens.css`'s header).
+
 ### refactor(web): remove fumadocs-theme.css (Fumadocs fully retired), collapse the token stack to 3 files
 - Deleted `apps/web/src/styles/fumadocs-theme.css` and its `@import` in `styles.css`. Fumadocs UI was already gone (no `apps/devdocs`, no `fumadocs*` deps, no `.mdx`, no `fd-*` class usage), so the file was a vestigial shim — except for four load-bearing pieces, migrated to the canonical files FIRST to avoid regressions:
   - body `background`/`color` repointed from `var(--color-fd-background/foreground)` to `var(--background)`/`var(--foreground)` (`styles.css`).

@@ -3,8 +3,7 @@
 
 @source "../node_modules/streamdown/dist/*.js";
 
-@import "./styles/design-tokens.css";
-@import "./styles/shadcn-tokens.css";
+@import "./styles/tokens.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -19,19 +18,15 @@
 }
 
 /*
- * Entry stylesheet. Every COLOR + TYPE token lives in the imported files — one
- * source of truth, no load-order overrides:
- *   design-tokens.css  → canonical semantic palette (--background … --ring),
- *                        --sidebar*, --wb-tab-icon*, and the --bd-* docs palette,
- *                        declared per theme (:root = day, .dark = night,
- *                        .catppuccin = mocha).
- *   shadcn-tokens.css  → shadcn util registration + radius + --destructive.
- *
- * This file keeps only what isn't a token value: base element styling (incl. the
- * Tailwind v4 default border-color + the --font-sans mapping, both migrated here
- * when fumadocs-theme.css was removed), the workbench shell sizing, and the
- * Tailwind sidebar-utility registration — the one util group the token files
- * don't register, since --sidebar* are app-shell only.
+ * Entry stylesheet. Two files, cleanly split:
+ *   tokens.css → the COMPLETE token system: theme-independent primitives, every
+ *                theme's palette (:root = day, .dark = night, .catppuccin, .ember,
+ *                .graphite), AND the @theme registration that exposes them as
+ *                Tailwind utilities. The single source of truth for tokens.
+ *   styles.css (this file) → everything that ISN'T a token value: base element
+ *                styling (the Tailwind v4 default border-color, body, and the
+ *                --font-sans mapping), the workbench shell sizing, and the
+ *                app-shell-only sidebar-utility registration.
  */
 
 html {
@@ -93,7 +88,7 @@ select {
 }
 
 /* Register the Tailwind sidebar color utilities from the --sidebar* tokens
- * (values defined per theme in design-tokens.css). */
+ * (values defined per theme in tokens.css). */
 @theme inline {
   /* Default UI sans family (migrated from fumadocs-theme.css). */
   --font-sans: var(--bd-font-ui);
