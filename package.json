@@ -2,6 +2,7 @@
   "name": "kai-chattr",
   "private": true,
   "packageManager": "pnpm@10.16.1",
+  "license": "AGPL-3.0-or-later",
   "description": "Clean rebuild of chattr — local multi-agent coordination room (web + api), built to the v3 design standard.",
   "scripts": {
     "dev": "node scripts/dev/start-kai-chattr.mjs",
