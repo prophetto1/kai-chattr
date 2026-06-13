@@ -15,7 +15,13 @@ import { AuthError, getStoredSessionToken, login } from '@/lib/auth-api'
  * on shadcn. Visual polish belongs to the designer; the flow works.
  */
 function safeRedirect(raw: string | null): string {
-  return raw && raw.startsWith('/') ? raw : APP_ROUTES.home
+  // Local-only paths; protocol-relative ('//') and absolute URLs fall back home.
+  return raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : APP_ROUTES.home
+}
+
+function nextParam(params: URLSearchParams): string | null {
+  // RequireAuth emits ?next=; accept legacy ?redirect= during transition.
+  return params.get('next') ?? params.get('redirect')
 }
 
 export default function LoginPage() {
@@ -28,7 +34,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(params.get('auth_error'))
 
   if (getStoredSessionToken()) {
-    return <Navigate to={safeRedirect(params.get('redirect'))} replace />
+    return <Navigate to={safeRedirect(nextParam(params))} replace />
   }
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -37,7 +43,7 @@ export default function LoginPage() {
     setError(null)
     try {
       await login({ email: email.trim(), password })
-      navigate(safeRedirect(params.get('redirect')))
+      navigate(safeRedirect(nextParam(params)))
     } catch (err) {
       // /auth/login returns a uniform 401 — never reveal whether the email exists.
       setError(
