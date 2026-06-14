@@ -6,6 +6,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/cn";
+import { typographyStyle } from "@/lib/design-system";
 import {
   IconChevronRight,
   IconFile,
@@ -97,11 +98,11 @@ export const FileTree = ({
       <div
         className={cn(
           "h-full w-full min-w-0 overflow-hidden rounded-none border-0 bg-transparent font-sans leading-tight text-muted-foreground",
-          density === "compact" ? "text-[11px]" : "text-[12px]",
           className
         )}
         role="tree"
         {...props}
+        style={{ ...typographyStyle(density === "compact" ? "ui.caption" : "ui.body-sm"), ...props.style }}
       >
         <div className={cn(density === "compact" ? "px-0 py-1" : "px-1 py-1")}>
           {children}
@@ -165,10 +166,11 @@ function FileTreeStats({
       {status && status !== "modified" && (
         <span
           className={cn(
-            "min-w-3 text-center text-[10px] font-semibold uppercase tabular-nums",
+            "min-w-3 text-center",
             status === "added" && "text-emerald-500",
             status === "deleted" && "text-rose-500"
           )}
+          style={typographyStyle("ui.overline")}
         >
           {status[0]}
         </span>
@@ -411,13 +413,14 @@ export const FileTreeActions = ({
 }: FileTreeActionsProps) => (
   <div
     className={cn(
-      "ml-auto flex shrink-0 items-center gap-1 pl-2 text-[11px] leading-none",
+      "ml-auto flex shrink-0 items-center gap-1 pl-2",
       className
     )}
     onClick={stopPropagation}
     onKeyDown={stopPropagation}
     role="group"
     {...props}
+    style={{ ...typographyStyle("code.stat"), ...props.style }}
   >
     {children}
   </div>

@@ -18,6 +18,7 @@ import {
   workspaceRepositoriesRoute,
   workspaceSettingsRoute,
 } from '@/lib/app-routes'
+import { typographyStyle } from '@/lib/design-system'
 
 type WorkspaceSettingsSectionId = 'agents' | 'general' | 'members'
 
@@ -80,8 +81,8 @@ function PlaceholderRow({
   return (
     <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <div className="text-[13px] font-medium">{label}</div>
-        <p className="mt-1 max-w-[62ch] text-[11.5px] leading-5 text-muted-foreground">
+        <div style={typographyStyle('ui.body-strong')}>{label}</div>
+        <p className="mt-1 max-w-[62ch] text-muted-foreground" style={typographyStyle('ui.caption')}>
           {description}
         </p>
       </div>

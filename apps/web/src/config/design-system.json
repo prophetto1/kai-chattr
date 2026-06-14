@@ -79,6 +79,13 @@
         "letterSpacing": "-0.006em",
         "purpose": "Emphasized body: selected rows, sender names, card titles."
       },
+      "ui.body-sm": {
+        "fontFamily": "ui",
+        "fontSize": "12px",
+        "lineHeight": "16px",
+        "fontWeight": 400,
+        "purpose": "12px regular body — compact rows, file-tree text, dense secondary content (the 400-weight sibling of ui.label)."
+      },
       "ui.label": {
         "fontFamily": "ui",
         "fontSize": "12px",
