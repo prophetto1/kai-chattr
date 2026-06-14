@@ -178,11 +178,11 @@ _c("POST", "/api/messages/{msg_id}/resolve_rule_proposal", "user-session", "agen
 _c("POST", "/api/messages/{msg_id}/demote_rule_proposal", "user-session", "agent-runtime", "global", "legacy", "MessageStore JSONL")
 
 # --- board stores (legacy, pre-tenancy) ---
-_c("GET", "/api/jobs", "user-session", "board", "global", "legacy", "jobs store")
-_c("POST", "/api/jobs", "user-session", "board", "global", "legacy", "jobs store")
-_c("POST", "/api/jobs/reorder", "user-session", "board", "global", "legacy", "jobs store")
-_c("DELETE", "/api/jobs/{job_id}", "user-session", "board", "global", "legacy", "jobs store")
-_c("PATCH", "/api/jobs/{job_id}", "user-session", "board", "global", "legacy", "jobs store")
+_c("GET", "/api/jobs", "user-session", "board", "global", "legacy", "jobs store; status todo/active/closed + archived flag")
+_c("POST", "/api/jobs", "user-session", "board", "global", "legacy", "jobs store; status todo/active/closed + archived flag")
+_c("POST", "/api/jobs/reorder", "user-session", "board", "global", "legacy", "jobs store; reorder canonical status lanes")
+_c("DELETE", "/api/jobs/{job_id}", "user-session", "board", "global", "legacy", "jobs store; non-permanent sets closed + archived")
+_c("PATCH", "/api/jobs/{job_id}", "user-session", "board", "global", "legacy", "jobs store; status/archived round-trip")
 _c("GET", "/api/jobs/{job_id}/messages", "user-session", "board", "global", "legacy", "jobs store")
 _c("POST", "/api/jobs/{job_id}/messages", "user-session", "board", "global", "legacy", "jobs store")
 _c("DELETE", "/api/jobs/{job_id}/messages/{msg_id}", "user-session", "board", "global", "legacy", "jobs store")

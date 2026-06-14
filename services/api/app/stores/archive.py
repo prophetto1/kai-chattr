@@ -307,6 +307,7 @@ def _do_import(zip_bytes, store, jobs_store, rules_store,
                 assignee=job.get("assignee"),
                 uid=job_uid,
                 status=job.get("status"),
+                archived=job.get("archived"),
                 created_at=job.get("created_at"),
                 updated_at=job.get("updated_at"),
             )

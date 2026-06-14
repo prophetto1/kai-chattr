@@ -630,9 +630,15 @@ def chat_read(
             "title": title,
             "body": body,
             "status": job.get("status", ""),
+            "archived": bool(job.get("archived", False)),
             "channel": job.get("channel", ""),
             "created_by": job.get("created_by", ""),
             "assignee": job.get("assignee", ""),
+            "uid": job.get("uid", ""),
+            "anchor_msg_id": job.get("anchor_msg_id"),
+            "sort_order": job.get("sort_order"),
+            "created_at": job.get("created_at"),
+            "updated_at": job.get("updated_at"),
         }]
         for m in msgs:
             entry = {"id": m["id"], "sender": m["sender"], "text": m["text"],
@@ -908,6 +914,7 @@ def chat_jobs(
     title: str = "",
     body: str = "",
     status: str = "",
+    archived: bool | None = None,
     assignee: str = "",
     channel: str = "",
     message: str = "",
@@ -956,6 +963,7 @@ def chat_jobs(
             body=body,
             assignee=assignee or None,
             status=status or None,
+            archived=archived,
         )
         if store:
             store.add(
@@ -979,7 +987,9 @@ def chat_jobs(
         if assignee.strip():
             result = jobs.update_assignee(int(job_id), assignee)
         if status.strip():
-            result = jobs.update_status(int(job_id), status)
+            result = jobs.update_status(int(job_id), status, archived=archived)
+        elif archived is not None:
+            result = jobs.update_archived(int(job_id), archived)
         if result is None:
             return "Error: job not found or invalid update."
         return _json_result(result)
@@ -990,7 +1000,7 @@ def chat_jobs(
             return write_error
         if not job_id:
             return "Error: job_id is required."
-        result = jobs.update_status(int(job_id), "archived")
+        result = jobs.update_status(int(job_id), "closed", archived=True)
         if result is None:
             return "Error: job not found."
         return _json_result(result)
@@ -1001,7 +1011,7 @@ def chat_jobs(
             return write_error
         if not job_id:
             return "Error: job_id is required."
-        result = jobs.delete(int(job_id)) if permanent else jobs.update_status(int(job_id), "archived")
+        result = jobs.delete(int(job_id)) if permanent else jobs.update_status(int(job_id), "closed", archived=True)
         if result is None:
             return "Error: job not found."
         if permanent:
@@ -1056,12 +1066,10 @@ def chat_jobs(
         job = jobs.get(int(job_id))
         if not job:
             return "Error: job not found."
-        msgs = job.get("messages", [])
-        if msg_index < 0 or msg_index >= len(msgs):
+        result = jobs.resolve_message(int(job_id), msg_index, resolution.strip() or "dismissed")
+        if result is None:
             return "Error: message index out of range."
-        msgs[msg_index]["resolved"] = resolution.strip() or "dismissed"
-        jobs._save()
-        return _json_result({"ok": True, "resolution": msgs[msg_index]["resolved"]})
+        return _json_result({"ok": True, "resolution": result.get("resolved", "dismissed")})
 
     return "Unknown action: {0}. Valid actions: list, get, create, update, archive, delete, reorder, message, delete_message, resolve_message.".format(action)
 

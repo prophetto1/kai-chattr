@@ -17,6 +17,8 @@ class BoardWorkflowCreateRequest(BaseModel):
     anchor_msg_id: int | None = None
     assignee: str = Field(default="", max_length=120)
     body: str = Field(default="", max_length=1000)
+    status: str | None = Field(default=None, max_length=32)
+    archived: bool = False
 
     _strip_title = field_validator("title", mode="before")(_strip)
     _strip_type = field_validator("type", mode="before")(_strip)
@@ -24,10 +26,12 @@ class BoardWorkflowCreateRequest(BaseModel):
     _strip_created_by = field_validator("created_by", mode="before")(_strip)
     _strip_assignee = field_validator("assignee", mode="before")(_strip)
     _strip_body = field_validator("body", mode="before")(_strip)
+    _strip_status = field_validator("status", mode="before")(_strip)
 
 
 class BoardWorkflowUpdateRequest(BaseModel):
     status: str | None = Field(default=None, max_length=32)
+    archived: bool | None = None
     title: str | None = Field(default=None, max_length=120)
     assignee: str | None = Field(default=None, max_length=120)
 
@@ -37,7 +41,7 @@ class BoardWorkflowUpdateRequest(BaseModel):
 
 
 class BoardWorkflowReorderRequest(BaseModel):
-    status: str = Field(default="open", max_length=32)
+    status: str = Field(default="todo", max_length=32)
     ordered_ids: list[int] = Field(min_length=1)
 
     _strip_status = field_validator("status", mode="before")(_strip)

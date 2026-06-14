@@ -24,7 +24,8 @@ export type JobItem = {
   id: number
   title: string
   body?: string
-  status: 'open' | 'done' | 'archived' | string
+  status: 'todo' | 'active' | 'closed' | string
+  archived?: boolean
   channel?: string
   assignee?: string
   created_by?: string
@@ -77,7 +78,7 @@ export function isBoardTabId(value: string): value is BoardTabId {
 }
 
 export type RuleLaneId = 'draft' | 'active' | 'archived'
-export type JobLaneId = 'open' | 'done' | 'archived'
+export type JobLaneId = 'todo' | 'active' | 'closed'
 export type LockedLaneId = 'active' | 'archived'
 export type PinLaneId = 'todo' | 'done'
 
@@ -92,10 +93,13 @@ export function normalizeRuleStatus(status: string): RuleLaneId {
 }
 
 export function normalizeJobStatus(status: string): JobLaneId {
-  if (status === 'done' || status === 'archived') {
-    return status
+  if (status === 'active' || status === 'done') {
+    return 'active'
   }
-  return 'open'
+  if (status === 'closed' || status === 'archived') {
+    return 'closed'
+  }
+  return 'todo'
 }
 
 export function normalizeLockedStatus(status: string): LockedLaneId {

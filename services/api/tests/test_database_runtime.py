@@ -189,9 +189,11 @@ def test_sqlalchemy_job_store_supports_workflow_lifecycle(tmp_path):
 
     assert created["id"] == 1
     assert created["type"] == "workflow"
-    assert created["status"] == "open"
+    assert created["status"] == "todo"
+    assert created["archived"] is False
     assert created["sort_order"] == 1
-    assert store.list_all(status="open")[0]["title"] == "Define the workflow schema"
+    assert store.list_all(status="todo")[0]["title"] == "Define the workflow schema"
+    assert store.list_all(status="open")[0]["status"] == "todo"
 
     msg = store.add_message(created["id"], "jon", "Please make it work.")
     assert msg["id"] == 0
@@ -201,7 +203,13 @@ def test_sqlalchemy_job_store_supports_workflow_lifecycle(tmp_path):
     assert resolved["resolved"] == "accepted"
 
     updated = store.update_status(created["id"], "done")
-    assert updated["status"] == "done"
+    assert updated["status"] == "active"
+    assert updated["archived"] is False
+
+    archived = store.update_status(created["id"], "archived")
+    assert archived["status"] == "closed"
+    assert archived["archived"] is True
+    assert store.list_all(status="archived")[0]["id"] == created["id"]
 
     deleted_msg = store.delete_message(created["id"], 0)
     assert deleted_msg == {"job_id": created["id"], "message_id": 0}

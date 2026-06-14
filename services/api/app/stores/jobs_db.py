@@ -29,7 +29,41 @@ MAX_BODY_CHARS = 1000
 MAX_WORKFLOW_TYPE_CHARS = 40
 MAX_CHANNEL_CHARS = 80
 MAX_ACTOR_CHARS = 120
-VALID_WORKFLOW_STATUSES = ("open", "done", "archived")
+CANONICAL_STATUSES = ("todo", "active", "closed")
+LEGACY_STATUS_ALIASES = {
+    "open": "todo",
+    "done": "active",
+    "archived": "closed",
+}
+VALID_WORKFLOW_STATUSES = CANONICAL_STATUSES + tuple(LEGACY_STATUS_ALIASES)
+
+
+def normalize_status(status: str | None) -> str | None:
+    value = (status or "").strip().lower()
+    if value in CANONICAL_STATUSES:
+        return value
+    return LEGACY_STATUS_ALIASES.get(value)
+
+
+def _coerce_archived(value) -> bool:
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on", "archived"}
+    return bool(value)
+
+
+def normalize_status_archived(
+    status: str | None,
+    archived=None,
+    current_archived: bool = False,
+    default_status: str = "todo",
+) -> tuple[str, bool]:
+    raw_status = (status or "").strip().lower()
+    normalized = normalize_status(raw_status) or default_status
+    if archived is None:
+        next_archived = True if raw_status == "archived" else bool(current_archived)
+    else:
+        next_archived = _coerce_archived(archived)
+    return normalized, next_archived
 
 
 class BoardWorkflow(Base):
@@ -41,6 +75,7 @@ class BoardWorkflow(Base):
     title: Mapped[str] = mapped_column(String(MAX_TITLE_CHARS), nullable=False)
     body: Mapped[str] = mapped_column(String(MAX_BODY_CHARS), nullable=False, default="")
     status: Mapped[str] = mapped_column(String(32), nullable=False)
+    archived: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     channel: Mapped[str] = mapped_column(String(MAX_CHANNEL_CHARS), nullable=False)
     created_by: Mapped[str] = mapped_column(String(MAX_ACTOR_CHARS), nullable=False)
     assignee: Mapped[str] = mapped_column(String(MAX_ACTOR_CHARS), nullable=False, default="")
@@ -113,7 +148,8 @@ class SqlAlchemyJobStore:
                 pass
 
     def _next_sort_order_locked(self, session: Session, status: str, exclude_id: int | None = None) -> int:
-        stmt = select(func.max(BoardWorkflow.sort_order)).where(BoardWorkflow.status == status)
+        normalized = normalize_status(status) or "todo"
+        stmt = select(func.max(BoardWorkflow.sort_order)).where(BoardWorkflow.status == normalized)
         if exclude_id is not None:
             stmt = stmt.where(BoardWorkflow.id != exclude_id)
         max_order = session.scalar(stmt)
@@ -146,13 +182,18 @@ class SqlAlchemyJobStore:
         return data
 
     def _workflow_dict(self, workflow: BoardWorkflow) -> dict:
+        status, archived = normalize_status_archived(
+            workflow.status,
+            getattr(workflow, "archived", False),
+        )
         return {
             "id": workflow.id,
             "uid": workflow.uid,
             "type": workflow.type,
             "title": workflow.title,
             "body": workflow.body,
-            "status": workflow.status,
+            "status": status,
+            "archived": archived,
             "channel": workflow.channel,
             "created_by": workflow.created_by,
             "assignee": workflow.assignee,
@@ -173,7 +214,13 @@ class SqlAlchemyJobStore:
             if channel:
                 stmt = stmt.where(BoardWorkflow.channel == channel)
             if status:
-                stmt = stmt.where(BoardWorkflow.status == status)
+                raw_status = status.strip().lower()
+                normalized = normalize_status(raw_status)
+                if normalized is None:
+                    return []
+                stmt = stmt.where(BoardWorkflow.status == normalized)
+                if raw_status == "archived":
+                    stmt = stmt.where(BoardWorkflow.archived.is_(True))
             workflows = session.scalars(stmt).all()
             return [self._workflow_dict(workflow) for workflow in workflows]
 
@@ -199,9 +246,10 @@ class SqlAlchemyJobStore:
         status: str | None = None,
         created_at: float | None = None,
         updated_at: float | None = None,
+        archived: bool | None = None,
     ) -> dict:
         with self._lock, self._sessions() as session:
-            st = status if status in VALID_WORKFLOW_STATUSES else "open"
+            st, is_archived = normalize_status_archived(status, archived)
             now = time.time()
             workflow = BoardWorkflow(
                 uid=uid or str(uuid.uuid4()),
@@ -209,6 +257,7 @@ class SqlAlchemyJobStore:
                 title=title.strip()[:MAX_TITLE_CHARS],
                 body=(body or "").strip()[:MAX_BODY_CHARS],
                 status=st,
+                archived=is_archived,
                 channel=(channel or "general").strip()[:MAX_CHANNEL_CHARS],
                 created_by=(created_by or "user").strip()[:MAX_ACTOR_CHARS],
                 assignee=(assignee or "").strip()[:MAX_ACTOR_CHARS],
@@ -224,8 +273,9 @@ class SqlAlchemyJobStore:
         self._fire("create", result)
         return result
 
-    def update_status(self, job_id: int, status: str) -> dict | None:
-        if status not in VALID_WORKFLOW_STATUSES:
+    def update_status(self, job_id: int, status: str, archived: bool | None = None) -> dict | None:
+        normalized = normalize_status(status)
+        if normalized is None:
             return None
         with self._lock, self._sessions() as session:
             workflow = session.scalar(
@@ -235,9 +285,31 @@ class SqlAlchemyJobStore:
             )
             if workflow is None:
                 return None
-            if workflow.status != status:
-                workflow.sort_order = self._next_sort_order_locked(session, status, exclude_id=job_id)
-            workflow.status = status
+            next_status, next_archived = normalize_status_archived(
+                status,
+                archived,
+                current_archived=workflow.archived,
+            )
+            if workflow.status != next_status:
+                workflow.sort_order = self._next_sort_order_locked(session, next_status, exclude_id=job_id)
+            workflow.status = next_status
+            workflow.archived = next_archived
+            workflow.updated_at = time.time()
+            session.commit()
+            result = self._workflow_dict(workflow)
+        self._fire("update", result)
+        return result
+
+    def update_archived(self, job_id: int, archived: bool) -> dict | None:
+        with self._lock, self._sessions() as session:
+            workflow = session.scalar(
+                select(BoardWorkflow)
+                .options(selectinload(BoardWorkflow.messages))
+                .where(BoardWorkflow.id == job_id)
+            )
+            if workflow is None:
+                return None
+            workflow.archived = _coerce_archived(archived)
             workflow.updated_at = time.time()
             session.commit()
             result = self._workflow_dict(workflow)
@@ -378,13 +450,14 @@ class SqlAlchemyJobStore:
         return result
 
     def reorder(self, status: str, ordered_ids: list[int]) -> list[dict]:
-        if status not in VALID_WORKFLOW_STATUSES:
+        normalized = normalize_status(status)
+        if normalized is None:
             return []
         with self._lock, self._sessions() as session:
             workflows = session.scalars(
                 select(BoardWorkflow)
                 .options(selectinload(BoardWorkflow.messages))
-                .where(BoardWorkflow.status == status)
+                .where(BoardWorkflow.status == normalized)
                 .order_by(BoardWorkflow.sort_order.desc(), BoardWorkflow.updated_at.desc())
             ).all()
             if not workflows:

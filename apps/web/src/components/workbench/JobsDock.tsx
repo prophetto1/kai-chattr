@@ -32,6 +32,7 @@ import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { BoardDropZone } from '@/components/workbench/board/BoardDropZone'
@@ -45,22 +46,22 @@ import {
 } from '@/components/workbench/board/types'
 import { chattrJson, errorMessage } from '@/lib/chattr-api'
 
-type JobDragRecord = { type: 'job'; id: number; status: JobLaneId }
+type JobDragRecord = { type: 'job'; id: number; status: JobLaneId; archived?: boolean }
 
 const jobLanes: Array<{ id: JobLaneId; label: string; description: string }> = [
-  { id: 'open', label: 'Open', description: 'ready for work' },
-  { id: 'done', label: 'Done', description: 'completed work threads' },
-  { id: 'archived', label: 'Closed', description: 'archived threads' },
+  { id: 'todo', label: 'To do', description: 'ready for work' },
+  { id: 'active', label: 'Active', description: 'work in progress' },
+  { id: 'closed', label: 'Closed', description: 'closed work threads' },
 ]
 
 function statusBadgeClass(status: string) {
-  if (status === 'open') {
+  if (status === 'todo') {
     return 'bg-emerald-600 text-white'
   }
-  if (status === 'done') {
+  if (status === 'active') {
     return 'bg-sky-600 text-white'
   }
-  if (status === 'archived') {
+  if (status === 'closed') {
     return 'bg-muted text-muted-foreground'
   }
   return ''
@@ -178,6 +179,7 @@ function JobRow({
   saving: boolean
 }) {
   const status = normalizeJobStatus(job.status)
+  const archived = Boolean(job.archived)
   const {
     attributes,
     isDragging,
@@ -186,7 +188,7 @@ function JobRow({
     transform,
     transition,
   } = useSortable({
-    data: { id: job.id, status, type: 'job' } satisfies JobDragRecord,
+    data: { archived, id: job.id, status, type: 'job' } satisfies JobDragRecord,
     id: `job:${job.id}`,
   })
   const style = {
@@ -212,7 +214,7 @@ function JobRow({
           {jobLanes.map((lane) => (
             <Button
               className="h-7 px-2 text-xs"
-              disabled={saving || status === lane.id}
+              disabled={saving || (status === lane.id && !archived)}
               key={lane.id}
               onClick={() => onStatus(job.id, lane.id)}
               size="sm"
@@ -225,7 +227,7 @@ function JobRow({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                aria-label="Delete job"
+                aria-label={archived ? 'Delete job' : 'Archive job'}
                 className="size-7"
                 disabled={saving}
                 onClick={() => onDelete(job.id)}
@@ -236,7 +238,7 @@ function JobRow({
                 <IconTrash className="size-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Delete job</TooltipContent>
+            <TooltipContent>{archived ? 'Delete job' : 'Archive job'}</TooltipContent>
           </Tooltip>
         </ButtonGroup>
       }
@@ -312,20 +314,26 @@ export function JobsDock() {
   const [jobDraft, setJobDraft] = useState({ title: '', body: '', assignee: '' })
   const [jobEdits, setJobEdits] = useState<Record<number, { title: string; assignee: string }>>({})
   const [jobMessages, setJobMessages] = useState<Record<number, string>>({})
+  const [showArchived, setShowArchived] = useState(false)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+
+  const visibleJobs = useMemo(
+    () => jobs.filter((job) => Boolean(job.archived) === showArchived),
+    [jobs, showArchived]
+  )
 
   const groupedJobs = useMemo(() => {
     const grouped = groupByStatus(
-      jobs,
-      ['open', 'done', 'archived'] as const,
+      visibleJobs,
+      ['todo', 'active', 'closed'] as const,
       (job) => normalizeJobStatus(job.status)
     )
     return {
-      archived: sortJobs(grouped.archived),
-      done: sortJobs(grouped.done),
-      open: sortJobs(grouped.open),
+      active: sortJobs(grouped.active),
+      closed: sortJobs(grouped.closed),
+      todo: sortJobs(grouped.todo),
     }
-  }, [jobs])
+  }, [visibleJobs])
   const activeDragJob = useMemo(
     () => (activeDrag?.type === 'job' ? jobs.find((job) => job.id === activeDrag.id) : undefined),
     [activeDrag, jobs]
@@ -419,10 +427,18 @@ export function JobsDock() {
   const deleteJob = useCallback(
     async (jobId: number) => {
       await withSave(`delete-job-${jobId}`, async () => {
-        await chattrJson(`/api/jobs/${jobId}?permanent=true`, { method: 'DELETE' })
+        const job = jobs.find((item) => item.id === jobId)
+        if (job?.archived) {
+          await chattrJson(`/api/jobs/${jobId}?permanent=true`, { method: 'DELETE' })
+        } else {
+          await chattrJson<JobItem>(`/api/jobs/${jobId}`, {
+            body: JSON.stringify({ archived: true, status: 'closed' }),
+            method: 'PATCH',
+          })
+        }
       })
     },
-    [withSave]
+    [jobs, withSave]
   )
 
   const reorderJobs = useCallback(
@@ -475,10 +491,14 @@ export function JobsDock() {
       const overData = event.over.data.current as JobDragRecord | undefined
 
       if (overId === 'jobs:delete') {
-        if (activeData.status === 'archived') {
+        if (activeData.archived) {
           void deleteJob(activeData.id)
         } else {
-          void updateJob(activeData.id, { status: 'archived' }, `job-${activeData.id}-archived`)
+          void updateJob(
+            activeData.id,
+            { archived: true, status: 'closed' },
+            `job-${activeData.id}-archived`
+          )
         }
         return
       }
@@ -571,14 +591,26 @@ export function JobsDock() {
                   </ButtonGroup>
                 </JobsForm>
 
-                {jobs.length === 0 ? <EmptyState>No jobs yet.</EmptyState> : null}
+                <div className="flex items-center justify-between rounded-md border border-border/70 px-2 py-1.5 text-xs text-muted-foreground">
+                  <span>Archived</span>
+                  <Switch
+                    aria-label="Show archived jobs"
+                    checked={showArchived}
+                    onCheckedChange={setShowArchived}
+                    size="sm"
+                  />
+                </div>
+
+                {visibleJobs.length === 0 ? (
+                  <EmptyState>{showArchived ? 'No archived jobs.' : 'No jobs yet.'}</EmptyState>
+                ) : null}
                 {jobLanes.map((lane) => {
                   const items = groupedJobs[lane.id]
                   return (
                     <BoardDropZone id={`jobs:${lane.id}`} key={lane.id}>
                       <BoardSection
                         count={items.length}
-                        defaultOpen={lane.id !== 'archived'}
+                        defaultOpen
                         description={lane.description}
                         title={lane.label}
                       >
@@ -608,7 +640,11 @@ export function JobsDock() {
                                 }
                                 onSave={saveJobEdit}
                                 onStatus={(jobId, status) =>
-                                  void updateJob(jobId, { status }, `job-${jobId}-${status}`)
+                                  void updateJob(
+                                    jobId,
+                                    { archived: false, status },
+                                    `job-${jobId}-${status}`
+                                  )
                                 }
                                 saving={Boolean(saving)}
                               />
@@ -622,7 +658,7 @@ export function JobsDock() {
                 <BoardDropZone id="jobs:delete">
                   <div className="flex min-h-10 items-center justify-center gap-2 rounded-md border border-dashed border-destructive/50 bg-destructive/5 px-3 text-xs text-destructive">
                     <IconTrash className="size-3.5" />
-                    Drop closed jobs here to delete; other jobs close first.
+                    Drop jobs here to archive; archived jobs delete.
                   </div>
                 </BoardDropZone>
               </>

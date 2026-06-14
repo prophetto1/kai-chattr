@@ -4,6 +4,11 @@ Repo-root changelog (decision 2026-06-11: lives here, not in the Planned store).
 
 ## 2026-06-13
 
+### feat(board): canonical job status lanes plus archived flag (Slice 1)
+- Migrated Board jobs from legacy `open` / `done` / `archived` status output to canonical `todo` / `active` / `closed` status output plus a separate `archived` Boolean. Legacy inputs still normalize for compatibility (`open` -> `todo`, `done` -> `active`, `archived` -> `closed` + `archived:true`).
+- Added Alembic migration `20260613_0009_board_status_canonical_archived.py` to add `board_workflows.archived` default false and backfill legacy status rows.
+- Updated storage, HTTP, MCP, endpoint registry semantics, and JobsDock lanes/filtering for status + archived round-trip. Focused tests updated for storage/MCP/HTTP/archive-import coverage.
+
 ### feat(web): migrate surfaces onto typography roles (Phase 2, rolling)
 Migrating the 154 hardcoded `text-[Npx]` literals onto `typographyStyle(role)`, per-surface, each built + committed. Added `ui.micro` (10px) role for tiny badges (ladder gap found during migration).
 - `components/agents/agent-bits.tsx` (7 sites): status/home/prototype badges → `ui.micro`; `MicroHeader` / `RailSectionBar` → `ui.overline`; KeyValueRow label → `ui.caption`, value → `ui.label`. Normalizes the one-off 10 / 11.5px sizes onto the ladder. Build exit 0; zero `text-[Npx]` left in the file.

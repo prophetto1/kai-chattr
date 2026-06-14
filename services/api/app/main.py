@@ -2241,6 +2241,8 @@ async def create_job(request: Request):
         anchor_msg_id=payload.anchor_msg_id,
         assignee=payload.assignee,
         body=payload.body,
+        status=payload.status,
+        archived=payload.archived,
     )
     # Mark the proposal message as accepted so it persists across refresh
     if payload.anchor_msg_id:
@@ -2267,7 +2269,9 @@ async def update_job(job_id: int, request: Request):
         return JSONResponse({"error": "invalid json"}, status_code=400)
     result = None
     if body.status is not None:
-        result = jobs.update_status(job_id, body.status)
+        result = jobs.update_status(job_id, body.status, archived=body.archived)
+    elif body.archived is not None:
+        result = jobs.update_archived(job_id, body.archived)
     if body.title is not None:
         result = jobs.update_title(job_id, body.title)
     if body.assignee is not None:
@@ -2386,7 +2390,7 @@ async def delete_job(job_id: int, request: Request):
     if permanent:
         result = jobs.delete(job_id)
     else:
-        result = jobs.update_status(job_id, "archived")
+        result = jobs.update_status(job_id, "closed", archived=True)
     if result is None:
         return JSONResponse({"error": "not found"}, status_code=404)
     return result

@@ -116,7 +116,8 @@ def test_jobs_tool_supports_full_read_write_lifecycle(tmp_path):
         )
     )
     assert updated["title"] == "Right rail MCP parity"
-    assert updated["status"] == "done"
+    assert updated["status"] == "active"
+    assert updated["archived"] is False
     assert updated["assignee"] == "claude"
 
     message = parse_result(
@@ -136,7 +137,8 @@ def test_jobs_tool_supports_full_read_write_lifecycle(tmp_path):
     archived = parse_result(
         bridge.chat_jobs(action="archive", sender="codex", job_id=job_id)
     )
-    assert archived["status"] == "archived"
+    assert archived["status"] == "closed"
+    assert archived["archived"] is True
 
     deleted = parse_result(
         bridge.chat_jobs(action="delete", sender="codex", job_id=job_id, permanent=True)
@@ -282,6 +284,59 @@ def test_browser_session_endpoint_is_not_exposed_and_right_rail_stays_protected(
         headers=conftest.session_headers(),
     )
     assert authed_res.status_code == 200
+
+
+def test_jobs_http_api_round_trips_canonical_status_and_archived(tmp_path):
+    from app import main as app_module
+    from fastapi.testclient import TestClient
+
+    app_module = importlib.reload(app_module)
+    app_module.configure(
+        {
+            "server": {"port": 8840, "data_dir": str(tmp_path)},
+            "agents": {},
+            "routing": {"default": "none", "max_agent_hops": 4},
+            "images": {"upload_dir": str(tmp_path / "uploads"), "max_size_mb": 10},
+            "mcp": {"http_port": 8841, "sse_port": 8842},
+        },
+        session_token="right-rail-test-token",
+    )
+    conftest.mint_test_session(app_module)
+    client = TestClient(app_module.app)
+    headers = conftest.session_headers()
+
+    created = client.post(
+        "/api/jobs",
+        headers=headers,
+        json={"title": "Canonical job status", "created_by": "user"},
+    )
+    assert created.status_code == 200
+    job_id = created.json()["id"]
+    assert created.json()["status"] == "todo"
+    assert created.json()["archived"] is False
+
+    legacy_update = client.patch(
+        f"/api/jobs/{job_id}",
+        headers=headers,
+        json={"status": "done"},
+    )
+    assert legacy_update.status_code == 200
+    assert legacy_update.json()["status"] == "active"
+    assert legacy_update.json()["archived"] is False
+
+    archived = client.patch(
+        f"/api/jobs/{job_id}",
+        headers=headers,
+        json={"status": "closed", "archived": True},
+    )
+    assert archived.status_code == 200
+    assert archived.json()["status"] == "closed"
+    assert archived.json()["archived"] is True
+
+    listed = client.get("/api/jobs?status=archived", headers=headers)
+    assert listed.status_code == 200
+    assert [item["id"] for item in listed.json()] == [job_id]
+    assert listed.json()[0]["archived"] is True
 
 
 def test_locked_http_api_supports_ui_lifecycle(tmp_path):
@@ -453,5 +508,3 @@ def test_pins_http_api_supports_ui_lifecycle(tmp_path):
     assert deleted.status_code == 200
     assert deleted.json()["ok"] is True
     assert client.get("/api/pins", headers=headers).json() == []
-
-

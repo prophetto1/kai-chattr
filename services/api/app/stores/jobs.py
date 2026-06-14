@@ -7,6 +7,43 @@ import uuid
 from pathlib import Path
 
 
+CANONICAL_STATUSES = ("todo", "active", "closed")
+LEGACY_STATUS_ALIASES = {
+    "open": "todo",
+    "done": "active",
+    "archived": "closed",
+}
+VALID_WORKFLOW_STATUSES = CANONICAL_STATUSES + tuple(LEGACY_STATUS_ALIASES)
+
+
+def normalize_status(status: str | None) -> str | None:
+    value = (status or "").strip().lower()
+    if value in CANONICAL_STATUSES:
+        return value
+    return LEGACY_STATUS_ALIASES.get(value)
+
+
+def _coerce_archived(value) -> bool:
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on", "archived"}
+    return bool(value)
+
+
+def normalize_status_archived(
+    status: str | None,
+    archived=None,
+    current_archived: bool = False,
+    default_status: str = "todo",
+) -> tuple[str, bool]:
+    raw_status = (status or "").strip().lower()
+    normalized = normalize_status(raw_status) or default_status
+    if archived is None:
+        next_archived = True if raw_status == "archived" else bool(current_archived)
+    else:
+        next_archived = _coerce_archived(archived)
+    return normalized, next_archived
+
+
 class JobStore:
     def __init__(self, path: str):
         self._path = Path(path)
@@ -38,9 +75,10 @@ class JobStore:
         )
 
     def _next_sort_order_locked(self, status: str) -> int:
+        normalized = normalize_status(status) or "todo"
         max_order = 0
         for a in self._jobs:
-            if a.get("status") != status:
+            if normalize_status(a.get("status")) != normalized:
                 continue
             try:
                 max_order = max(max_order, int(a.get("sort_order", 0)))
@@ -52,7 +90,7 @@ class JobStore:
         max_by_group: dict[str, int] = {}
         changed = False
         for a in self._jobs:
-            key = a.get("status", "open")
+            key = normalize_status(a.get("status")) or "todo"
             try:
                 cur = int(a.get("sort_order", 0))
             except (TypeError, ValueError):
@@ -61,7 +99,7 @@ class JobStore:
                 max_by_group[key] = max(max_by_group.get(key, 0), cur)
 
         for a in self._jobs:
-            key = a.get("status", "open")
+            key = normalize_status(a.get("status")) or "todo"
             try:
                 cur = int(a.get("sort_order", 0))
             except (TypeError, ValueError):
@@ -85,6 +123,16 @@ class JobStore:
             except Exception:
                 pass
 
+    def _job_dict(self, job: dict) -> dict:
+        out = dict(job)
+        status, archived = normalize_status_archived(
+            out.get("status"),
+            out.get("archived"),
+        )
+        out["status"] = status
+        out["archived"] = archived
+        return out
+
     def list_all(self, channel: str | None = None,
                  status: str | None = None) -> list[dict]:
         """List jobs, optionally filtered by channel and/or status."""
@@ -96,14 +144,20 @@ class JobStore:
         if channel:
             result = [a for a in result if a.get("channel") == channel]
         if status:
-            result = [a for a in result if a.get("status") == status]
-        return result
+            raw_status = status.strip().lower()
+            normalized = normalize_status(raw_status)
+            if normalized is None:
+                return []
+            result = [a for a in result if normalize_status(a.get("status")) == normalized]
+            if raw_status == "archived":
+                result = [a for a in result if self._job_dict(a).get("archived")]
+        return [self._job_dict(a) for a in result]
 
     def get(self, job_id: int) -> dict | None:
         with self._lock:
             for a in self._jobs:
                 if a["id"] == job_id:
-                    return dict(a)
+                    return self._job_dict(a)
             return None
 
     def create(self, title: str, job_type: str, channel: str,
@@ -113,10 +167,11 @@ class JobStore:
                uid: str | None = None,
                status: str | None = None,
                created_at: float | None = None,
-               updated_at: float | None = None) -> dict:
+               updated_at: float | None = None,
+               archived: bool | None = None) -> dict:
         """Create a new job. Returns the job dict."""
         with self._lock:
-            st = status or "open"
+            st, is_archived = normalize_status_archived(status, archived)
             now = time.time()
             a = {
                 "id": self._next_id,
@@ -125,6 +180,7 @@ class JobStore:
                 "title": title.strip()[:120],
                 "body": (body or "").strip()[:1000],
                 "status": st,
+                "archived": is_archived,
                 "channel": channel,
                 "created_by": created_by,
                 "assignee": assignee or "",
@@ -137,28 +193,50 @@ class JobStore:
             self._next_id += 1
             self._jobs.append(a)
             self._save()
-        self._fire("create", a)
-        return a
+        result = self._job_dict(a)
+        self._fire("create", result)
+        return result
 
-    def update_status(self, job_id: int, status: str) -> dict | None:
-        """Update job status. Valid: open, done, archived."""
-        if status not in ("open", "done", "archived"):
+    def update_status(self, job_id: int, status: str, archived: bool | None = None) -> dict | None:
+        """Update job status. Valid canonical statuses: todo, active, closed."""
+        normalized = normalize_status(status)
+        if normalized is None:
             return None
         with self._lock:
             for a in self._jobs:
                 if a["id"] == job_id:
-                    old_status = a.get("status")
+                    old_status = normalize_status(a.get("status"))
+                    next_status, next_archived = normalize_status_archived(
+                        status,
+                        archived,
+                        current_archived=self._job_dict(a).get("archived", False),
+                    )
                     next_order = None
-                    if old_status != status:
+                    if old_status != next_status:
                         # Compute destination order before moving this job so
                         # the job doesn't count itself in the target lane.
-                        next_order = self._next_sort_order_locked(status)
-                    a["status"] = status
+                        next_order = self._next_sort_order_locked(next_status)
+                    a["status"] = next_status
+                    a["archived"] = next_archived
                     a["updated_at"] = time.time()
                     if next_order is not None:
                         a["sort_order"] = next_order
                     self._save()
-                    result = dict(a)
+                    result = self._job_dict(a)
+                    break
+            else:
+                return None
+        self._fire("update", result)
+        return result
+
+    def update_archived(self, job_id: int, archived: bool) -> dict | None:
+        with self._lock:
+            for a in self._jobs:
+                if a["id"] == job_id:
+                    a["archived"] = _coerce_archived(archived)
+                    a["updated_at"] = time.time()
+                    self._save()
+                    result = self._job_dict(a)
                     break
             else:
                 return None
@@ -172,7 +250,7 @@ class JobStore:
                     a["title"] = title.strip()[:120]
                     a["updated_at"] = time.time()
                     self._save()
-                    result = dict(a)
+                    result = self._job_dict(a)
                     break
             else:
                 return None
@@ -186,7 +264,7 @@ class JobStore:
                     a["assignee"] = assignee.strip()
                     a["updated_at"] = time.time()
                     self._save()
-                    result = dict(a)
+                    result = self._job_dict(a)
                     break
             else:
                 return None
@@ -298,7 +376,7 @@ class JobStore:
                 if a["id"] == job_id:
                     removed = self._jobs.pop(i)
                     self._save()
-                    result = dict(removed)
+                    result = self._job_dict(removed)
                     break
             else:
                 return None
@@ -307,13 +385,14 @@ class JobStore:
 
     def reorder(self, status: str, ordered_ids: list[int]) -> list[dict]:
         """Reorder jobs within a status group by explicit id order (top to bottom)."""
-        if status not in ("open", "done", "archived"):
+        normalized = normalize_status(status)
+        if normalized is None:
             return []
         with self._lock:
             self._ensure_sort_orders_locked()
             group = [
                 a for a in self._jobs
-                if a.get("status") == status
+                if normalize_status(a.get("status")) == normalized
             ]
             if not group:
                 return []
@@ -353,7 +432,7 @@ class JobStore:
                 old_order = int(item.get("sort_order", 0) or 0)
                 if old_order != new_order:
                     item["sort_order"] = new_order
-                    changed.append(dict(item))
+                    changed.append(self._job_dict(item))
 
             if changed:
                 self._save()
