@@ -2,6 +2,11 @@
 
 Repo-root changelog (decision 2026-06-11: lives here, not in the Planned store). Append an entry per codebase change, newest first.
 
+## 2026-06-14
+
+### docs(plan): typography & theme model implementation handoff
+- Added `governance/plans/kai-chattr-typography-theme-model-handoff.md` — the corrected plan to make typography fully controllable (runtime CSS-var-tokenized ladder: per-role size/weight/family) and themes **addable as JSON files carrying color + typography**, plus an Appearance role editor. Documents current built-vs-gap state, the root cause (built the picker before the data model), a 4-step build sequence with per-step **live** acceptance, the full base role-ladder values, the exact file map, and open decisions for Jon. In-repo, tracked, zero-context-executable.
+
 ## 2026-06-13
 
 ### feat(web,api): in-browser per-role font control — the payoff of the typography migration
