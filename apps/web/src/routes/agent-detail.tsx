@@ -36,6 +36,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { APP_ROUTES } from '@/lib/app-routes'
+import { typographyStyle } from '@/lib/design-system'
 import { agentByPublicId, engineById } from '@/lib/agent-fixtures'
 import {
   AGENT_CONSOLE_TABS,
@@ -115,7 +116,7 @@ function OverviewTab({ agent }: { agent: AgentDetail }) {
         ].map((metric) => (
           <div className="rounded-[10px] border border-border bg-card px-4 py-3" key={metric.label}>
             <MicroHeader>{metric.label}</MicroHeader>
-            <p className="mt-1 text-[15px] font-semibold capitalize">{metric.value}</p>
+            <p className="mt-1 capitalize" style={typographyStyle('ui.lg')}>{metric.value}</p>
           </div>
         ))}
       </div>
@@ -124,10 +125,10 @@ function OverviewTab({ agent }: { agent: AgentDetail }) {
         <div className="divide-y divide-border">
           {agent.activity.map((event) => (
             <div className="flex items-baseline gap-3 px-5 py-2.5" key={event.id}>
-              <span className="shrink-0 font-mono text-[10px] text-muted-foreground/70">
+              <span className="shrink-0 text-muted-foreground/70" style={typographyStyle('code.stat')}>
                 {new Date(event.at).toLocaleString()}
               </span>
-              <p className="min-w-0 text-[11.5px] leading-5">
+              <p className="min-w-0" style={typographyStyle('ui.caption')}>
                 <span className="font-medium">{event.actor}</span>{' '}
                 <span className="text-muted-foreground">{event.summary}</span>
               </p>
@@ -140,14 +141,14 @@ function OverviewTab({ agent }: { agent: AgentDetail }) {
         <div className="divide-y divide-border">
           {agent.versions.map((version) => (
             <div className="flex items-center gap-3 px-5 py-2.5" key={version.version_id}>
-              <Badge className="rounded-[5px] font-mono text-[10px]" variant="outline">
+              <Badge className="rounded-[5px]" style={typographyStyle('code.stat')} variant="outline">
                 v{version.version_number}
               </Badge>
-              <p className="min-w-0 flex-1 truncate text-[11.5px]">{version.change_summary}</p>
-              <span className="shrink-0 text-[10.5px] text-muted-foreground/70">
+              <p className="min-w-0 flex-1 truncate" style={typographyStyle('ui.caption')}>{version.change_summary}</p>
+              <span className="shrink-0 text-muted-foreground/70" style={typographyStyle('ui.micro')}>
                 {version.created_by} · {new Date(version.created_at).toLocaleDateString()}
               </span>
-              <Badge className="rounded-[5px] text-[10px] capitalize" variant={version.state === 'published' ? 'secondary' : 'outline'}>
+              <Badge className="rounded-[5px] capitalize" style={typographyStyle('ui.micro')} variant={version.state === 'published' ? 'secondary' : 'outline'}>
                 {version.state}
               </Badge>
             </div>
@@ -173,12 +174,12 @@ function IdentityTab({ agent }: { agent: AgentDetail }) {
         </div>
       </SectionCard>
       <SectionCard title="Persona — renders into soul.md">
-        <p className="px-5 py-4 text-[11.5px] leading-5 text-muted-foreground">
+        <p className="px-5 py-4 text-muted-foreground" style={typographyStyle('ui.caption')}>
           {agent.identity.persona}
         </p>
       </SectionCard>
       <SectionCard title="Description">
-        <p className="px-5 py-4 text-[11.5px] leading-5 text-muted-foreground">
+        <p className="px-5 py-4 text-muted-foreground" style={typographyStyle('ui.caption')}>
           {agent.identity.description}
         </p>
       </SectionCard>
@@ -292,11 +293,11 @@ function RuntimeTab({ agent }: { agent: AgentDetail }) {
       {runtime.local ? (
         <SectionCard title="Terminal — wterm">
           <div className="flex items-center justify-between gap-3 px-5 py-4">
-            <p className="text-[11.5px] leading-5 text-muted-foreground">
+            <p className="text-muted-foreground" style={typographyStyle('ui.caption')}>
               Per-slot PTY owned by the backend; terminal stays on to keep the CLI runtime on.
               Session lands with Slice 3 (local runtime).
             </p>
-            <Button className="h-8 gap-1.5 rounded-[5px] text-[12px]" disabled type="button" variant="outline">
+            <Button className="h-8 gap-1.5 rounded-[5px]" disabled style={typographyStyle('ui.label')} type="button" variant="outline">
               <IconTerminal2 className="size-3.5" />
               Open terminal
             </Button>
@@ -308,20 +309,21 @@ function RuntimeTab({ agent }: { agent: AgentDetail }) {
         <div className="flex items-center gap-2 px-5 py-4">
           {['Relaunch', 'Repair pairing', 'Free slot'].map((action) => (
             <Button
-              className="h-8 rounded-[5px] text-[12px]"
+              className="h-8 rounded-[5px]"
               disabled
               key={action}
+              style={typographyStyle('ui.label')}
               type="button"
               variant="outline"
             >
               {action}
             </Button>
           ))}
-          <span className="ml-1 text-[10.5px] text-muted-foreground/70">Slice 3</span>
-          <Button className="h-8 rounded-[5px] text-[12px]" disabled type="button" variant="outline">
+          <span className="ml-1 text-muted-foreground/70" style={typographyStyle('ui.micro')}>Slice 3</span>
+          <Button className="h-8 rounded-[5px]" disabled style={typographyStyle('ui.label')} type="button" variant="outline">
             Migrate home
           </Button>
-          <span className="text-[10.5px] text-muted-foreground/70">v1.5 · reserved</span>
+          <span className="text-muted-foreground/70" style={typographyStyle('ui.micro')}>v1.5 · reserved</span>
         </div>
       </SectionCard>
     </div>
@@ -331,7 +333,7 @@ function RuntimeTab({ agent }: { agent: AgentDetail }) {
 function StubTab({ note }: { note: string }) {
   return (
     <div className="flex min-h-[200px] items-center justify-center rounded-[10px] border border-dashed border-border bg-card/30">
-      <p className="max-w-[44ch] px-6 text-center text-[11.5px] leading-5 text-muted-foreground">
+      <p className="max-w-[44ch] px-6 text-center text-muted-foreground" style={typographyStyle('ui.caption')}>
         {note}
       </p>
     </div>
@@ -352,9 +354,9 @@ function AgentConsoleTabs() {
           return (
             <TabsTrigger
               aria-label={TAB_LABELS[tabId]}
-              className="group/agent-tab !h-[54px] min-w-[98px] flex-none flex-col gap-1 rounded-[8px] px-1.5 text-[10.5px] font-medium leading-none text-muted-foreground transition-[background-color,border-color,box-shadow,color,transform] duration-150 ease-out after:hidden active:scale-[0.98] data-[state=active]:border-border data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-[0_1px_2px_rgba(0,0,0,0.13),inset_0_-2px_0_var(--agent-tab-accent)] dark:data-[state=active]:bg-white/[0.055] lg:min-w-0"
+              className="group/agent-tab !h-[54px] min-w-[98px] flex-none flex-col gap-1 rounded-[8px] px-1.5 text-muted-foreground transition-[background-color,border-color,box-shadow,color,transform] duration-150 ease-out after:hidden active:scale-[0.98] data-[state=active]:border-border data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-[0_1px_2px_rgba(0,0,0,0.13),inset_0_-2px_0_var(--agent-tab-accent)] dark:data-[state=active]:bg-white/[0.055] lg:min-w-0"
               key={tabId}
-              style={{ '--agent-tab-accent': meta.accent } as React.CSSProperties}
+              style={{ '--agent-tab-accent': meta.accent, ...typographyStyle('ui.micro') } as React.CSSProperties}
               value={tabId}
             >
               <Icon className="size-4 text-muted-foreground/75 transition-[color,transform] duration-150 group-data-[state=active]/agent-tab:text-foreground" />
@@ -378,12 +380,13 @@ export default function AgentDetailPage() {
       <AppShell rail={<KaiAppRail activeItem="agents" />}>
         <Sheet className="flex min-h-0 min-w-0 flex-1 items-center justify-center">
           <div className="text-center">
-            <p className="text-[13px] font-semibold">Agent not found</p>
-            <p className="mt-1 text-[11.5px] text-muted-foreground">
+            <p style={typographyStyle('ui.body-strong')}>Agent not found</p>
+            <p className="mt-1 text-muted-foreground" style={typographyStyle('ui.caption')}>
               No fixture agent with id “{agentPublicId}”.
             </p>
             <Button
-              className="mt-4 h-8 rounded-[5px] text-[12px]"
+              className="mt-4 h-8 rounded-[5px]"
+              style={typographyStyle('ui.label')}
               onClick={() => navigate(APP_ROUTES.agents)}
               type="button"
               variant="outline"
@@ -420,19 +423,19 @@ export default function AgentDetailPage() {
             />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <h1 className="truncate text-[15px] font-semibold leading-tight">
+                <h1 className="truncate" style={typographyStyle('ui.lg')}>
                   {agent.identity.name}
                 </h1>
                 <StatusDot status={agent.identity.status} />
                 <LifecycleBadge state={agent.identity.lifecycle_state} />
               </div>
-              <p className="truncate text-[11.5px] text-muted-foreground">
+              <p className="truncate text-muted-foreground" style={typographyStyle('ui.caption')}>
                 {agent.identity.role} ·{' '}
-                <span className="font-mono text-[10.5px]">{agent.identity.agent_public_id}</span>
+                <span style={typographyStyle('code.stat')}>{agent.identity.agent_public_id}</span>
               </p>
             </div>
             <PrototypeBadge />
-            <Button className="h-8 gap-1.5 rounded-[5px] text-[12px]" disabled type="button" variant="outline">
+            <Button className="h-8 gap-1.5 rounded-[5px]" disabled style={typographyStyle('ui.label')} type="button" variant="outline">
               <IconRefresh className="size-3.5" />
               Swap engine
             </Button>
