@@ -48,6 +48,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
 import { cn } from '@/lib/cn'
+import { typographyStyle } from '@/lib/design-system'
 
 export type WorkbenchCompactRailItem =
   | 'new-session'
@@ -205,7 +206,7 @@ function RailItem({ active, expanded, icon: Icon, label, onClick }: RailItemProp
       className={cn(
         'transition-colors active:scale-95',
         expanded
-          ? 'h-8 w-full justify-start gap-2.5 rounded-[5px] px-2 text-[13px] font-medium leading-[1.35]'
+          ? 'h-8 w-full justify-start gap-2.5 rounded-[5px] px-2'
           : 'size-9 rounded-[5px]',
         active
           ? 'bg-transparent font-semibold hover:bg-transparent'
@@ -213,7 +214,7 @@ function RailItem({ active, expanded, icon: Icon, label, onClick }: RailItemProp
       )}
       onClick={onClick}
       size={expanded ? 'default' : 'icon'}
-      style={itemStyle}
+      style={expanded ? { ...itemStyle, ...typographyStyle('ui.body-strong') } : itemStyle}
       type="button"
       variant="ghost"
     >
@@ -246,7 +247,7 @@ function RailSection({ children, expanded, label }: RailSectionProps) {
   return (
     <SidebarGroup className="p-0">
       {label ? (
-        <SidebarGroupLabel className="h-7 rounded-[5px] px-2 text-[10px] font-semibold uppercase tracking-[0.06em] text-foreground/50 dark:text-sidebar-foreground/48">
+        <SidebarGroupLabel className="h-7 rounded-[5px] px-2 text-foreground/50 dark:text-sidebar-foreground/48" style={typographyStyle('ui.overline')}>
           {label}
         </SidebarGroupLabel>
       ) : null}
@@ -302,7 +303,7 @@ function RailPlaceholderSection({
 
   return (
     <SidebarGroup className="p-0">
-      <SidebarGroupLabel className="h-8 rounded-[5px] px-2 text-[12px] font-medium normal-case tracking-normal text-sidebar-foreground/68">
+      <SidebarGroupLabel className="h-8 rounded-[5px] px-2 text-sidebar-foreground/68" style={typographyStyle('ui.label')}>
         {hasChildren ? (
           <div className="flex min-w-0 flex-1 items-center gap-1.5 pr-7">
             <button
@@ -386,10 +387,11 @@ function RailSubItem({
       <Button
         aria-current={active ? 'page' : undefined}
         className={cn(
-          'h-7 w-full justify-start rounded-[5px] px-2 text-[12px] font-medium active:scale-[0.99]',
+          'h-7 w-full justify-start rounded-[5px] px-2 active:scale-[0.99]',
           active ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/62 hover:bg-sidebar-accent/55'
         )}
         onClick={onClick}
+        style={typographyStyle('ui.label')}
         type="button"
         variant="ghost"
       >
@@ -547,7 +549,7 @@ export function WorkbenchCompactRail({
           onBrand={onBrand}
           onExpand={() => setExpanded(true)}
         />
-        {expanded ? <span className="truncate text-[13px] font-semibold">kai-chattr</span> : null}
+        {expanded ? <span className="truncate" style={typographyStyle('ui.body-strong')}>kai-chattr</span> : null}
         {expanded ? (
           <Button
             aria-label="Collapse rail"
@@ -760,9 +762,9 @@ export function WorkbenchCompactRail({
                   />
                 </span>
                 <span className="grid min-w-0 flex-1 text-left leading-tight">
-                  <span className="truncate text-[13px] font-medium">{account.label}</span>
+                  <span className="truncate" style={typographyStyle('ui.body-strong')}>{account.label}</span>
                   {account.secondaryLabel ? (
-                    <span className="truncate text-[11px] text-muted-foreground">
+                    <span className="truncate text-muted-foreground" style={typographyStyle('ui.caption')}>
                       {account.secondaryLabel}
                     </span>
                   ) : null}
