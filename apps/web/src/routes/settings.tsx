@@ -25,6 +25,7 @@ import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/cn'
 import { APP_ROUTES } from '@/lib/app-routes'
+import { typographyStyle } from '@/lib/design-system'
 
 type SettingsIcon = ComponentType<{
   size?: number | string
@@ -60,8 +61,8 @@ const settingsHeaderBaseClass =
   'flex shrink-0 items-center gap-2.5 border-b border-border py-3'
 const settingsHeaderIconClass =
   'flex size-7 shrink-0 items-center justify-center rounded-[7px] bg-muted ring-1 ring-border/50'
-const settingsHeaderTitleClass = 'truncate text-[13px] font-semibold leading-tight'
-const settingsHeaderDescriptionClass = 'truncate text-[11px] text-muted-foreground'
+const settingsHeaderTitleClass = 'truncate'
+const settingsHeaderDescriptionClass = 'truncate text-muted-foreground'
 
 function SettingsNavigation() {
   return (
@@ -71,8 +72,8 @@ function SettingsNavigation() {
           <IconSettings2 className="size-4" />
         </span>
         <div className="min-w-0">
-          <h1 className={settingsHeaderTitleClass}>Settings</h1>
-          <p className={settingsHeaderDescriptionClass}>Current controls</p>
+          <h1 className={settingsHeaderTitleClass} style={typographyStyle('ui.body-strong')}>Settings</h1>
+          <p className={settingsHeaderDescriptionClass} style={typographyStyle('ui.caption')}>Current controls</p>
         </div>
       </div>
 
@@ -110,8 +111,8 @@ function SettingsHeader({ section }: { section: SettingsSection }) {
         <SectionIcon className="size-4 text-muted-foreground" />
       </span>
       <div className="min-w-0">
-        <h2 className={settingsHeaderTitleClass}>{section.label}</h2>
-        <p className={settingsHeaderDescriptionClass}>{section.description}</p>
+        <h2 className={settingsHeaderTitleClass} style={typographyStyle('ui.body-strong')}>{section.label}</h2>
+        <p className={settingsHeaderDescriptionClass} style={typographyStyle('ui.caption')}>{section.description}</p>
       </div>
     </header>
   )
@@ -147,9 +148,9 @@ function SettingsRow({
   return (
     <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <Label className="text-[13px] font-medium">{label}</Label>
+        <Label style={typographyStyle('ui.body-strong')}>{label}</Label>
         {description ? (
-          <p className="mt-1 max-w-[46ch] text-[11.5px] leading-5 text-muted-foreground">
+          <p className="mt-1 max-w-[46ch] text-muted-foreground" style={typographyStyle('ui.caption')}>
             {description}
           </p>
         ) : null}
@@ -167,13 +168,13 @@ function AccountSettings() {
           description="Current-user settings are resolved from the browser session, not a user id in the URL."
           label="Signed-in user"
         >
-          <span className="text-[13px] font-medium text-muted-foreground">Jon</span>
+          <span className="text-muted-foreground" style={typographyStyle('ui.body-strong')}>Jon</span>
         </SettingsRow>
         <SettingsRow
           description="Workspace-specific settings will live under /w/{workspace}/settings/workspace/{section}."
           label="Settings scope"
         >
-          <span className="font-mono text-[12px] text-muted-foreground">/settings/user/account</span>
+          <span className="text-muted-foreground" style={typographyStyle('code.inline')}>/settings/user/account</span>
         </SettingsRow>
       </SettingsPanel>
     </div>
