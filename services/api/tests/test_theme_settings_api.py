@@ -28,6 +28,7 @@ class ThemeSettingsApiTests(unittest.TestCase):
         chattr_test_configure(self.tmp.name, session_token="theme-test-token")
         app_module.room_settings["selected_theme"] = "night"
         app_module.room_settings["fonts"] = {}
+        app_module.room_settings["type_overrides"] = {"roles": {}}
         app_module._save_settings()
         self.client = TestClient(app_module.app)
 
@@ -71,6 +72,58 @@ class ThemeSettingsApiTests(unittest.TestCase):
         saved = json.loads(settings_path.read_text("utf-8"))
         self.assertEqual(saved["fonts"], {"ui": "geist", "mono": "ibm-plex-mono"})
 
+    def test_patch_settings_persists_type_overrides(self):
+        response = self.client.patch(
+            "/api/settings",
+            headers=_headers(),
+            json={
+                "type_overrides": {
+                    "roles": {
+                        "display.title": {
+                            "family": "space-grotesk",
+                            "size": "32px",
+                            "line": "38px",
+                            "weight": 650,
+                        },
+                    },
+                },
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        expected = {
+            "roles": {
+                "display.title": {
+                    "family": "space-grotesk",
+                    "size": "32px",
+                    "line": "38px",
+                    "weight": 650,
+                },
+            },
+        }
+        self.assertEqual(response.json()["type_overrides"], expected)
+        settings_path = Path(self.tmp.name) / "settings.json"
+        saved = json.loads(settings_path.read_text("utf-8"))
+        self.assertEqual(saved["type_overrides"], expected)
+
+    def test_patch_settings_rejects_unknown_type_override_key(self):
+        response = self.client.patch(
+            "/api/settings",
+            headers=_headers(),
+            json={
+                "type_overrides": {
+                    "roles": {
+                        "display.title": {
+                            "shadow": "large",
+                        },
+                    },
+                },
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"], "type_overrides.shadow is not available")
+
     def test_patch_settings_rejects_unknown_font_slot(self):
         response = self.client.patch(
             "/api/settings",
@@ -89,6 +142,7 @@ class ThemeSettingsApiTests(unittest.TestCase):
         self.assertEqual(body["required"], ["selected_theme"])
         self.assertIn("selected_theme", body["properties"])
         self.assertIn("fonts", body["properties"])
+        self.assertIn("type_overrides", body["properties"])
         self.assertNotIn("font", body["properties"])
         self.assertNotIn("contrast", body["properties"])
 

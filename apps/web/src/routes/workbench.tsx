@@ -121,6 +121,7 @@ import { ChatApprovalCard } from '@/components/workbench/ChatApprovalCard'
 import { BoardDock } from '@/components/workbench/BoardDock'
 import { DockWorkspace } from '@/components/workbench/DockWorkspace'
 import { JobsDock } from '@/components/workbench/JobsDock'
+import { JobProposalCard } from '@/components/workbench/JobProposalCard'
 import { InteractiveTerminal } from '@/components/workbench/InteractiveTerminal'
 import { AgentLauncherDialog } from '@/components/workbench/launcher/AgentLauncherDialog'
 import { WorkspaceFileList, WorkspaceFileTree } from '@/components/workbench/WorkspaceFileTree'
@@ -1410,15 +1411,24 @@ function toWorkbenchMessage(message: ChattrRoomMessage): WorkbenchMessage {
 function WorkbenchChatMessage({
   index,
   message,
+  onJobAccepted,
 }: {
   index: number
   message: WorkbenchMessage
+  onJobAccepted?: (jobId: number) => void
 }) {
   const kind = message.raw?.type
   if (kind === 'approval_card' && message.raw) {
     return (
       <div className="flex w-full justify-start">
         <ChatApprovalCard message={message.raw} />
+      </div>
+    )
+  }
+  if (kind === 'job_proposal' && message.raw) {
+    return (
+      <div className="flex w-full justify-start">
+        <JobProposalCard message={message.raw} onAccepted={onJobAccepted} />
       </div>
     )
   }
@@ -1532,6 +1542,10 @@ export default function WorkbenchPage() {
 
   const handleDockTabClick = useCallback((tab: DockTabId) => {
     openDockTab(tab)
+  }, [openDockTab])
+
+  const handleJobAccepted = useCallback((_jobId: number) => {
+    openDockTab('jobs')
   }, [openDockTab])
 
   const handleNewSession = useCallback(() => {
@@ -1667,6 +1681,7 @@ export default function WorkbenchPage() {
                         index={i}
                         key={m.id ?? `${m.role}-${i}`}
                         message={m}
+                        onJobAccepted={handleJobAccepted}
                       />
                     ))}
                   </ConversationContent>
@@ -1824,7 +1839,7 @@ export default function WorkbenchPage() {
                       <TabsContent value="jobs" className={dockWorkspaceContentClassName}>
                         <DockWorkspace
                           title="Jobs"
-                          path="Open, Done, Closed"
+                          path="To do, Active, Closed"
                           icon={IconBriefcase}
                           onClose={closeRightDock}
                           main={<JobsDock />}

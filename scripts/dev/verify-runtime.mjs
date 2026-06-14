@@ -3,11 +3,13 @@ import { spawn, spawnSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { createServer } from 'node:net'
 
+import { kaiChattrApiUvEnvironmentPath } from '../lib/kai-chattr-api-uv-env.mjs'
 import { KAI_CHATTR_PORTS, localApiUrl, localWebUrl } from '../lib/kai-chattr-dev-ports.mjs'
 
 const token = (process.env.KAI_CHATTR_SESSION_TOKEN ?? '').trim() || randomBytes(32).toString('hex')
 const env = {
   ...process.env,
+  UV_PROJECT_ENVIRONMENT: kaiChattrApiUvEnvironmentPath(),
   KAI_CHATTR_SESSION_TOKEN: token,
   VITE_KAI_CHATTR_SESSION_TOKEN: token,
 }

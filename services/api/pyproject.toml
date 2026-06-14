@@ -27,8 +27,8 @@ dependencies = [
 ]
 
 [tool.uv]
-# Repo on drive E: and uv cache elsewhere often breaks hardlinks during sync;
-# a half-written .venv then yields "No pyvenv.cfg file" and the server never starts.
+# Repo on drive E: and uv cache elsewhere often breaks hardlinks during sync.
+# Use UV_PROJECT_ENVIRONMENT (see scripts/dev/api-uv-env.ps1) — no repo-local .venv.
 link-mode = "copy"
 
 [dependency-groups]

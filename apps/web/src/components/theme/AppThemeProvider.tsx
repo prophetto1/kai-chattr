@@ -17,9 +17,13 @@ import {
 } from '@/lib/theme-api'
 import type { ThemeSummary } from '@/lib/theme-api'
 import {
+  applyThemeTypeVariables,
+  builtInDefaultTheme,
   fontSlotCatalog,
+  mergeThemeWithTypeOverrides,
   type FontFaceOption,
   type FontSlotName,
+  type ThemeTypeOverrides,
 } from '@/lib/design-system'
 
 const DEFAULT_THEME_ID = 'night'
@@ -28,7 +32,7 @@ const FONT_SLOT_LABELS: Record<FontSlotName, string> = {
   ui: 'Interface',
   display: 'Display',
   prose: 'Reading',
-  mono: 'Mono',
+  mono: 'Code',
 }
 
 const FONT_SLOT_DESCRIPTIONS: Record<FontSlotName, string> = {
@@ -120,7 +124,11 @@ type AppThemeContextValue = {
   setTheme: (themeId: string) => void
   themes: ThemeSummary[]
   fontSlots: FontSlotView[]
-  setFontFamily: (slot: FontSlotName, value: string) => void
+  typeOverrides: ThemeTypeOverrides
+  saveTypographySettings: (settings: {
+    fonts: Partial<Record<FontSlotName, string>>
+    typeOverrides: ThemeTypeOverrides
+  }) => void
   settingsSchema: WorkbenchSettingsSchema | null
 }
 
@@ -166,19 +174,30 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
     })
   }, [savedFonts])
 
+  const typeOverrides = useMemo<ThemeTypeOverrides>(() => {
+    const rawOverrides = settingsQuery.data?.type_overrides
+    return rawOverrides && typeof rawOverrides === 'object' ? rawOverrides : { roles: {} }
+  }, [settingsQuery.data?.type_overrides])
+
+  const activeTypographyTheme = useMemo(
+    () => mergeThemeWithTypeOverrides(builtInDefaultTheme, typeOverrides),
+    [typeOverrides],
+  )
+
   useEffect(() => {
     applyThemeClasses(themes, selectedTheme)
   }, [themes, selectedTheme])
 
   useEffect(() => {
     const root = document.documentElement
+    applyThemeTypeVariables(root, activeTypographyTheme)
     for (const slot of fontSlots) {
       const option = slot.options.find((candidate) => candidate.value === slot.selected)
       if (option) {
         root.style.setProperty(slot.cssVariable, option.stack)
       }
     }
-  }, [fontSlots])
+  }, [activeTypographyTheme, fontSlots])
 
   const updateSettingsMutation = useMutation({
     mutationFn: patchSettings,
@@ -221,13 +240,20 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
       },
       themes,
       fontSlots,
-      setFontFamily: (slot, value) => {
-        const entry = fontSlotCatalog().find((candidate) => candidate.slot === slot)
-        if (!entry || !entry.options.some((option) => option.value === value)) {
-          return
+      typeOverrides,
+      saveTypographySettings: ({ fonts, typeOverrides: nextTypeOverrides }) => {
+        const normalizedFonts: Partial<Record<FontSlotName, string>> = {}
+        const catalog = fontSlotCatalog()
+        for (const entry of catalog) {
+          const value = fonts[entry.slot]
+          if (typeof value === 'string' && entry.options.some((option) => option.value === value)) {
+            normalizedFonts[entry.slot] = value
+          }
         }
-        const currentFonts = (settingsQuery.data?.fonts ?? {}) as Partial<Record<FontSlotName, string>>
-        updateSettingsMutation.mutate({ fonts: { ...currentFonts, [slot]: value } })
+        updateSettingsMutation.mutate({
+          fonts: normalizedFonts,
+          type_overrides: { roles: nextTypeOverrides.roles ?? {} },
+        })
       },
       settingsSchema: settingsSchemaQuery.data ?? null,
     }),
@@ -235,6 +261,7 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
       selectedTheme,
       themes,
       fontSlots,
+      typeOverrides,
       settingsQuery.data,
       settingsQuery.error,
       settingsQuery.isLoading,

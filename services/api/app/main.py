@@ -263,6 +263,61 @@ def _selected_theme_id() -> str:
     return _normalize_theme_id(room_settings.get("selected_theme")) or DEFAULT_THEME_ID
 
 
+_TYPE_OVERRIDE_ROLE_KEYS = {"family", "size", "line", "weight"}
+
+
+def _normalize_type_overrides(value):
+    if value is None:
+        return {"roles": {}}, None
+    if not isinstance(value, dict):
+        return None, "type_overrides must be an object"
+
+    roles = value.get("roles", {})
+    if roles is None:
+        roles = {}
+    if not isinstance(roles, dict):
+        return None, "type_overrides.roles must be an object"
+
+    normalized_roles = {}
+    for role_name, role_override in roles.items():
+        if not isinstance(role_name, str) or not role_name.strip():
+            return None, "type_overrides role names must be non-empty strings"
+        if len(role_name) > 120:
+            return None, "type_overrides role names are too long"
+        if not isinstance(role_override, dict):
+            return None, "type_overrides role values must be objects"
+
+        normalized_role = {}
+        for key, raw_value in role_override.items():
+            if key not in _TYPE_OVERRIDE_ROLE_KEYS:
+                return None, f"type_overrides.{key} is not available"
+            if raw_value is None or raw_value == "":
+                continue
+            if key == "family":
+                if not isinstance(raw_value, str):
+                    return None, "type_overrides.family must be a string"
+                value_text = raw_value.strip()
+                if not value_text or len(value_text) > 64:
+                    return None, "type_overrides.family is invalid"
+                normalized_role[key] = value_text
+            elif key in {"size", "line"}:
+                if not isinstance(raw_value, str):
+                    return None, f"type_overrides.{key} must be a string"
+                value_text = raw_value.strip()
+                if not value_text or len(value_text) > 32:
+                    return None, f"type_overrides.{key} is invalid"
+                normalized_role[key] = value_text
+            elif key == "weight":
+                if isinstance(raw_value, bool) or not isinstance(raw_value, (int, float, str)):
+                    return None, "type_overrides.weight must be a number or string"
+                normalized_role[key] = raw_value
+
+        if normalized_role:
+            normalized_roles[role_name] = normalized_role
+
+    return {"roles": normalized_roles}, None
+
+
 def _load_settings():
     global room_settings
     p = _settings_path()
@@ -278,6 +333,8 @@ def _load_settings():
     elif "general" not in room_settings["channels"]:
         room_settings["channels"].insert(0, "general")
     room_settings["selected_theme"] = _selected_theme_id()
+    normalized_type_overrides, _ = _normalize_type_overrides(room_settings.get("type_overrides"))
+    room_settings["type_overrides"] = normalized_type_overrides or {"roles": {}}
 
 
 def _save_settings():
@@ -1445,6 +1502,10 @@ async def websocket_endpoint(websocket: WebSocket):
                     selected_theme = _normalize_theme_id(new["selected_theme"])
                     if selected_theme:
                         room_settings["selected_theme"] = selected_theme
+                if "type_overrides" in new:
+                    type_overrides, type_overrides_error = _normalize_type_overrides(new.get("type_overrides"))
+                    if type_overrides_error is None:
+                        room_settings["type_overrides"] = type_overrides
                 if "rules_refresh_interval" in new:
                     try:
                         ri = int(new["rules_refresh_interval"])
@@ -1814,9 +1875,10 @@ async def patch_settings(request: Request):
 
     selected_theme = body.get("selected_theme")
     fonts = body.get("fonts")
-    if selected_theme is None and fonts is None:
+    type_overrides = body.get("type_overrides")
+    if selected_theme is None and fonts is None and type_overrides is None:
         return JSONResponse(
-            {"error": "selected_theme or fonts is required"},
+            {"error": "selected_theme, fonts, or type_overrides is required"},
             status_code=400,
         )
 
@@ -1847,6 +1909,12 @@ async def patch_settings(request: Request):
                 return JSONResponse({"error": "font value must be a string"}, status_code=400)
         normalized_fonts = dict(fonts)
 
+    normalized_type_overrides: dict | None = None
+    if type_overrides is not None:
+        normalized_type_overrides, type_overrides_error = _normalize_type_overrides(type_overrides)
+        if type_overrides_error:
+            return JSONResponse({"error": type_overrides_error}, status_code=400)
+
     if normalized_theme:
         room_settings["selected_theme"] = normalized_theme
     if normalized_fonts is not None:
@@ -1859,6 +1927,8 @@ async def patch_settings(request: Request):
             else:
                 current_fonts[slot] = value
         room_settings["fonts"] = current_fonts
+    if normalized_type_overrides is not None:
+        room_settings["type_overrides"] = normalized_type_overrides
     _save_settings()
     _schedule_runtime_coroutine(broadcast_settings())
     return room_settings

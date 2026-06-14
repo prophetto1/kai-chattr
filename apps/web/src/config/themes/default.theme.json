@@ -1,0 +1,196 @@
+{
+  "$schema": "../theme.schema.json",
+  "id": "default",
+  "label": "Default",
+  "description": "Built-in base theme. User themes and personal overrides layer on top of this JSON.",
+  "colorScheme": "dark",
+  "colors": {},
+  "type": {
+    "roles": {
+      "display.hero": {
+        "family": "display",
+        "size": "56px",
+        "line": "60px",
+        "weight": 600,
+        "tracking": "-0.03em"
+      },
+      "display.title": {
+        "family": "display",
+        "size": "28px",
+        "line": "34px",
+        "weight": 600,
+        "tracking": "-0.01em"
+      },
+      "display.subtitle": {
+        "family": "display",
+        "size": "20px",
+        "line": "26px",
+        "weight": 500,
+        "tracking": "-0.01em"
+      },
+      "ui.lg": {
+        "family": "ui",
+        "size": "16px",
+        "line": "22px",
+        "weight": 500
+      },
+      "ui.md": {
+        "family": "ui",
+        "size": "14px",
+        "line": "20px",
+        "weight": 400
+      },
+      "ui.body": {
+        "family": "ui",
+        "size": "13px",
+        "line": "18px",
+        "weight": 400,
+        "tracking": "-0.006em"
+      },
+      "ui.body-strong": {
+        "family": "ui",
+        "size": "13px",
+        "line": "18px",
+        "weight": 500,
+        "tracking": "-0.006em"
+      },
+      "ui.body-sm": {
+        "family": "ui",
+        "size": "12px",
+        "line": "16px",
+        "weight": 400
+      },
+      "ui.label": {
+        "family": "ui",
+        "size": "12px",
+        "line": "16px",
+        "weight": 500
+      },
+      "ui.caption": {
+        "family": "ui",
+        "size": "11px",
+        "line": "16px",
+        "weight": 400,
+        "tracking": "0.005em"
+      },
+      "ui.overline": {
+        "family": "ui",
+        "size": "11px",
+        "line": "14px",
+        "weight": 600,
+        "tracking": "0.12em",
+        "transform": "uppercase"
+      },
+      "ui.micro": {
+        "family": "ui",
+        "size": "10px",
+        "line": "14px",
+        "weight": 400
+      },
+      "prose.body": {
+        "family": "prose",
+        "size": "16px",
+        "line": "26px",
+        "weight": 400
+      },
+      "prose.h1": {
+        "family": "display",
+        "size": "30px",
+        "line": "36px",
+        "weight": 600,
+        "tracking": "-0.02em"
+      },
+      "prose.h2": {
+        "family": "display",
+        "size": "22px",
+        "line": "28px",
+        "weight": 600,
+        "tracking": "-0.02em"
+      },
+      "prose.h3": {
+        "family": "display",
+        "size": "18px",
+        "line": "24px",
+        "weight": 600,
+        "tracking": "-0.01em"
+      },
+      "prose.h4": {
+        "family": "display",
+        "size": "16px",
+        "line": "22px",
+        "weight": 600
+      },
+      "code.block": {
+        "family": "mono",
+        "size": "13px",
+        "line": "20px",
+        "weight": 400
+      },
+      "code.inline": {
+        "family": "mono",
+        "size": "12px",
+        "line": "16px",
+        "weight": 400
+      },
+      "code.diff": {
+        "family": "mono",
+        "size": "11px",
+        "line": "18px",
+        "weight": 400
+      },
+      "code.stat": {
+        "family": "mono",
+        "size": "10px",
+        "line": "14px",
+        "weight": 500,
+        "numeric": "tabular-nums"
+      },
+      "numeric": {
+        "family": "ui",
+        "size": "13px",
+        "line": "18px",
+        "weight": 500,
+        "numeric": "tabular-nums"
+      },
+      "workbench.fileListHeader": {
+        "family": "ui",
+        "size": "11px",
+        "line": "16px",
+        "weight": 500,
+        "tracking": "normal"
+      },
+      "workbench.fileRow": {
+        "family": "ui",
+        "size": "12px",
+        "line": "16px",
+        "weight": 400,
+        "selectedWeight": 500,
+        "rowHeight": "22px",
+        "tracking": "normal"
+      },
+      "workbench.fileRowMeta": {
+        "family": "ui",
+        "size": "11px",
+        "line": "16px",
+        "weight": 400,
+        "tracking": "normal"
+      },
+      "workbench.fileTreeStat": {
+        "family": "mono",
+        "size": "10px",
+        "line": "14px",
+        "weight": 500,
+        "numeric": "tabular-nums",
+        "tracking": "normal"
+      },
+      "workbench.diffCode": {
+        "family": "mono",
+        "size": "11px",
+        "line": "18px",
+        "weight": 400,
+        "tracking": "normal"
+      }
+    },
+    "areas": {}
+  }
+}

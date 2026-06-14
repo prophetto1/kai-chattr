@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { kaiChattrApiUvEnvironmentPath } from '../lib/kai-chattr-api-uv-env.mjs';
 import { KAI_CHATTR_PORTS, localOtelHttpTracesUrl } from '../lib/kai-chattr-dev-ports.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -27,6 +28,7 @@ logEvent('kai_chattr.runtime.dev_start', {
 
 const childEnv = {
   ...process.env,
+  UV_PROJECT_ENVIRONMENT: kaiChattrApiUvEnvironmentPath(),
   KAI_CHATTR_SESSION_TOKEN: sessionToken,
   VITE_KAI_CHATTR_SESSION_TOKEN: sessionToken,
   ...(databaseUrl

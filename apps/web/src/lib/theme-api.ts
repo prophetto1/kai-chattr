@@ -15,9 +15,21 @@ export type ThemeCatalog = {
 
 export type FontSlot = 'ui' | 'display' | 'prose' | 'mono'
 
+export type TypographyRoleOverride = {
+  family?: string
+  size?: string
+  line?: string
+  weight?: number | string
+}
+
+export type TypeOverrides = {
+  roles?: Record<string, TypographyRoleOverride>
+}
+
 export type WorkbenchSettings = {
   selected_theme?: string
   fonts?: Partial<Record<FontSlot, string>>
+  type_overrides?: TypeOverrides
   [key: string]: unknown
 }
 
@@ -40,6 +52,7 @@ export type WorkbenchSettingsSchema = {
   properties: {
     selected_theme?: SettingsSchemaField
     fonts?: SettingsSchemaField
+    type_overrides?: SettingsSchemaField
   }
   required?: string[]
 }

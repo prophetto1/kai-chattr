@@ -160,11 +160,15 @@ sops exec-env secrets/dev/neon.yaml "pnpm run dev"
 
 ### Work on the API
 
-```bash
+```powershell
+# From repo root — sets UV_PROJECT_ENVIRONMENT (no repo-local .venv)
+. ./scripts/dev/api-uv-env.ps1
 cd services/api
 uv sync
-uv run python -m pytest -q
+uv run pytest -q
 ```
+
+Or use the wrapped scripts: `pnpm run neon:dev:api`, `pnpm run neon:dev:migrate`.
 
 ### Verify everything before you push
 

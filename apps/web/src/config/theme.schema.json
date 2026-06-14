@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kai-chattr.local/schemas/theme.schema.json",
+  "title": "Kai Chattr Theme",
+  "type": "object",
+  "required": ["id", "label"],
+  "properties": {
+    "id": { "type": "string" },
+    "label": { "type": "string" },
+    "description": { "type": "string" },
+    "extends": { "type": "string" },
+    "colorScheme": { "type": "string", "enum": ["light", "dark"] },
+    "colors": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "type": {
+      "type": "object",
+      "properties": {
+        "scales": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
+        "roles": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "family": { "type": "string" },
+              "size": { "type": "string" },
+              "line": { "type": "string" },
+              "weight": { "type": ["number", "string"] },
+              "selectedWeight": { "type": ["number", "string"] },
+              "tracking": { "type": "string" },
+              "transform": { "type": "string" },
+              "numeric": { "type": "string" },
+              "rowHeight": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "areas": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "family": { "type": "string" },
+              "size": { "type": "string" },
+              "line": { "type": "string" },
+              "weight": { "type": ["number", "string"] },
+              "tracking": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

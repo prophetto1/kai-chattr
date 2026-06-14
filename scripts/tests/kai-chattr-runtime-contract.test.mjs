@@ -70,6 +70,7 @@ test('runtime files required by the contract exist', () => {
     'ops/otel/collector.local.yaml',
     'scripts/dev/check-db-from-env.ps1',
     'scripts/dev/database-env.ps1',
+    'scripts/dev/api-uv-env.ps1',
     'scripts/dev/run-alembic-from-env.ps1',
     'scripts/dev/run-api-from-env.ps1',
     'scripts/deploy/sync-fly-secrets.ps1',
@@ -112,6 +113,16 @@ test('runtime probe uses decisions as the Board tab id and locks it to the locke
   assert.match(probe, /const decisionsTab = tabs\.find\(\(tab\) => tab\.id === 'decisions'\);/);
   assert.match(probe, /decisionsTab\?\.category !== 'locked'/);
   assert.doesNotMatch(probe, /for \(const required of \['rules', 'jobs', 'locked', 'pins'\]\)/);
+});
+
+test('dev orchestrator pins API uv environment (no repo-local .venv)', () => {
+  const startScript = fs.readFileSync(path.join(repoRoot, 'scripts/dev/start-kai-chattr.mjs'), 'utf8');
+  const uvEnvHelper = fs.readFileSync(path.join(repoRoot, 'scripts/lib/kai-chattr-api-uv-env.mjs'), 'utf8');
+
+  assert.match(startScript, /kai-chattr-api-uv-env\.mjs/);
+  assert.match(startScript, /UV_PROJECT_ENVIRONMENT:\s*kaiChattrApiUvEnvironmentPath\(\)/);
+  assert.match(uvEnvHelper, /kai-chattr-services-api/);
+  assert.doesNotMatch(startScript, /services\/api\/\.venv/);
 });
 
 test('deploy workflows map branches without browser-exposed session tokens', () => {

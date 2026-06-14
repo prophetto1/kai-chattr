@@ -76,6 +76,29 @@ _SCHEMA_FALLBACK: dict[str, Any] = {
             "additionalProperties": False,
             "default": {},
         },
+        "type_overrides": {
+            "title": "Typography overrides",
+            "description": "User-authored typography role overrides layered over the built-in default theme JSON.",
+            "type": "object",
+            "properties": {
+                "roles": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                            "family": {"type": "string", "minLength": 1, "maxLength": 64},
+                            "size": {"type": "string"},
+                            "line": {"type": "string"},
+                            "weight": {"type": ["number", "string"]},
+                        },
+                        "additionalProperties": False,
+                    },
+                    "default": {},
+                },
+            },
+            "additionalProperties": False,
+            "default": {"roles": {}},
+        },
     },
     "additionalProperties": True,
 }
@@ -130,6 +153,7 @@ DEFAULT_ROOM_SETTINGS = {
     "title": "noname",
     "username": "user",
     "fonts": {},
+    "type_overrides": {"roles": {}},
     "channels": ["general"],
     "history_limit": "all",
     "custom_roles": [],

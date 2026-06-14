@@ -53,12 +53,16 @@ No manual step.
 
 ## Python environment (`services/api`)
 
-- `services/api/.venv` is machine-local and uv-managed. Never commit it (it is gitignored), never
-  edit it by hand, never point tooling at its interpreter directly.
+- **No repo-local `.venv`.** Dependencies live in a uv project environment named
+  `kai-chattr-services-api` (Windows:
+  `%LOCALAPPDATA%\uv\envs\kai-chattr-services-api`). Repo scripts set
+  `UV_PROJECT_ENVIRONMENT` to that path before every `uv` invocation. Do not create, use, or
+  document `services/api/.venv`.
 - `services/api/uv.lock` + `pyproject.toml` are the dependency source of truth and are tracked.
-- Always launch and test through `uv run` from `services/api` (e.g. `uv run python -m app.cli`,
-  `uv run python -m pytest`). Never invoke a bare global interpreter with `-m app.cli` — it does
-  not resolve the project venv and the server fails to bind.
-- Rebuild a broken environment by deleting `.venv` and running `uv sync`; do not patch it in place.
+- Always launch and test through `uv run` from `services/api` with `UV_PROJECT_ENVIRONMENT` set
+  (e.g. `pnpm run dev`, `pnpm run neon:dev:api`, or dot-source `scripts/dev/api-uv-env.ps1`
+  first). Never invoke a bare global interpreter with `-m app.cli` — it will not resolve deps.
+- Rebuild a broken environment: delete the uv env directory above, then run `uv sync` from
+  `services/api` with `UV_PROJECT_ENVIRONMENT` still pointing at that path.
 
 @RTK.md

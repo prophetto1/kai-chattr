@@ -10,7 +10,7 @@ $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 
 Use-KaiChattrDatabaseUrl -Environment $Environment
 
-$env:UV_PROJECT_ENVIRONMENT = Join-Path $env:LOCALAPPDATA "uv\envs\kai-chattr-services-api"
+. (Join-Path $PSScriptRoot "api-uv-env.ps1")
 
 Push-Location (Join-Path $RepoRoot "services\api")
 try {

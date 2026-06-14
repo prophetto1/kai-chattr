@@ -19,7 +19,7 @@ The app's typography was migrated onto a named **role ladder** (`design-system.j
 | Working branch | `dev` (never push to `main`; PRs go main) |
 | Web build | `pnpm --dir apps/web run build` (run from repo root; ~50s; must exit 0) |
 | Web typecheck only | `pnpm --dir apps/web exec tsc --noEmit` |
-| Backend tests | from `services/api`: `uv run --with pytest pytest -q` (tests are `unittest`-style; the env has no global pytest, so `--with pytest`) |
+| Backend tests | from `services/api` with `UV_PROJECT_ENVIRONMENT` set (dot-source `scripts/dev/api-uv-env.ps1` first, or use `pnpm run neon:dev:*` wrappers): `uv run pytest -q` |
 | Dev stack (DB-backed) | `pnpm run neon:dev:runtime` (SOPS-injects Neon URL; works non-interactively here). Spawns API + Vite. |
 | Ports | **web (Vite) = 8800**, **API = 8840** (8800 proxies `/api` → 8840). mcp 8841/8842, otel 8837/8838, jaeger 8886. Source: `scripts/lib/kai-chattr-dev-ports.mjs`. |
 | Restart the dev stack | It's orchestrated by `node scripts/dev/start-kai-chattr.mjs` (one parent that spawns API+Vite and tears both down if one dies). To restart: `taskkill /PID <orchestrator-node-pid> /T /F` (find via `Get-NetTCPConnection -LocalPort 8800`), then relaunch `pnpm run neon:dev:runtime`. **The API caches the settings schema at import (no `--reload`) — any backend schema change needs this restart.** |

@@ -198,6 +198,14 @@ export function useChattrRoom({ channel = 'general' }: UseChattrRoomOptions = {}
         return
       }
 
+      if (payload.type === 'edit' || payload.type === 'message_update') {
+        const message = normalizeMessage(payload.message)
+        if (message?.channel === channel) {
+          setMessages((current) => mergeMessages(current, [message]))
+        }
+        return
+      }
+
       if (payload.type === 'clear') {
         const clearChannel = typeof payload.channel === 'string' ? payload.channel : undefined
         if (!clearChannel || clearChannel === channel) {
