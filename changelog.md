@@ -4,6 +4,13 @@ Repo-root changelog (decision 2026-06-11: lives here, not in the Planned store).
 
 ## 2026-06-13
 
+### feat(web,api): in-browser per-role font control — the payoff of the typography migration
+- Settings → Appearance now has **4 working typeface pickers** (Interface / Display / Reading / Mono). Selecting a face writes the matching `--font-ui` / `--font-display` / `--font-prose` / `--font-mono` token via `root.style.setProperty`, so every typography role bound to that family repaints **live**. This is what the whole `text-[Npx]` → `typographyStyle` migration was building toward.
+- Faces loaded via `@fontsource`: Geist, Space Grotesk, Source Serif 4, Lora (variable) + IBM Plex Mono (static); Inter + JetBrains Mono already present. Registered `@font-face` family names verified against the catalog stacks (no silent fallback).
+- `design-system.json` `fontFamilies` is the single face authority — each slot gains `default` + `options [{value,label,stack}]`; `fontSlotCatalog()` in `lib/design-system.ts` exposes it. `AppThemeProvider` resolves + applies + persists; `settings.tsx` renders the pickers with a live preview in each face.
+- Removed the **fake** font/contrast controls (they toggled `font-family-*` / `contrast-*` classes that exist in zero CSS): backend `font`/`contrast` → structured `fonts:{ui,display,prose,mono}` object in `workbench_settings` (schema + model + `patch_settings` + WS handler), validated structurally so the FE catalog stays the only face authority (no drift). `theme-api.ts` types updated.
+- Tests: backend `unittest` 11 passed (fonts persist + structural rejection + schema shape); `pnpm --dir apps/web run build` exit 0; 0 `text-[Npx]` literals. Commits `0c34bd8` (faces + catalog) + `387c00a` (wiring). LIVE visual acceptance (pick a face → watch it change) pending a dev-API restart — the settings schema is cached at import (no `--reload`).
+
 ### feat(board): canonical job status lanes plus archived flag (Slice 1)
 - Migrated Board jobs from legacy `open` / `done` / `archived` status output to canonical `todo` / `active` / `closed` status output plus a separate `archived` Boolean. Legacy inputs still normalize for compatibility (`open` -> `todo`, `done` -> `active`, `archived` -> `closed` + `archived:true`).
 - Added Alembic migration `20260613_0009_board_status_canonical_archived.py` to add `board_workflows.archived` default false and backfill legacy status rows.
