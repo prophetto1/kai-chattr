@@ -4,6 +4,12 @@ Repo-root changelog (decision 2026-06-11: lives here, not in the Planned store).
 
 ## 2026-06-13
 
+### feat(web): typography role system — generalize the design-system.json ladder (foundation)
+- Grew `apps/web/src/config/design-system.json` from 5 workbench-only roles to a full typography ladder. Families: `ui` / `display` / `mono` / `prose` — `display` + `prose` are swappable slots (`--font-display` / `--font-prose` in `tokens.css`, Inter for now). Roles (~20 + the 5 kept `workbench.*`): `display.hero/title/subtitle`, `ui.lg/md/body/body-strong/label/caption/overline`, `prose.body/h1-h4`, `code.block/inline/diff/stat`, `numeric` — each with family + size + weight + line-height (+ optional tracking / uppercase / tabular figures).
+- Generalized `design-system.schema.json`: removed the hardcoded required-role list; added `textTransform` and `fontVariantNumeric` to the role shape so `ui.overline` (uppercase) and `numeric` / `code.stat` (tabular) are first-class. `lib/design-system.ts` `typographyStyle()` now emits those and guards optional fields; `TypographyRoleName` auto-derives from the config.
+- This is the FOUNDATION for migrating the 154 hardcoded `text-[Npx]` literals (across 21 files) onto named roles, in reviewable per-surface batches.
+- Tests: `pnpm --dir apps/web run build` exit 0 (existing `workbench.*` consumers still type-check).
+
 ### refactor(web): consolidate fonts — 2 canonical tokens, drop 2 dead typefaces
 - Removed **Plus Jakarta Sans** (loaded via `@fontsource` but referenced by nothing): `apps/web/src/main.tsx` drops its 4 weight imports → CSS bundle **246.73 → 226.29 kB** (gzip 64.44 → 55.29). Removed the **Instrument Serif phantom** (`--kai-font-serif`/`--bd-font-serif`: named but never loaded or used).
 - Consolidated the 14 tangled font variables in `tokens.css` to **2 canonical tokens** — `--font-ui` (Inter, all product surfaces) and `--font-mono` (JetBrains Mono, code/terminal). The legacy `--bd-font-*` / `--kai-font-*` / `--font-*` names now **forward** to those two (single source of truth; behavior unchanged — `--font-mono` still overrides Tailwind's default so the `font-mono` utility = JetBrains). Forwarders marked deprecated for a later sweep.

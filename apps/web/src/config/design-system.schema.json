@@ -29,14 +29,7 @@
           "type": "object",
           "additionalProperties": {
             "$ref": "#/$defs/typographyRole"
-          },
-          "required": [
-            "workbench.fileListHeader",
-            "workbench.fileRow",
-            "workbench.fileRowMeta",
-            "workbench.fileTreeStat",
-            "workbench.diffCode"
-          ]
+          }
         }
       }
     }
@@ -110,6 +103,13 @@
               "pattern": "^-?\\\\d+(\\\\.\\\\d+)?em$"
             }
           ]
+        },
+        "textTransform": {
+          "type": "string",
+          "enum": ["none", "uppercase", "lowercase", "capitalize"]
+        },
+        "fontVariantNumeric": {
+          "type": "string"
         },
         "purpose": {
           "type": "string"

@@ -3,23 +3,181 @@
   "version": 1,
   "fontFamilies": {
     "ui": {
-      "cssVariable": "--bd-font-ui",
+      "cssVariable": "--font-ui",
       "stack": ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
       "purpose": "Default product UI text and dense workbench chrome."
     },
     "display": {
-      "cssVariable": "--bd-font-display",
+      "cssVariable": "--font-display",
       "stack": ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
-      "purpose": "Product headings until a distinct display face is assigned."
+      "purpose": "Headings, page titles, and brand moments. Inter until a distinct display face is assigned via --font-display in tokens.css."
     },
     "mono": {
-      "cssVariable": "--bd-font-mono",
+      "cssVariable": "--font-mono",
       "stack": ["JetBrains Mono", "IBM Plex Mono", "ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
       "purpose": "Code, terminal, diff, and tabular technical text."
+    },
+    "prose": {
+      "cssVariable": "--font-prose",
+      "stack": ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+      "purpose": "Chat messages and long-form/markdown reading. Inter until a reading face is assigned via --font-prose in tokens.css."
     }
   },
   "typography": {
     "roles": {
+      "display.hero": {
+        "fontFamily": "display",
+        "fontSize": "56px",
+        "lineHeight": "60px",
+        "fontWeight": 600,
+        "letterSpacing": "-0.03em",
+        "purpose": "Landing hero / largest brand statement."
+      },
+      "display.title": {
+        "fontFamily": "display",
+        "fontSize": "28px",
+        "lineHeight": "34px",
+        "fontWeight": 600,
+        "letterSpacing": "-0.01em",
+        "purpose": "Page and route headings."
+      },
+      "display.subtitle": {
+        "fontFamily": "display",
+        "fontSize": "20px",
+        "lineHeight": "26px",
+        "fontWeight": 500,
+        "letterSpacing": "-0.01em",
+        "purpose": "Section headings inside a page."
+      },
+      "ui.lg": {
+        "fontFamily": "ui",
+        "fontSize": "16px",
+        "lineHeight": "22px",
+        "fontWeight": 500,
+        "purpose": "Card / panel titles, prominent UI headers."
+      },
+      "ui.md": {
+        "fontFamily": "ui",
+        "fontSize": "14px",
+        "lineHeight": "20px",
+        "fontWeight": 400,
+        "purpose": "Input text and slightly roomier body."
+      },
+      "ui.body": {
+        "fontFamily": "ui",
+        "fontSize": "13px",
+        "lineHeight": "18px",
+        "fontWeight": 400,
+        "letterSpacing": "-0.006em",
+        "purpose": "Workhorse: dense body, list rows, message UI."
+      },
+      "ui.body-strong": {
+        "fontFamily": "ui",
+        "fontSize": "13px",
+        "lineHeight": "18px",
+        "fontWeight": 500,
+        "letterSpacing": "-0.006em",
+        "purpose": "Emphasized body: selected rows, sender names, card titles."
+      },
+      "ui.label": {
+        "fontFamily": "ui",
+        "fontSize": "12px",
+        "lineHeight": "16px",
+        "fontWeight": 500,
+        "purpose": "Setting labels, button text, menu/dropdown items."
+      },
+      "ui.caption": {
+        "fontFamily": "ui",
+        "fontSize": "11px",
+        "lineHeight": "16px",
+        "fontWeight": 400,
+        "letterSpacing": "0.005em",
+        "purpose": "Meta, hints, secondary/context text."
+      },
+      "ui.overline": {
+        "fontFamily": "ui",
+        "fontSize": "11px",
+        "lineHeight": "14px",
+        "fontWeight": 600,
+        "letterSpacing": "0.12em",
+        "textTransform": "uppercase",
+        "purpose": "Rail labels, group eyebrows, section overlines."
+      },
+      "prose.body": {
+        "fontFamily": "prose",
+        "fontSize": "16px",
+        "lineHeight": "26px",
+        "fontWeight": 400,
+        "purpose": "Chat message content and rendered markdown body."
+      },
+      "prose.h1": {
+        "fontFamily": "display",
+        "fontSize": "30px",
+        "lineHeight": "36px",
+        "fontWeight": 600,
+        "letterSpacing": "-0.02em",
+        "purpose": "Markdown H1."
+      },
+      "prose.h2": {
+        "fontFamily": "display",
+        "fontSize": "22px",
+        "lineHeight": "28px",
+        "fontWeight": 600,
+        "letterSpacing": "-0.02em",
+        "purpose": "Markdown H2."
+      },
+      "prose.h3": {
+        "fontFamily": "display",
+        "fontSize": "18px",
+        "lineHeight": "24px",
+        "fontWeight": 600,
+        "letterSpacing": "-0.01em",
+        "purpose": "Markdown H3."
+      },
+      "prose.h4": {
+        "fontFamily": "display",
+        "fontSize": "16px",
+        "lineHeight": "22px",
+        "fontWeight": 600,
+        "purpose": "Markdown H4."
+      },
+      "code.block": {
+        "fontFamily": "mono",
+        "fontSize": "13px",
+        "lineHeight": "20px",
+        "fontWeight": 400,
+        "purpose": "Terminal, code blocks, fenced code."
+      },
+      "code.inline": {
+        "fontFamily": "mono",
+        "fontSize": "12px",
+        "lineHeight": "16px",
+        "fontWeight": 400,
+        "purpose": "Inline code and short technical tokens."
+      },
+      "code.diff": {
+        "fontFamily": "mono",
+        "fontSize": "11px",
+        "lineHeight": "18px",
+        "fontWeight": 400,
+        "purpose": "Unified diff code rows and hunk headers."
+      },
+      "code.stat": {
+        "fontFamily": "mono",
+        "fontSize": "10px",
+        "lineHeight": "14px",
+        "fontWeight": 500,
+        "fontVariantNumeric": "tabular-nums",
+        "purpose": "Compact addition/deletion counters and status markers."
+      },
+      "numeric": {
+        "fontFamily": "ui",
+        "fontSize": "13px",
+        "lineHeight": "18px",
+        "fontWeight": 500,
+        "fontVariantNumeric": "tabular-nums",
+        "purpose": "Aligned figures: metrics, counts, durations."
+      },
       "workbench.fileListHeader": {
         "fontFamily": "ui",
         "fontSize": "11px",
@@ -51,6 +209,7 @@
         "fontSize": "10px",
         "lineHeight": "14px",
         "fontWeight": 500,
+        "fontVariantNumeric": "tabular-nums",
         "letterSpacing": "normal",
         "purpose": "Compact addition/deletion counters and file status markers."
       },

@@ -26,8 +26,11 @@ export function typographyStyle(roleName: TypographyRoleName): CSSProperties {
     fontFamily: fontFamilyValue(role.fontFamily),
     fontSize: role.fontSize,
     fontWeight: role.fontWeight,
-    letterSpacing: role.letterSpacing,
     lineHeight: role.lineHeight,
+    letterSpacing: 'letterSpacing' in role ? role.letterSpacing : undefined,
+    textTransform:
+      'textTransform' in role ? (role.textTransform as CSSProperties['textTransform']) : undefined,
+    fontVariantNumeric: 'fontVariantNumeric' in role ? role.fontVariantNumeric : undefined,
   }
 }
 
