@@ -28,6 +28,7 @@ import { APP_ROUTES } from '@/lib/app-routes'
 import { ENGINE_CATALOG, TRUST_PROFILE_SUMMARIES, engineById } from '@/lib/agent-fixtures'
 import { type AgentHome, type TrustProfileName } from '@/lib/agent-system-contract'
 import { cn } from '@/lib/cn'
+import { typographyStyle } from '@/lib/design-system'
 
 const STEPS = ['Intent', 'Identity', 'Home', 'Model & Trust', 'Review'] as const
 
@@ -75,11 +76,11 @@ function ChoiceCard({
       onClick={onClick}
       type="button"
     >
-      <span className="flex items-center gap-2 text-[12.5px] font-medium">
+      <span className="flex items-center gap-2" style={typographyStyle('ui.label')}>
         {label}
         {active ? <IconCheck className="size-3.5 text-primary" /> : null}
       </span>
-      <span className="text-[11px] leading-4 text-muted-foreground">{note}</span>
+      <span className="text-muted-foreground" style={typographyStyle('ui.caption')}>{note}</span>
     </button>
   )
 }
@@ -119,8 +120,8 @@ export default function AgentCreatePage() {
             <IconArrowLeft className="size-4" />
           </Button>
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-[13px] font-semibold leading-tight">Define agent</h1>
-            <p className="truncate text-[11px] text-muted-foreground">
+            <h1 className="truncate" style={typographyStyle('ui.body-strong')}>Define agent</h1>
+            <p className="truncate text-muted-foreground" style={typographyStyle('ui.caption')}>
               Creation is thin — deeper tuning lives in the agent console after provisioning.
             </p>
           </div>
@@ -134,7 +135,7 @@ export default function AgentCreatePage() {
                 <li key={label}>
                   <button
                     className={cn(
-                      'flex w-full items-center gap-2.5 rounded-[5px] px-2.5 py-1.5 text-left text-[12px] transition-colors',
+                      'flex w-full items-center gap-2.5 rounded-[5px] px-2.5 py-1.5 text-left transition-colors',
                       index === step
                         ? 'bg-accent font-medium text-foreground'
                         : 'text-muted-foreground hover:bg-accent/40',
@@ -142,15 +143,17 @@ export default function AgentCreatePage() {
                     )}
                     disabled={index > step}
                     onClick={() => setStep(index)}
+                    style={typographyStyle('ui.label')}
                     type="button"
                   >
                     <span
                       className={cn(
-                        'flex size-5 shrink-0 items-center justify-center rounded-full border text-[10px]',
+                        'flex size-5 shrink-0 items-center justify-center rounded-full border',
                         index < step
                           ? 'border-primary/50 bg-primary/10 text-primary'
                           : 'border-border'
                       )}
+                      style={typographyStyle('ui.micro')}
                     >
                       {index < step ? <IconCheck className="size-3" /> : index + 1}
                     </span>
@@ -185,17 +188,17 @@ export default function AgentCreatePage() {
                   <MicroHeader>Identity — durable; renders into soul.md</MicroHeader>
                   <div className="grid gap-4">
                     <div className="grid gap-1.5">
-                      <Label className="text-[12px]" htmlFor="agent-name">Name</Label>
+                      <Label htmlFor="agent-name" style={typographyStyle('ui.label')}>Name</Label>
                       <Input
                         id="agent-name"
                         onChange={(event) => setName(event.target.value)}
                         placeholder="Matt"
                         value={name}
                       />
-                      <p className="font-mono text-[10.5px] text-muted-foreground/70">{publicId}</p>
+                      <p className="text-muted-foreground/70" style={typographyStyle('code.stat')}>{publicId}</p>
                     </div>
                     <div className="grid gap-1.5">
-                      <Label className="text-[12px]">Role</Label>
+                      <Label style={typographyStyle('ui.label')}>Role</Label>
                       <Select onValueChange={setRole} value={role}>
                         <SelectTrigger className="w-full">
                           <SelectValue />
@@ -210,7 +213,7 @@ export default function AgentCreatePage() {
                       </Select>
                     </div>
                     <div className="grid gap-1.5">
-                      <Label className="text-[12px]" htmlFor="agent-persona">Persona</Label>
+                      <Label htmlFor="agent-persona" style={typographyStyle('ui.label')}>Persona</Label>
                       <Textarea
                         id="agent-persona"
                         onChange={(event) => setPersona(event.target.value)}
@@ -220,7 +223,7 @@ export default function AgentCreatePage() {
                       />
                     </div>
                     <div className="grid gap-1.5">
-                      <Label className="text-[12px]" htmlFor="agent-description">Description</Label>
+                      <Label htmlFor="agent-description" style={typographyStyle('ui.label')}>Description</Label>
                       <Input
                         id="agent-description"
                         onChange={(event) => setDescription(event.target.value)}
@@ -229,7 +232,7 @@ export default function AgentCreatePage() {
                       />
                     </div>
                     <div className="grid gap-1.5">
-                      <Label className="text-[12px]">Accent</Label>
+                      <Label style={typographyStyle('ui.label')}>Accent</Label>
                       <div className="flex gap-2">
                         {ACCENTS.map((swatch) => (
                           <button
@@ -288,7 +291,7 @@ export default function AgentCreatePage() {
                           type="button"
                         >
                           <EngineChip engine={entry} />
-                          <span className="ml-auto text-[10.5px] text-muted-foreground/70">
+                          <span className="ml-auto text-muted-foreground/70" style={typographyStyle('ui.micro')}>
                             {(entry.context_window / 1000).toLocaleString()}k ctx · $
                             {entry.cost_metadata.input_usd_per_mtok}/$
                             {entry.cost_metadata.output_usd_per_mtok} per Mtok
@@ -330,7 +333,7 @@ export default function AgentCreatePage() {
                     </div>
                   </section>
                   {provisionNotice ? (
-                    <div className="rounded-[10px] border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-[11.5px] leading-5 text-amber-600 dark:text-amber-400">
+                    <div className="rounded-[10px] border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-amber-600 dark:text-amber-400" style={typographyStyle('ui.caption')}>
                       Prototype: provisioning becomes available when the agents registry (Plan 1b /
                       Slice 2) lands. This wizard already produces a contract-complete definition —
                       nothing here is thrown away.
@@ -341,7 +344,8 @@ export default function AgentCreatePage() {
 
               <div className="flex items-center justify-between border-t border-border pt-4">
                 <Button
-                  className="h-8 rounded-[5px] text-[12px]"
+                  className="h-8 rounded-[5px]"
+                  style={typographyStyle('ui.label')}
                   disabled={step === 0}
                   onClick={() => setStep((current) => Math.max(0, current - 1))}
                   type="button"
@@ -351,7 +355,8 @@ export default function AgentCreatePage() {
                 </Button>
                 {step < STEPS.length - 1 ? (
                   <Button
-                    className="h-8 rounded-[5px] text-[12px]"
+                    className="h-8 rounded-[5px]"
+                    style={typographyStyle('ui.label')}
                     disabled={!canContinue}
                     onClick={() => setStep((current) => Math.min(STEPS.length - 1, current + 1))}
                     type="button"
@@ -360,7 +365,8 @@ export default function AgentCreatePage() {
                   </Button>
                 ) : (
                   <Button
-                    className="h-8 rounded-[5px] text-[12px]"
+                    className="h-8 rounded-[5px]"
+                    style={typographyStyle('ui.label')}
                     onClick={() => setProvisionNotice(true)}
                     type="button"
                   >
