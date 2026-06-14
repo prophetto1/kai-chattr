@@ -11,6 +11,7 @@ import {
   type AgentRuntimeCard,
 } from '@/lib/terminal-api'
 import { cn } from '@/lib/cn'
+import { typographyStyle } from '@/lib/design-system'
 
 const AUTOHIDE_MS = 8000
 
@@ -95,7 +96,7 @@ export function AgentRuntimeOverlay() {
       >
         <IconRobot className="size-[18px]" />
         {pending > 0 ? (
-          <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-amber-500 text-[10px] font-semibold text-black">
+          <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-amber-500 text-black" style={typographyStyle('ui.micro')}>
             {pending}
           </span>
         ) : liveAgents.length > 0 ? (
@@ -181,28 +182,29 @@ function RuntimeCard(props: {
           {agent.name}
         </span>
         {agent.approval_needed ? (
-          <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-500">
+          <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-amber-500" style={typographyStyle('ui.micro')}>
             Approval needed
           </span>
         ) : (
-          <span className="shrink-0 text-[10px] text-muted-foreground">
+          <span className="shrink-0 text-muted-foreground" style={typographyStyle('ui.micro')}>
             {stale ? 'stale' : 'live'}
           </span>
         )}
       </button>
       {agent.approval_needed && !expanded ? (
-        <div className="truncate px-2.5 pb-2 text-[11px] text-muted-foreground">
+        <div className="truncate px-2.5 pb-2 text-muted-foreground" style={typographyStyle('ui.caption')}>
           {agent.approval_hint}
         </div>
       ) : null}
       {expanded ? (
         <div className="flex flex-col gap-2 border-t px-2.5 py-2">
-          <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded bg-zinc-950 p-2 font-mono text-[10px] leading-snug text-zinc-200">
+          <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded bg-zinc-950 p-2 text-zinc-200" style={typographyStyle('code.stat')}>
             {agent.screen_tail || '(no screen reported)'}
           </pre>
           <div className="flex flex-wrap items-center gap-1.5">
             <Button
-              className="h-6 px-2 text-[11px]"
+              className="h-6 px-2"
+              style={typographyStyle('ui.caption')}
               disabled={sending}
               onClick={() => onSend('y')}
               size="sm"
@@ -210,7 +212,8 @@ function RuntimeCard(props: {
               Approve (y)
             </Button>
             <Button
-              className="h-6 px-2 text-[11px]"
+              className="h-6 px-2"
+              style={typographyStyle('ui.caption')}
               disabled={sending}
               onClick={() => onSend('1')}
               size="sm"
@@ -219,7 +222,8 @@ function RuntimeCard(props: {
               1
             </Button>
             <Button
-              className="h-6 px-2 text-[11px]"
+              className="h-6 px-2"
+              style={typographyStyle('ui.caption')}
               disabled={sending}
               onClick={() => onSend('2')}
               size="sm"
@@ -229,7 +233,8 @@ function RuntimeCard(props: {
             </Button>
             <Button
               aria-label="Send Enter"
-              className="h-6 px-2 text-[11px]"
+              className="h-6 px-2"
+              style={typographyStyle('ui.caption')}
               disabled={sending}
               onClick={() => onSend('')}
               size="sm"
@@ -238,7 +243,8 @@ function RuntimeCard(props: {
               <IconCornerDownLeft className="size-3" />
             </Button>
             <input
-              className="h-6 min-w-0 flex-1 rounded border bg-transparent px-1.5 text-[11px] outline-none"
+              className="h-6 min-w-0 flex-1 rounded border bg-transparent px-1.5 outline-none"
+              style={typographyStyle('ui.caption')}
               onChange={(event) => setCustom(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
