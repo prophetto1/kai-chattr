@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { type WorkbenchCompactRailItem } from '@/components/workbench/WorkbenchCompactRail'
+import { typographyStyle } from '@/lib/design-system'
 
 type ProductSectionPageProps = {
   activeItem: WorkbenchCompactRailItem
@@ -32,10 +33,10 @@ export function ProductSectionPage({
       <Sheet className="min-h-0 min-w-0 flex-1">
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-6 py-3">
           <div className="min-w-0">
-            <h1 className="truncate text-[13px] font-semibold leading-tight">{title}</h1>
-            <p className="truncate text-[11px] text-muted-foreground">{description}</p>
+            <h1 className="truncate" style={typographyStyle('ui.body-strong')}>{title}</h1>
+            <p className="truncate text-muted-foreground" style={typographyStyle('ui.caption')}>{description}</p>
           </div>
-          <Badge className="rounded-[5px] font-mono text-[10px]" variant="outline">
+          <Badge className="rounded-[5px]" style={typographyStyle('code.stat')} variant="outline">
             {route}
           </Badge>
         </header>
@@ -43,7 +44,7 @@ export function ProductSectionPage({
           <div className="mx-auto grid w-full max-w-[1000px] gap-5 px-6 py-7">
             <section className="overflow-hidden rounded-[10px] border border-border bg-card">
               <div className="px-5 py-3.5">
-                <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                <p className="mb-0.5 text-muted-foreground" style={typographyStyle('ui.overline')}>
                   Route contract
                 </p>
                 <h2 className="text-sm font-semibold">{title}</h2>
@@ -52,8 +53,8 @@ export function ProductSectionPage({
               <div className="divide-y divide-border">
                 <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <div className="text-[13px] font-medium">Scope</div>
-                    <p className="mt-1 max-w-[58ch] text-[11.5px] leading-5 text-muted-foreground">
+                    <div style={typographyStyle('ui.body-strong')}>Scope</div>
+                    <p className="mt-1 max-w-[58ch] text-muted-foreground" style={typographyStyle('ui.caption')}>
                       {scope}
                     </p>
                   </div>
@@ -61,8 +62,8 @@ export function ProductSectionPage({
                 </div>
                 <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <div className="text-[13px] font-medium">Browser route</div>
-                    <p className="mt-1 max-w-[58ch] font-mono text-[11.5px] leading-5 text-muted-foreground">
+                    <div style={typographyStyle('ui.body-strong')}>Browser route</div>
+                    <p className="mt-1 max-w-[58ch] text-muted-foreground" style={typographyStyle('code.inline')}>
                       {route}
                     </p>
                   </div>
