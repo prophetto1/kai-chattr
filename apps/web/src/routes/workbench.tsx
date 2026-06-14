@@ -146,6 +146,7 @@ import { type ChattrRoomMessage, useChattrRoom } from '@/hooks/use-chattr-room'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useMonacoTheme } from '@/hooks/use-monaco-theme'
 import { cn } from '@/lib/cn'
+import { typographyStyle } from '@/lib/design-system'
 import { Button } from '@/components/ui/button'
 import {
   ResizableHandle,
@@ -561,7 +562,8 @@ function ChangeCounts({
 }) {
   return (
     <div
-      className={`ml-auto flex shrink-0 items-center gap-1.5 text-[11px] leading-none tabular-nums ${className ?? ''}`}
+      className={`ml-auto flex shrink-0 items-center gap-1.5 ${className ?? ''}`}
+      style={typographyStyle('code.stat')}
     >
       {additions > 0 ? <span className="text-emerald-500">+{additions}</span> : null}
       {deletions > 0 ? <span className="text-rose-500">-{deletions}</span> : null}
@@ -592,7 +594,7 @@ function WorkbenchChangesTree({
       className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-background"
       data-testid="changes-tree"
     >
-      <div className="flex h-8 shrink-0 items-center gap-1.5 border-b border-border/25 px-2 text-[11px]">
+      <div className="flex h-8 shrink-0 items-center gap-1.5 border-b border-border/25 px-2" style={typographyStyle('ui.caption')}>
         <IconGitCompare className="size-3.5 shrink-0 text-muted-foreground" />
         <span className="min-w-0 truncate font-medium text-foreground">All changes</span>
         {showStats ? (
@@ -902,11 +904,12 @@ function WorkspaceDiffLineRow({ line }: { line: WorkspaceDiffLine }) {
   return (
     <div
       className={cn(
-        'grid w-full min-w-0 grid-cols-[3rem_3rem_1rem_minmax(0,1fr)] border-b border-border/10 font-mono text-[11px] leading-[18px]',
+        'grid w-full min-w-0 grid-cols-[3rem_3rem_1rem_minmax(0,1fr)] border-b border-border/10',
         line.kind === 'add' && 'bg-emerald-500/10 text-emerald-950 dark:text-emerald-100',
         line.kind === 'delete' && 'bg-rose-500/10 text-rose-950 dark:text-rose-100',
         line.kind === 'context' && 'text-muted-foreground',
       )}
+      style={typographyStyle('code.diff')}
     >
       <span className="select-none border-r border-border/15 px-2 text-right text-muted-foreground/70">
         {line.oldLine ?? ''}
@@ -946,21 +949,21 @@ function WorkspaceDiffFileSection({
       data-testid="changes-diff-file"
       id={diffFileSectionId(file.path)}
     >
-      <div className="sticky top-0 z-10 flex h-9 min-w-0 items-center gap-2 border-b border-border/30 bg-background/95 px-2 text-[11px] backdrop-blur">
+      <div className="sticky top-0 z-10 flex h-9 min-w-0 items-center gap-2 border-b border-border/30 bg-background/95 px-2 backdrop-blur" style={typographyStyle('ui.caption')}>
         <IconFileText className="size-3.5 shrink-0 text-muted-foreground" />
         <span className="min-w-0 flex-1 truncate font-medium text-foreground">{file.path}</span>
-        <span className="shrink-0 rounded border border-border/60 px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
+        <span className="shrink-0 rounded border border-border/60 px-1.5 py-0.5 text-muted-foreground" style={typographyStyle('ui.overline')}>
           {file.status}
         </span>
         <ChangeCounts additions={file.additions} deletions={file.deletions} />
       </div>
 
       {file.binary || file.tooLarge ? (
-        <p className="px-3 py-4 text-[11px] text-muted-foreground">
+        <p className="px-3 py-4 text-muted-foreground" style={typographyStyle('ui.caption')}>
           {file.binary ? 'Binary file diff is not shown.' : 'File is too large for inline diff.'}
         </p>
       ) : file.hunks.length === 0 ? (
-        <p className="px-3 py-4 text-[11px] text-muted-foreground">
+        <p className="px-3 py-4 text-muted-foreground" style={typographyStyle('ui.caption')}>
           No textual hunks available for this file.
         </p>
       ) : (
@@ -970,7 +973,7 @@ function WorkspaceDiffFileSection({
               key={`${file.path}:${hunk.oldStart}:${hunk.newStart}:${hunk.lines.length}`}
               className="w-full min-w-0"
             >
-              <div className="w-full min-w-0 break-words border-b border-border/20 bg-muted/25 px-2 py-1 font-mono text-[11px] text-muted-foreground [overflow-wrap:anywhere]">
+              <div className="w-full min-w-0 break-words border-b border-border/20 bg-muted/25 px-2 py-1 text-muted-foreground [overflow-wrap:anywhere]" style={typographyStyle('code.diff')}>
                 @@ -{hunk.oldStart},{hunk.oldLines} +{hunk.newStart},{hunk.newLines} @@
                 {hunk.section ? ` ${hunk.section}` : ''}
               </div>
@@ -996,12 +999,12 @@ function WorkspaceDiffDocumentView({
   selectedPath: string
 }) {
   if (document.files.length === 0) {
-    return <p className="px-3 py-4 text-[11px] text-muted-foreground">No changes in the working tree.</p>
+    return <p className="px-3 py-4 text-muted-foreground" style={typographyStyle('ui.caption')}>No changes in the working tree.</p>
   }
 
   return (
     <div className="h-full min-h-0 overflow-x-hidden overflow-y-auto bg-background" data-testid="changes-diff-document">
-      <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border/25 bg-muted/15 px-2 text-[11px]">
+      <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border/25 bg-muted/15 px-2" style={typographyStyle('ui.caption')}>
         <span className="min-w-0 flex-1 truncate font-medium text-foreground">
           {document.files.length} changed {document.files.length === 1 ? 'file' : 'files'}
         </span>
@@ -1075,13 +1078,13 @@ function ChangesViewerPane({ onClose }: { onClose?: () => void }) {
       }
       main={
         diffDocumentQuery.isError ? (
-          <p className="px-3 py-4 text-[11px] text-destructive">
+          <p className="px-3 py-4 text-destructive" style={typographyStyle('ui.caption')}>
             {diffDocumentQuery.error instanceof Error
               ? diffDocumentQuery.error.message
               : 'Diff document unavailable.'}
           </p>
         ) : diffDocumentQuery.isLoading ? (
-          <p className="px-3 py-4 text-[11px] text-muted-foreground">Loading diff...</p>
+          <p className="px-3 py-4 text-muted-foreground" style={typographyStyle('ui.caption')}>Loading diff...</p>
         ) : (
           <WorkspaceDiffDocumentView
             document={
@@ -1179,7 +1182,7 @@ function CodeEditorPane({
       main={
         selectedPath ? (
           <div className="flex h-full min-h-0 flex-col bg-background">
-            <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border/25 bg-muted/15 px-2 text-[11px]">
+            <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border/25 bg-muted/15 px-2" style={typographyStyle('ui.caption')}>
               <div className="min-w-0 flex-1 truncate font-medium text-foreground">
                 {selectedPath}
                 {dirty ? <span className="ml-1.5 text-amber-500">●</span> : null}
@@ -1198,7 +1201,8 @@ function CodeEditorPane({
               ) : null}
               {!readOnly ? (
                 <Button
-                  className="h-6 shrink-0 px-2 text-[11px]"
+                  className="h-6 shrink-0 px-2"
+                  style={typographyStyle('ui.caption')}
                   disabled={!dirty || saveMutation.isPending}
                   onClick={() => saveMutation.mutate()}
                   size="sm"
@@ -1235,7 +1239,7 @@ function CodeEditorPane({
           </div>
         ) : (
           <div className="flex h-full items-center justify-center bg-background">
-            <p className="text-[11.5px] text-muted-foreground">Select a file from the tree.</p>
+            <p className="text-muted-foreground" style={typographyStyle('ui.caption')}>Select a file from the tree.</p>
           </div>
         )
       }
@@ -1305,7 +1309,8 @@ function TerminalTabsPane() {
                   aria-controls={`${tab.id}-panel`}
                   aria-label={tab.label}
                   aria-selected={isActive}
-                  className="flex h-full min-w-0 items-center gap-1.5 px-2 text-[11px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className="flex h-full min-w-0 items-center gap-1.5 px-2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  style={typographyStyle('ui.caption')}
                   id={`${tab.id}-tab`}
                   onClick={() => setActiveTabId(tab.id)}
                   role="tab"
@@ -1426,14 +1431,14 @@ function WorkbenchChatMessage({
   }
   return (
     <Message className="gap-1.5" from={message.role} key={`${message.role}-${index}`}>
-      <MessageContent className="gap-1.5 text-[13px] leading-[1.45] group-[.is-user]:px-3.5 group-[.is-user]:py-2.5">
+      <MessageContent className="gap-1.5 group-[.is-user]:px-3.5 group-[.is-user]:py-2.5" style={typographyStyle('ui.body')}>
         {message.reasoning && (
           <Reasoning className="mb-2.5" defaultOpen={false} duration={14}>
             <ReasoningTrigger />
             <ReasoningContent>{message.reasoning}</ReasoningContent>
           </Reasoning>
         )}
-        <MessageResponse className="text-[13px] leading-[1.45] [&_li]:leading-[1.45] [&_p]:leading-[1.45]">
+        <MessageResponse className="[&_li]:leading-[1.45] [&_p]:leading-[1.45]" style={typographyStyle('ui.body')}>
           {message.text}
         </MessageResponse>
         {message.tool && (
@@ -1597,7 +1602,8 @@ export default function WorkbenchPage() {
         )}
       >
         <Tabs
-          className="jwc-workbench-shell flex min-h-0 flex-1 overflow-hidden text-[13px] text-foreground antialiased"
+          className="jwc-workbench-shell flex min-h-0 flex-1 overflow-hidden text-foreground antialiased"
+          style={typographyStyle('ui.body')}
           onValueChange={handleDockTabChange}
           orientation="vertical"
           value={activeDockTab}
