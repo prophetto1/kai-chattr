@@ -402,11 +402,11 @@ export function WorkspaceFileTree({
       className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-background"
       data-testid="workspace-tree"
     >
-      <div className="flex h-8 shrink-0 items-center gap-1.5 border-b border-border/25 px-2 text-[11px]">
+      <div className="flex h-8 shrink-0 items-center gap-1.5 border-b border-border/25 px-2" style={typographyStyle('ui.caption')}>
         <HeaderIcon className="size-3.5 shrink-0 text-muted-foreground" />
         <span className="min-w-0 truncate font-medium text-foreground">{headerLabel}</span>
         {showStats && (tree.additions > 0 || tree.deletions > 0) ? (
-          <span className="ml-auto flex shrink-0 items-center gap-1.5 font-mono text-[10px] tabular-nums">
+          <span className="ml-auto flex shrink-0 items-center gap-1.5" style={typographyStyle('code.stat')}>
             <span className="text-emerald-500">+{tree.additions}</span>
             <span className="text-red-400">-{tree.deletions}</span>
           </span>
@@ -417,7 +417,8 @@ export function WorkspaceFileTree({
         <div className="flex h-7 shrink-0 items-center gap-1.5 border-b border-border/25 px-2">
           <IconSearch className="size-3 shrink-0 text-muted-foreground" />
           <input
-            className="h-5 min-w-0 flex-1 bg-transparent text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none"
+            className="h-5 min-w-0 flex-1 bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none"
+            style={typographyStyle('ui.caption')}
             onChange={(event) => setSearchTerm(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Escape') {
@@ -441,9 +442,9 @@ export function WorkspaceFileTree({
         </div>
       ) : null}
 
-      <div className="min-h-0 min-w-0 flex-1 text-[11px] leading-tight" ref={sizeRef}>
+      <div className="min-h-0 min-w-0 flex-1" style={typographyStyle('ui.caption')} ref={sizeRef}>
         {entries.length === 0 ? (
-          <p className="px-3 py-4 text-[11px] text-muted-foreground">{emptyText}</p>
+          <p className="px-3 py-4 text-muted-foreground" style={typographyStyle('ui.caption')}>{emptyText}</p>
         ) : size.height > 0 ? (
           <Tree<ArborNode>
             childrenAccessor={(node) => node.children}

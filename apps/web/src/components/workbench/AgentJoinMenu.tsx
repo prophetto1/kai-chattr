@@ -20,6 +20,7 @@ import {
   type AgentLauncherProfile,
 } from '@/lib/launcher-api'
 import { getTerminalRuntimes, type AgentRuntimeCard } from '@/lib/terminal-api'
+import { typographyStyle } from '@/lib/design-system'
 
 const STALE_MS = 15000
 
@@ -116,7 +117,7 @@ export function AgentJoinMenu({ className }: { className?: string }) {
                   className={cn('mr-2 size-2 shrink-0 rounded-full', presenceClass(entry))}
                 />
                 <span className="min-w-0 flex-1 truncate">{p.label ?? agentName}</span>
-                <span className="ml-2 text-[10px] text-muted-foreground">
+                <span className="ml-2 text-muted-foreground" style={typographyStyle('ui.micro')}>
                   {inChat
                     ? 'in chat'
                     : joining

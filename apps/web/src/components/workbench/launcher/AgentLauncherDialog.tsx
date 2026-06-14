@@ -50,6 +50,7 @@ import {
   type AgentLauncherStartResult,
 } from '@/lib/launcher-api'
 import { cn } from '@/lib/cn'
+import { typographyStyle } from '@/lib/design-system'
 
 type LaunchState = {
   result?: AgentLauncherStartResult
@@ -330,7 +331,7 @@ function AgentLaunchCard(props: {
                   ))}
                 </SelectContent>
               </Select>
-              <span className="truncate text-[11px] text-muted-foreground/70">
+              <span className="truncate text-muted-foreground/70" style={typographyStyle('ui.caption')}>
                 applies on next launch
               </span>
             </div>

@@ -11,6 +11,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/cn'
+import { typographyStyle } from '@/lib/design-system'
 
 type DockWorkspaceProps = {
   title: string
@@ -84,7 +85,7 @@ export function DockWorkspace({
           >
             <div className="flex h-full min-h-0 flex-col">
               {showSidebarLabel ? (
-                <div className="flex h-7 shrink-0 items-center px-2 text-[10px] font-medium uppercase text-muted-foreground">
+                <div className="flex h-7 shrink-0 items-center px-2 text-muted-foreground" style={typographyStyle('ui.overline')}>
                   {sidebarLabel}
                 </div>
               ) : null}

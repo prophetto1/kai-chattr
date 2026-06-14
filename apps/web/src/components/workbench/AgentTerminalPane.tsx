@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { errorMessage } from '@/lib/chattr-api'
 import { getTerminalSnapshot, type TerminalSnapshot } from '@/lib/terminal-api'
+import { typographyStyle } from '@/lib/design-system'
 
 type TerminalLoadState = 'loading' | 'ready' | 'empty' | 'error'
 
@@ -89,7 +90,8 @@ export function AgentTerminalPane({
           <span className="size-1.5 shrink-0 rounded-full bg-emerald-400" />
           <span className="truncate text-xs font-medium">{agentName}</span>
           <span
-            className="truncate text-[11px] text-zinc-400"
+            className="truncate text-zinc-400"
+            style={typographyStyle('ui.caption')}
             data-testid="terminal-status"
           >
             {statusLabel}
