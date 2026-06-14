@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { typographyStyle } from '@/lib/design-system'
 import {
   getEndpointContractCoverage,
   getObservedEndpoints,
@@ -91,8 +92,8 @@ const observabilityHeaderBaseClass =
   'flex shrink-0 items-center gap-2.5 border-b border-border py-3'
 const observabilityHeaderIconClass =
   'flex size-7 shrink-0 items-center justify-center rounded-[7px] bg-muted ring-1 ring-border/50'
-const observabilityHeaderTitleClass = 'truncate text-[13px] font-semibold leading-tight'
-const observabilityHeaderDescriptionClass = 'truncate text-[11px] text-muted-foreground'
+const observabilityHeaderTitleClass = 'truncate'
+const observabilityHeaderDescriptionClass = 'truncate text-muted-foreground'
 
 type ObservabilityModel = {
   endpoint: string
@@ -160,11 +161,12 @@ function SectionStatusBadge({ status }: { status: ObservabilitySection['status']
   return (
     <Badge
       className={cn(
-        'ml-auto rounded-[5px] px-1.5 py-0 text-[10px] font-medium',
+        'ml-auto rounded-[5px] px-1.5 py-0',
         status === 'live'
           ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
           : 'border-border/50 bg-muted/50 text-muted-foreground'
       )}
+      style={typographyStyle('ui.micro')}
       variant="outline"
     >
       {label}
@@ -180,8 +182,8 @@ function ObservabilityNavigation() {
           <IconActivityHeartbeat className="size-4" />
         </span>
         <div className="min-w-0">
-          <h1 className={observabilityHeaderTitleClass}>Observability</h1>
-          <p className={observabilityHeaderDescriptionClass}>Runtime signals</p>
+          <h1 className={observabilityHeaderTitleClass} style={typographyStyle('ui.body-strong')}>Observability</h1>
+          <p className={observabilityHeaderDescriptionClass} style={typographyStyle('ui.caption')}>Runtime signals</p>
         </div>
       </div>
 
@@ -192,7 +194,7 @@ function ObservabilityNavigation() {
         >
           {observabilityGroups.map((group) => (
             <div className="flex w-full flex-col gap-0.5" key={group.label}>
-              <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              <div className="px-2 pb-1 text-muted-foreground" style={typographyStyle('ui.overline')}>
                 {group.label}
               </div>
               {group.sectionIds.map((sectionId) => {
@@ -230,8 +232,8 @@ function ObservabilityHeader({ section }: { section: ObservabilitySection }) {
         <SectionIcon className="size-4 text-muted-foreground" />
       </span>
       <div className="min-w-0">
-        <h2 className={observabilityHeaderTitleClass}>{section.label}</h2>
-        <p className={observabilityHeaderDescriptionClass}>{section.description}</p>
+        <h2 className={observabilityHeaderTitleClass} style={typographyStyle('ui.body-strong')}>{section.label}</h2>
+        <p className={observabilityHeaderDescriptionClass} style={typographyStyle('ui.caption')}>{section.description}</p>
       </div>
     </header>
   )
@@ -250,7 +252,7 @@ function ObservabilityPanel({
     <section className="overflow-hidden rounded-[10px] border border-border bg-card">
       <div className="px-5 py-3.5">
         {eyebrow ? (
-          <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          <p className="mb-0.5 text-muted-foreground" style={typographyStyle('ui.overline')}>
             {eyebrow}
           </p>
         ) : null}
@@ -274,9 +276,9 @@ function ObservabilityRow({
   return (
     <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <div className="text-[13px] font-medium">{label}</div>
+        <div style={typographyStyle('ui.body-strong')}>{label}</div>
         {description ? (
-          <p className="mt-1 max-w-[58ch] text-[11.5px] leading-5 text-muted-foreground">
+          <p className="mt-1 max-w-[58ch] text-muted-foreground" style={typographyStyle('ui.caption')}>
             {description}
           </p>
         ) : null}
@@ -289,8 +291,8 @@ function ObservabilityRow({
 function TelemetryMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-[7px] border border-border bg-muted/20 px-3 py-2">
-      <div className="text-[11px] font-medium text-muted-foreground">{label}</div>
-      <div className="mt-1 truncate text-[13px] font-semibold text-foreground">{value}</div>
+      <div className="text-muted-foreground" style={typographyStyle('ui.caption')}>{label}</div>
+      <div className="mt-1 truncate text-foreground" style={typographyStyle('ui.body-strong')}>{value}</div>
     </div>
   )
 }
@@ -312,7 +314,7 @@ function ApiObservabilityPanel({ model }: { model: ObservabilityModel }) {
             <Badge variant={model.statusTone}>{model.statusLabel}</Badge>
             <Badge variant="outline">{model.exporter}</Badge>
           </div>
-          <p className="mt-2 text-[11.5px] leading-5 text-muted-foreground">
+          <p className="mt-2 text-muted-foreground" style={typographyStyle('ui.caption')}>
             Collector path: {model.stackLabel}. Service {model.serviceName}
             {model.endpoint ? ` exports to ${model.endpoint}.` : ' has no OTLP endpoint configured.'}
           </p>
@@ -337,7 +339,7 @@ function ApiObservabilityPanel({ model }: { model: ObservabilityModel }) {
             {endpointQuery.isError ? <Badge variant="outline">Unavailable</Badge> : null}
           </div>
           {endpointQuery.isError ? (
-            <p className="text-[11.5px] leading-5 text-destructive">
+            <p className="text-destructive" style={typographyStyle('ui.caption')}>
               {endpointQuery.error instanceof Error ? endpointQuery.error.message : 'Endpoint catalog unavailable.'}
             </p>
           ) : (
@@ -357,16 +359,16 @@ function EndpointContractTable({
   loading: boolean
 }) {
   if (loading) {
-    return <div className="text-[11.5px] text-muted-foreground">Loading endpoint contract...</div>
+    return <div className="text-muted-foreground" style={typographyStyle('ui.caption')}>Loading endpoint contract...</div>
   }
 
   if (!endpoints.length) {
-    return <div className="text-[11.5px] text-muted-foreground">No endpoint definitions returned.</div>
+    return <div className="text-muted-foreground" style={typographyStyle('ui.caption')}>No endpoint definitions returned.</div>
   }
 
   return (
     <div className="overflow-x-auto rounded-[7px] border border-border">
-      <table className="min-w-[1040px] border-collapse text-left text-[11.5px]">
+      <table className="min-w-[1040px] border-collapse text-left" style={typographyStyle('ui.caption')}>
         <thead className="bg-muted/30 text-muted-foreground">
           <tr>
             <th className="px-3 py-2 font-medium">Method</th>
