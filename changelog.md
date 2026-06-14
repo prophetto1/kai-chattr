@@ -4,6 +4,10 @@ Repo-root changelog (decision 2026-06-11: lives here, not in the Planned store).
 
 ## 2026-06-13
 
+### feat(web): migrate surfaces onto typography roles (Phase 2, rolling)
+Migrating the 154 hardcoded `text-[Npx]` literals onto `typographyStyle(role)`, per-surface, each built + committed. Added `ui.micro` (10px) role for tiny badges (ladder gap found during migration).
+- `components/agents/agent-bits.tsx` (7 sites): status/home/prototype badges → `ui.micro`; `MicroHeader` / `RailSectionBar` → `ui.overline`; KeyValueRow label → `ui.caption`, value → `ui.label`. Normalizes the one-off 10 / 11.5px sizes onto the ladder. Build exit 0; zero `text-[Npx]` left in the file.
+
 ### feat(web): typography role system — generalize the design-system.json ladder (foundation)
 - Grew `apps/web/src/config/design-system.json` from 5 workbench-only roles to a full typography ladder. Families: `ui` / `display` / `mono` / `prose` — `display` + `prose` are swappable slots (`--font-display` / `--font-prose` in `tokens.css`, Inter for now). Roles (~20 + the 5 kept `workbench.*`): `display.hero/title/subtitle`, `ui.lg/md/body/body-strong/label/caption/overline`, `prose.body/h1-h4`, `code.block/inline/diff/stat`, `numeric` — each with family + size + weight + line-height (+ optional tracking / uppercase / tabular figures).
 - Generalized `design-system.schema.json`: removed the hardcoded required-role list; added `textTransform` and `fontVariantNumeric` to the role shape so `ui.overline` (uppercase) and `numeric` / `code.stat` (tabular) are first-class. `lib/design-system.ts` `typographyStyle()` now emits those and guards optional fields; `TypographyRoleName` auto-derives from the config.

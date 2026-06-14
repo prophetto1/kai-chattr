@@ -103,6 +103,13 @@
         "textTransform": "uppercase",
         "purpose": "Rail labels, group eyebrows, section overlines."
       },
+      "ui.micro": {
+        "fontFamily": "ui",
+        "fontSize": "10px",
+        "lineHeight": "14px",
+        "fontWeight": 400,
+        "purpose": "Smallest UI text: tiny chips and status badges."
+      },
       "prose.body": {
         "fontFamily": "prose",
         "fontSize": "16px",

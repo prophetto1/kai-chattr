@@ -8,6 +8,7 @@ import {
   type EngineDefinition,
 } from '@/lib/agent-system-contract'
 import { ENGINE_FAMILY_COLORS } from '@/lib/agent-fixtures'
+import { typographyStyle } from '@/lib/design-system'
 
 const STATUS_DOT_CLASS: Record<AgentStatus, string> = {
   online: 'bg-emerald-400',
@@ -38,10 +39,11 @@ export function LifecycleBadge({ state }: { state: AgentLifecycleState }) {
   return (
     <Badge
       className={cn(
-        'rounded-[5px] text-[10px]',
+        'rounded-[5px]',
         state === 'suspended' ? 'border-amber-500/40 text-amber-500' : null,
         state === 'archived' || state === 'deleted' ? 'opacity-60' : null
       )}
+      style={typographyStyle('ui.micro')}
       variant={state === 'active' ? 'secondary' : 'outline'}
     >
       {LIFECYCLE_LABELS[state]}
@@ -96,9 +98,10 @@ export function HomeBadge({ home }: { home: 'local' | 'cloud' }) {
   return (
     <Badge
       className={cn(
-        'rounded-[5px] text-[10px] capitalize',
+        'rounded-[5px] capitalize',
         home === 'local' ? 'border-sky-500/40 text-sky-400' : 'border-violet-500/40 text-violet-400'
       )}
+      style={typographyStyle('ui.micro')}
       variant="outline"
     >
       {home}
@@ -108,7 +111,7 @@ export function HomeBadge({ home }: { home: 'local' | 'cloud' }) {
 
 export function PrototypeBadge() {
   return (
-    <Badge className="rounded-[5px] text-[10px]" variant="outline">
+    <Badge className="rounded-[5px]" style={typographyStyle('ui.micro')} variant="outline">
       Prototype · fixture data
     </Badge>
   )
@@ -116,7 +119,7 @@ export function PrototypeBadge() {
 
 export function MicroHeader({ children }: { children: ReactNode }) {
   return (
-    <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+    <p className="text-muted-foreground" style={typographyStyle('ui.overline')}>
       {children}
     </p>
   )
@@ -132,15 +135,15 @@ export function KeyValueRow({
 }) {
   return (
     <div className="flex min-h-9 items-center justify-between gap-3 px-4 py-1.5">
-      <span className="text-[11.5px] text-muted-foreground">{label}</span>
-      <span className="min-w-0 truncate text-right text-[11.5px] font-medium">{value}</span>
+      <span className="text-muted-foreground" style={typographyStyle('ui.caption')}>{label}</span>
+      <span className="min-w-0 truncate text-right" style={typographyStyle('ui.label')}>{value}</span>
     </div>
   )
 }
 
 export function RailSectionBar({ children }: { children: ReactNode }) {
   return (
-    <div className="bg-muted/40 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+    <div className="bg-muted/40 px-4 py-1.5 text-muted-foreground" style={typographyStyle('ui.overline')}>
       {children}
     </div>
   )
