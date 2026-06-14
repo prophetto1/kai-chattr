@@ -22,6 +22,7 @@ dependencies = [
   "sqladmin>=0.18",
   "sqlalchemy>=2.0",
   "tomlkit>=0.13",
+  "tzdata>=2025.2",
   "uvicorn[standard]>=0.29",
 ]
 

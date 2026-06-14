@@ -22,6 +22,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship, selectinload, sessionmaker
 
 from app.database import create_database_engine, normalize_database_url
+from app.stores.jobs import JobVersionConflict
 from app.stores.rules_db import Base
 
 MAX_TITLE_CHARS = 120
@@ -66,6 +67,34 @@ def normalize_status_archived(
     return normalized, next_archived
 
 
+def _coerce_version(value, default: int = 1) -> int:
+    try:
+        version = int(value)
+    except (TypeError, ValueError):
+        return default
+    return version if version > 0 else default
+
+
+def _workflow_version(workflow: "BoardWorkflow") -> int:
+    return _coerce_version(getattr(workflow, "version", None), default=1)
+
+
+def _check_expected_version(
+    workflow: "BoardWorkflow",
+    expected_version: int | None,
+) -> None:
+    if expected_version is None:
+        return
+    expected = _coerce_version(expected_version, default=1)
+    actual = _workflow_version(workflow)
+    if expected != actual:
+        raise JobVersionConflict(workflow.id, expected, actual)
+
+
+def _bump_version(workflow: "BoardWorkflow") -> None:
+    workflow.version = _workflow_version(workflow) + 1
+
+
 class BoardWorkflow(Base):
     __tablename__ = "board_workflows"
 
@@ -76,6 +105,7 @@ class BoardWorkflow(Base):
     body: Mapped[str] = mapped_column(String(MAX_BODY_CHARS), nullable=False, default="")
     status: Mapped[str] = mapped_column(String(32), nullable=False)
     archived: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     channel: Mapped[str] = mapped_column(String(MAX_CHANNEL_CHARS), nullable=False)
     created_by: Mapped[str] = mapped_column(String(MAX_ACTOR_CHARS), nullable=False)
     assignee: Mapped[str] = mapped_column(String(MAX_ACTOR_CHARS), nullable=False, default="")
@@ -194,6 +224,7 @@ class SqlAlchemyJobStore:
             "body": workflow.body,
             "status": status,
             "archived": archived,
+            "version": _workflow_version(workflow),
             "channel": workflow.channel,
             "created_by": workflow.created_by,
             "assignee": workflow.assignee,
@@ -247,6 +278,7 @@ class SqlAlchemyJobStore:
         created_at: float | None = None,
         updated_at: float | None = None,
         archived: bool | None = None,
+        version: int | None = None,
     ) -> dict:
         with self._lock, self._sessions() as session:
             st, is_archived = normalize_status_archived(status, archived)
@@ -265,6 +297,7 @@ class SqlAlchemyJobStore:
                 created_at=created_at or now,
                 updated_at=updated_at or now,
                 sort_order=self._next_sort_order_locked(session, st),
+                version=_coerce_version(version, default=1),
             )
             session.add(workflow)
             session.commit()
@@ -273,7 +306,13 @@ class SqlAlchemyJobStore:
         self._fire("create", result)
         return result
 
-    def update_status(self, job_id: int, status: str, archived: bool | None = None) -> dict | None:
+    def update_status(
+        self,
+        job_id: int,
+        status: str,
+        archived: bool | None = None,
+        expected_version: int | None = None,
+    ) -> dict | None:
         normalized = normalize_status(status)
         if normalized is None:
             return None
@@ -285,6 +324,7 @@ class SqlAlchemyJobStore:
             )
             if workflow is None:
                 return None
+            _check_expected_version(workflow, expected_version)
             next_status, next_archived = normalize_status_archived(
                 status,
                 archived,
@@ -295,12 +335,18 @@ class SqlAlchemyJobStore:
             workflow.status = next_status
             workflow.archived = next_archived
             workflow.updated_at = time.time()
+            _bump_version(workflow)
             session.commit()
             result = self._workflow_dict(workflow)
         self._fire("update", result)
         return result
 
-    def update_archived(self, job_id: int, archived: bool) -> dict | None:
+    def update_archived(
+        self,
+        job_id: int,
+        archived: bool,
+        expected_version: int | None = None,
+    ) -> dict | None:
         with self._lock, self._sessions() as session:
             workflow = session.scalar(
                 select(BoardWorkflow)
@@ -309,20 +355,45 @@ class SqlAlchemyJobStore:
             )
             if workflow is None:
                 return None
+            _check_expected_version(workflow, expected_version)
             workflow.archived = _coerce_archived(archived)
             workflow.updated_at = time.time()
+            _bump_version(workflow)
             session.commit()
             result = self._workflow_dict(workflow)
         self._fire("update", result)
         return result
 
-    def update_title(self, job_id: int, title: str) -> dict | None:
-        return self._update_fields(job_id, title=title.strip()[:MAX_TITLE_CHARS])
+    def update_title(
+        self,
+        job_id: int,
+        title: str,
+        expected_version: int | None = None,
+    ) -> dict | None:
+        return self._update_fields(
+            job_id,
+            expected_version=expected_version,
+            title=title.strip()[:MAX_TITLE_CHARS],
+        )
 
-    def update_assignee(self, job_id: int, assignee: str) -> dict | None:
-        return self._update_fields(job_id, assignee=assignee.strip()[:MAX_ACTOR_CHARS])
+    def update_assignee(
+        self,
+        job_id: int,
+        assignee: str,
+        expected_version: int | None = None,
+    ) -> dict | None:
+        return self._update_fields(
+            job_id,
+            expected_version=expected_version,
+            assignee=assignee.strip()[:MAX_ACTOR_CHARS],
+        )
 
-    def _update_fields(self, job_id: int, **fields: str) -> dict | None:
+    def _update_fields(
+        self,
+        job_id: int,
+        expected_version: int | None = None,
+        **fields: str,
+    ) -> dict | None:
         with self._lock, self._sessions() as session:
             workflow = session.scalar(
                 select(BoardWorkflow)
@@ -331,9 +402,11 @@ class SqlAlchemyJobStore:
             )
             if workflow is None:
                 return None
+            _check_expected_version(workflow, expected_version)
             for key, value in fields.items():
                 setattr(workflow, key, value)
             workflow.updated_at = time.time()
+            _bump_version(workflow)
             session.commit()
             result = self._workflow_dict(workflow)
         self._fire("update", result)
@@ -374,6 +447,7 @@ class SqlAlchemyJobStore:
                 attachments_json=json.dumps(attachments or [], ensure_ascii=False),
             )
             workflow.updated_at = time.time()
+            _bump_version(workflow)
             session.add(message)
             session.commit()
             result_msg = self._message_dict(message, job_id=job_id)
@@ -409,6 +483,7 @@ class SqlAlchemyJobStore:
                 message.attachments_json = "[]"
                 message.updated_at = time.time()
                 workflow.updated_at = time.time()
+                _bump_version(workflow)
                 session.commit()
             payload = {"job_id": job_id, "message_id": msg_id}
         self._fire("message_delete", payload)
@@ -429,12 +504,13 @@ class SqlAlchemyJobStore:
             message.resolved = resolution.strip()[:32] or "dismissed"
             message.updated_at = time.time()
             workflow.updated_at = time.time()
+            _bump_version(workflow)
             session.commit()
             result = self._message_dict(message, job_id=job_id)
         self._fire("message", {"job_id": job_id, "message": result})
         return result
 
-    def delete(self, job_id: int) -> dict | None:
+    def delete(self, job_id: int, expected_version: int | None = None) -> dict | None:
         with self._lock, self._sessions() as session:
             workflow = session.scalar(
                 select(BoardWorkflow)
@@ -443,6 +519,7 @@ class SqlAlchemyJobStore:
             )
             if workflow is None:
                 return None
+            _check_expected_version(workflow, expected_version)
             result = self._workflow_dict(workflow)
             session.delete(workflow)
             session.commit()
@@ -488,6 +565,7 @@ class SqlAlchemyJobStore:
                 if workflow.sort_order != next_order:
                     workflow.sort_order = next_order
                     workflow.updated_at = time.time()
+                    _bump_version(workflow)
                     changed.append(self._workflow_dict(workflow))
             if changed:
                 session.commit()

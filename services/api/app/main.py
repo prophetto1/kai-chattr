@@ -23,7 +23,7 @@ from app.stores.factory import (
     create_rule_store,
 )
 from app.stores.summaries import SummaryStore
-from app.stores.jobs import JobStore
+from app.stores.jobs import JobStore, JobVersionConflict
 from app.stores.schedules import ScheduleStore, parse_schedule_spec
 from app.runtime.routing import Router
 from app.runtime.agents import AgentTrigger
@@ -133,6 +133,18 @@ terminal_snapshots_lock = threading.Lock()
 # --- Runtime event stream (set by configure()) ---
 runtime_event_stream: JsonlEventStream | None = None
 chattr_version: str = _resolve_chattr_version()
+
+
+def _job_version_conflict_response(exc: JobVersionConflict) -> JSONResponse:
+    return JSONResponse(
+        {
+            "error": "version_conflict",
+            "job_id": exc.job_id,
+            "expected": exc.expected,
+            "actual": exc.actual,
+        },
+        status_code=409,
+    )
 # Mutable single-element holder so providers can read the current session_token
 # from inside configure() without clashing with the function's parameter name.
 _session_token_holder: list[str] = [""]
@@ -2268,14 +2280,30 @@ async def update_job(job_id: int, request: Request):
     except Exception:
         return JSONResponse({"error": "invalid json"}, status_code=400)
     result = None
-    if body.status is not None:
-        result = jobs.update_status(job_id, body.status, archived=body.archived)
-    elif body.archived is not None:
-        result = jobs.update_archived(job_id, body.archived)
-    if body.title is not None:
-        result = jobs.update_title(job_id, body.title)
-    if body.assignee is not None:
-        result = jobs.update_assignee(job_id, body.assignee)
+    expected_version = body.version
+    try:
+        if body.status is not None:
+            result = jobs.update_status(
+                job_id,
+                body.status,
+                archived=body.archived,
+                expected_version=expected_version,
+            )
+            expected_version = None
+        elif body.archived is not None:
+            result = jobs.update_archived(
+                job_id,
+                body.archived,
+                expected_version=expected_version,
+            )
+            expected_version = None
+        if body.title is not None:
+            result = jobs.update_title(job_id, body.title, expected_version=expected_version)
+            expected_version = None
+        if body.assignee is not None:
+            result = jobs.update_assignee(job_id, body.assignee, expected_version=expected_version)
+    except JobVersionConflict as exc:
+        return _job_version_conflict_response(exc)
     if result is None:
         return JSONResponse({"error": "not found or invalid"}, status_code=404)
     return result

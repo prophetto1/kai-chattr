@@ -16,6 +16,7 @@ from mcp.server.fastmcp import Context, FastMCP
 from app.events.jsonl_stream import JsonlEventStream
 from app.proposals.patch_kernel import apply_text_patch
 from app.mcp.tools import ToolDefinition, ToolRegistry
+from app.stores.jobs import JobVersionConflict
 
 log = logging.getLogger(__name__)
 
@@ -631,6 +632,7 @@ def chat_read(
             "body": body,
             "status": job.get("status", ""),
             "archived": bool(job.get("archived", False)),
+            "version": job.get("version", 1),
             "channel": job.get("channel", ""),
             "created_by": job.get("created_by", ""),
             "assignee": job.get("assignee", ""),
@@ -907,6 +909,13 @@ def _job_with_messages(job: dict) -> dict:
     return out
 
 
+def _job_version_conflict_error(exc: JobVersionConflict) -> str:
+    return (
+        f"Error: job #{exc.job_id} version conflict: "
+        f"expected {exc.expected}, current {exc.actual}. Refetch and retry."
+    )
+
+
 def chat_jobs(
     action: str,
     sender: str,
@@ -922,6 +931,7 @@ def chat_jobs(
     msg_index: int = 0,
     resolution: str = "",
     ordered_ids: list[int] | None = None,
+    version: int | None = None,
     permanent: bool = False,
     ctx: Context | None = None,
 ) -> str:
@@ -982,14 +992,37 @@ def chat_jobs(
         if not job_id:
             return "Error: job_id is required."
         result = None
-        if title.strip():
-            result = jobs.update_title(int(job_id), title)
-        if assignee.strip():
-            result = jobs.update_assignee(int(job_id), assignee)
-        if status.strip():
-            result = jobs.update_status(int(job_id), status, archived=archived)
-        elif archived is not None:
-            result = jobs.update_archived(int(job_id), archived)
+        expected_version = version
+        try:
+            if title.strip():
+                result = jobs.update_title(
+                    int(job_id),
+                    title,
+                    expected_version=expected_version,
+                )
+                expected_version = None
+            if assignee.strip():
+                result = jobs.update_assignee(
+                    int(job_id),
+                    assignee,
+                    expected_version=expected_version,
+                )
+                expected_version = None
+            if status.strip():
+                result = jobs.update_status(
+                    int(job_id),
+                    status,
+                    archived=archived,
+                    expected_version=expected_version,
+                )
+            elif archived is not None:
+                result = jobs.update_archived(
+                    int(job_id),
+                    archived,
+                    expected_version=expected_version,
+                )
+        except JobVersionConflict as exc:
+            return _job_version_conflict_error(exc)
         if result is None:
             return "Error: job not found or invalid update."
         return _json_result(result)
@@ -1000,7 +1033,15 @@ def chat_jobs(
             return write_error
         if not job_id:
             return "Error: job_id is required."
-        result = jobs.update_status(int(job_id), "closed", archived=True)
+        try:
+            result = jobs.update_status(
+                int(job_id),
+                "closed",
+                archived=True,
+                expected_version=version,
+            )
+        except JobVersionConflict as exc:
+            return _job_version_conflict_error(exc)
         if result is None:
             return "Error: job not found."
         return _json_result(result)
@@ -1011,7 +1052,19 @@ def chat_jobs(
             return write_error
         if not job_id:
             return "Error: job_id is required."
-        result = jobs.delete(int(job_id)) if permanent else jobs.update_status(int(job_id), "closed", archived=True)
+        try:
+            result = (
+                jobs.delete(int(job_id), expected_version=version)
+                if permanent
+                else jobs.update_status(
+                    int(job_id),
+                    "closed",
+                    archived=True,
+                    expected_version=version,
+                )
+            )
+        except JobVersionConflict as exc:
+            return _job_version_conflict_error(exc)
         if result is None:
             return "Error: job not found."
         if permanent:

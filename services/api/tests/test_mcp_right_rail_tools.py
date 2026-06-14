@@ -147,6 +147,52 @@ def test_jobs_tool_supports_full_read_write_lifecycle(tmp_path):
     assert parse_result(bridge.chat_jobs(action="list", sender="codex")) == []
 
 
+def test_jobs_tool_rejects_stale_version_and_preserves_first_update(tmp_path):
+    bridge = configure_bridge(tmp_path)
+
+    created = parse_result(
+        bridge.chat_jobs(
+            action="create",
+            sender="codex",
+            title="Protect MCP writers",
+            channel="general",
+        )
+    )
+    job_id = created["id"]
+    assert created["version"] == 1
+
+    first = parse_result(
+        bridge.chat_jobs(
+            action="update",
+            sender="codex",
+            job_id=job_id,
+            status="active",
+            version=created["version"],
+        )
+    )
+    assert first["status"] == "active"
+    assert first["version"] == 2
+
+    stale = bridge.chat_jobs(
+        action="update",
+        sender="codex",
+        job_id=job_id,
+        title="Stale writer should not win",
+        version=created["version"],
+    )
+    assert "version conflict" in stale
+    assert "Refetch and retry" in stale
+
+    details = parse_result(bridge.chat_jobs(action="get", sender="codex", job_id=job_id))
+    assert details["status"] == "active"
+    assert details["title"] == "Protect MCP writers"
+    assert details["version"] == first["version"]
+
+    header = parse_result(bridge.chat_read(sender="codex", job_id=job_id))[0]
+    assert header["type"] == "job_header"
+    assert header["version"] == first["version"]
+
+
 def test_pins_tool_supports_message_pin_lifecycle(tmp_path):
     bridge = configure_bridge(tmp_path)
     msg = bridge.store.add("user", "Pin this coordination note.", channel="general")
@@ -314,6 +360,7 @@ def test_jobs_http_api_round_trips_canonical_status_and_archived(tmp_path):
     job_id = created.json()["id"]
     assert created.json()["status"] == "todo"
     assert created.json()["archived"] is False
+    assert created.json()["version"] == 1
 
     legacy_update = client.patch(
         f"/api/jobs/{job_id}",
@@ -323,15 +370,30 @@ def test_jobs_http_api_round_trips_canonical_status_and_archived(tmp_path):
     assert legacy_update.status_code == 200
     assert legacy_update.json()["status"] == "active"
     assert legacy_update.json()["archived"] is False
+    assert legacy_update.json()["version"] == 2
+
+    stale_update = client.patch(
+        f"/api/jobs/{job_id}",
+        headers=headers,
+        json={"title": "Stale writer should not win", "version": 1},
+    )
+    assert stale_update.status_code == 409
+    assert stale_update.json()["error"] == "version_conflict"
+    assert stale_update.json()["actual"] == legacy_update.json()["version"]
 
     archived = client.patch(
         f"/api/jobs/{job_id}",
         headers=headers,
-        json={"status": "closed", "archived": True},
+        json={
+            "status": "closed",
+            "archived": True,
+            "version": legacy_update.json()["version"],
+        },
     )
     assert archived.status_code == 200
     assert archived.json()["status"] == "closed"
     assert archived.json()["archived"] is True
+    assert archived.json()["title"] == "Canonical job status"
 
     listed = client.get("/api/jobs?status=archived", headers=headers)
     assert listed.status_code == 200

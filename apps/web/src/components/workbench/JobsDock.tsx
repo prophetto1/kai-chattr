@@ -404,13 +404,19 @@ export function JobsDock() {
   const updateJob = useCallback(
     async (jobId: number, body: Record<string, unknown>, key = `job-${jobId}`) => {
       await withSave(key, async () => {
+        const job = jobs.find((item) => item.id === jobId)
+        const version = Number(job?.version)
+        const payload =
+          Number.isFinite(version) && version > 0
+            ? { ...body, version }
+            : body
         await chattrJson<JobItem>(`/api/jobs/${jobId}`, {
-          body: JSON.stringify(body),
+          body: JSON.stringify(payload),
           method: 'PATCH',
         })
       })
     },
-    [withSave]
+    [jobs, withSave]
   )
 
   const setJobEdit = useCallback((jobId: number, value: { title: string; assignee: string }) => {

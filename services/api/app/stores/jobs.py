@@ -44,6 +44,39 @@ def normalize_status_archived(
     return normalized, next_archived
 
 
+class JobVersionConflict(Exception):
+    def __init__(self, job_id: int, expected: int, actual: int):
+        super().__init__(f"job #{job_id} version conflict: expected {expected}, current {actual}")
+        self.job_id = job_id
+        self.expected = expected
+        self.actual = actual
+
+
+def _coerce_version(value, default: int = 1) -> int:
+    try:
+        version = int(value)
+    except (TypeError, ValueError):
+        return default
+    return version if version > 0 else default
+
+
+def _job_version(job: dict) -> int:
+    return _coerce_version(job.get("version"), default=1)
+
+
+def _check_expected_version(job: dict, expected_version: int | None) -> None:
+    if expected_version is None:
+        return
+    expected = _coerce_version(expected_version, default=1)
+    actual = _job_version(job)
+    if expected != actual:
+        raise JobVersionConflict(int(job.get("id", 0)), expected, actual)
+
+
+def _bump_version(job: dict) -> None:
+    job["version"] = _job_version(job) + 1
+
+
 class JobStore:
     def __init__(self, path: str):
         self._path = Path(path)
@@ -131,6 +164,7 @@ class JobStore:
         )
         out["status"] = status
         out["archived"] = archived
+        out["version"] = _job_version(out)
         return out
 
     def list_all(self, channel: str | None = None,
@@ -168,7 +202,8 @@ class JobStore:
                status: str | None = None,
                created_at: float | None = None,
                updated_at: float | None = None,
-               archived: bool | None = None) -> dict:
+               archived: bool | None = None,
+               version: int | None = None) -> dict:
         """Create a new job. Returns the job dict."""
         with self._lock:
             st, is_archived = normalize_status_archived(status, archived)
@@ -189,6 +224,7 @@ class JobStore:
                 "created_at": created_at or now,
                 "updated_at": updated_at or now,
                 "sort_order": self._next_sort_order_locked(st),
+                "version": _coerce_version(version, default=1),
             }
             self._next_id += 1
             self._jobs.append(a)
@@ -197,7 +233,13 @@ class JobStore:
         self._fire("create", result)
         return result
 
-    def update_status(self, job_id: int, status: str, archived: bool | None = None) -> dict | None:
+    def update_status(
+        self,
+        job_id: int,
+        status: str,
+        archived: bool | None = None,
+        expected_version: int | None = None,
+    ) -> dict | None:
         """Update job status. Valid canonical statuses: todo, active, closed."""
         normalized = normalize_status(status)
         if normalized is None:
@@ -205,6 +247,7 @@ class JobStore:
         with self._lock:
             for a in self._jobs:
                 if a["id"] == job_id:
+                    _check_expected_version(a, expected_version)
                     old_status = normalize_status(a.get("status"))
                     next_status, next_archived = normalize_status_archived(
                         status,
@@ -221,6 +264,7 @@ class JobStore:
                     a["updated_at"] = time.time()
                     if next_order is not None:
                         a["sort_order"] = next_order
+                    _bump_version(a)
                     self._save()
                     result = self._job_dict(a)
                     break
@@ -229,12 +273,19 @@ class JobStore:
         self._fire("update", result)
         return result
 
-    def update_archived(self, job_id: int, archived: bool) -> dict | None:
+    def update_archived(
+        self,
+        job_id: int,
+        archived: bool,
+        expected_version: int | None = None,
+    ) -> dict | None:
         with self._lock:
             for a in self._jobs:
                 if a["id"] == job_id:
+                    _check_expected_version(a, expected_version)
                     a["archived"] = _coerce_archived(archived)
                     a["updated_at"] = time.time()
+                    _bump_version(a)
                     self._save()
                     result = self._job_dict(a)
                     break
@@ -243,12 +294,19 @@ class JobStore:
         self._fire("update", result)
         return result
 
-    def update_title(self, job_id: int, title: str) -> dict | None:
+    def update_title(
+        self,
+        job_id: int,
+        title: str,
+        expected_version: int | None = None,
+    ) -> dict | None:
         with self._lock:
             for a in self._jobs:
                 if a["id"] == job_id:
+                    _check_expected_version(a, expected_version)
                     a["title"] = title.strip()[:120]
                     a["updated_at"] = time.time()
+                    _bump_version(a)
                     self._save()
                     result = self._job_dict(a)
                     break
@@ -257,12 +315,19 @@ class JobStore:
         self._fire("update", result)
         return result
 
-    def update_assignee(self, job_id: int, assignee: str) -> dict | None:
+    def update_assignee(
+        self,
+        job_id: int,
+        assignee: str,
+        expected_version: int | None = None,
+    ) -> dict | None:
         with self._lock:
             for a in self._jobs:
                 if a["id"] == job_id:
+                    _check_expected_version(a, expected_version)
                     a["assignee"] = assignee.strip()
                     a["updated_at"] = time.time()
+                    _bump_version(a)
                     self._save()
                     result = self._job_dict(a)
                     break
@@ -296,6 +361,7 @@ class JobStore:
                         msg["type"] = msg_type
                     a["messages"].append(msg)
                     a["updated_at"] = time.time()
+                    _bump_version(a)
                     self._save()
                     result_msg = dict(msg)
                     result_msg["job_id"] = job_id
@@ -339,6 +405,7 @@ class JobStore:
                 msg["attachments"] = []
                 msg["updated_at"] = time.time()
                 a["updated_at"] = time.time()
+                _bump_version(a)
                 self._save()
                 payload = {"job_id": job_id, "message_id": msg_id}
                 break
@@ -360,6 +427,7 @@ class JobStore:
                 msg["resolved"] = resolution.strip()[:32] or "dismissed"
                 msg["updated_at"] = time.time()
                 a["updated_at"] = time.time()
+                _bump_version(a)
                 self._save()
                 result_msg = dict(msg)
                 result_msg["job_id"] = job_id
@@ -369,11 +437,12 @@ class JobStore:
         self._fire("message", {"job_id": job_id, "message": result_msg})
         return result_msg
 
-    def delete(self, job_id: int) -> dict | None:
+    def delete(self, job_id: int, expected_version: int | None = None) -> dict | None:
         """Permanently delete a job."""
         with self._lock:
             for i, a in enumerate(self._jobs):
                 if a["id"] == job_id:
+                    _check_expected_version(a, expected_version)
                     removed = self._jobs.pop(i)
                     self._save()
                     result = self._job_dict(removed)
@@ -432,6 +501,8 @@ class JobStore:
                 old_order = int(item.get("sort_order", 0) or 0)
                 if old_order != new_order:
                     item["sort_order"] = new_order
+                    item["updated_at"] = time.time()
+                    _bump_version(item)
                     changed.append(self._job_dict(item))
 
             if changed:

@@ -2,6 +2,8 @@ import os
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = ROOT.parents[1]
 if str(ROOT) not in sys.path:
@@ -191,6 +193,7 @@ def test_sqlalchemy_job_store_supports_workflow_lifecycle(tmp_path):
     assert created["type"] == "workflow"
     assert created["status"] == "todo"
     assert created["archived"] is False
+    assert created["version"] == 1
     assert created["sort_order"] == 1
     assert store.list_all(status="todo")[0]["title"] == "Define the workflow schema"
     assert store.list_all(status="open")[0]["status"] == "todo"
@@ -205,6 +208,7 @@ def test_sqlalchemy_job_store_supports_workflow_lifecycle(tmp_path):
     updated = store.update_status(created["id"], "done")
     assert updated["status"] == "active"
     assert updated["archived"] is False
+    assert updated["version"] > created["version"]
 
     archived = store.update_status(created["id"], "archived")
     assert archived["status"] == "closed"
@@ -218,6 +222,41 @@ def test_sqlalchemy_job_store_supports_workflow_lifecycle(tmp_path):
     deleted = store.delete(created["id"])
     assert deleted["id"] == created["id"]
     assert store.list_all() == []
+
+
+def test_sqlalchemy_job_store_rejects_stale_expected_version(tmp_path):
+    from app.stores.jobs import JobVersionConflict
+    from app.stores.jobs_db import SqlAlchemyJobStore
+
+    store = SqlAlchemyJobStore(f"sqlite:///{tmp_path / 'jobs.db'}")
+    created = store.create(
+        title="Protect concurrent writes",
+        job_type="workflow",
+        channel="general",
+        created_by="codex",
+    )
+
+    first = store.update_status(
+        created["id"],
+        "active",
+        expected_version=created["version"],
+    )
+
+    assert first["status"] == "active"
+    assert first["version"] == created["version"] + 1
+
+    with pytest.raises(JobVersionConflict) as exc:
+        store.update_title(
+            created["id"],
+            "Stale writer should not win",
+            expected_version=created["version"],
+        )
+
+    assert exc.value.expected == created["version"]
+    assert exc.value.actual == first["version"]
+    current = store.get(created["id"])
+    assert current["status"] == "active"
+    assert current["title"] == "Protect concurrent writes"
 
 
 def test_job_store_factory_uses_sqlalchemy_when_database_configured(tmp_path):

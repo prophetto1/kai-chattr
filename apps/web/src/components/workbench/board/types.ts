@@ -26,6 +26,7 @@ export type JobItem = {
   body?: string
   status: 'todo' | 'active' | 'closed' | string
   archived?: boolean
+  version?: number
   channel?: string
   assignee?: string
   created_by?: string

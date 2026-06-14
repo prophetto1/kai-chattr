@@ -34,6 +34,7 @@ class BoardWorkflowUpdateRequest(BaseModel):
     archived: bool | None = None
     title: str | None = Field(default=None, max_length=120)
     assignee: str | None = Field(default=None, max_length=120)
+    version: int | None = Field(default=None, ge=1)
 
     _strip_status = field_validator("status", mode="before")(_strip)
     _strip_title = field_validator("title", mode="before")(_strip)
