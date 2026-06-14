@@ -4,6 +4,11 @@ Repo-root changelog (decision 2026-06-11: lives here, not in the Planned store).
 
 ## 2026-06-13
 
+### refactor(web): consolidate fonts — 2 canonical tokens, drop 2 dead typefaces
+- Removed **Plus Jakarta Sans** (loaded via `@fontsource` but referenced by nothing): `apps/web/src/main.tsx` drops its 4 weight imports → CSS bundle **246.73 → 226.29 kB** (gzip 64.44 → 55.29). Removed the **Instrument Serif phantom** (`--kai-font-serif`/`--bd-font-serif`: named but never loaded or used).
+- Consolidated the 14 tangled font variables in `tokens.css` to **2 canonical tokens** — `--font-ui` (Inter, all product surfaces) and `--font-mono` (JetBrains Mono, code/terminal). The legacy `--bd-font-*` / `--kai-font-*` / `--font-*` names now **forward** to those two (single source of truth; behavior unchanged — `--font-mono` still overrides Tailwind's default so the `font-mono` utility = JetBrains). Forwarders marked deprecated for a later sweep.
+- Tests: `pnpm --dir apps/web run build` exit 0 (CSS 226.29 kB, ~20 kB smaller); grep confirms no residual `plus-jakarta` / `Instrument Serif` / serif-var refs.
+
 ### refactor(web): merge token CSS into one honestly-named tokens.css (2 files, not 3)
 - Renamed `apps/web/src/styles/design-tokens.css` → `styles/tokens.css` (via `git mv`, history preserved) and merged the misleadingly-named `shadcn-tokens.css` (which was the Tailwind `@theme` registration, not a theme) into it. The token CSS is now **2 files with self-evident names**: `tokens.css` (theme-independent primitives + every theme palette + the `@theme` registration) and `styles.css` (entry + base element styles + the app-shell sidebar-utility registration). Deleted `shadcn-tokens.css`; repointed the `styles.css` `@import` and rewrote every stale comment that named the old files.
 - Nothing-breaks proof: `pnpm --dir apps/web run build` exit 0, and the emitted CSS bundle is **byte-identical at 246.73 kB / gzip 64.44 kB** (same as before the merge → no token or utility lost). Grep confirms zero live references to the old filenames under `apps/web/src` (only an intentional provenance note in `tokens.css`'s header).

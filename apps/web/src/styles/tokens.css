@@ -34,22 +34,30 @@
  * 1. PRIMITIVES — theme-independent (fonts, fixed accents)
  * ════════════════════════════════════════════════════════════════════════ */
 :root {
-  /* Product fonts: Inter/system UI for product surfaces, JetBrains Mono code. */
-  --bd-font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --bd-font-prose: var(--bd-font-ui);
-  --bd-font-display: var(--bd-font-ui);
-  --bd-font-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas,
-    monospace;
-  --kai-font-display: var(--bd-font-prose);
-  --kai-font-sans: var(--bd-font-ui);
-  --kai-font-mono: var(--bd-font-mono);
-  --kai-font-serif: 'Instrument Serif', 'Times New Roman', serif;
-  --font-display: var(--bd-font-display);
-  --font-sans: var(--bd-font-ui);
-  --font-nav: var(--bd-font-ui);
-  --font-mono: var(--bd-font-mono);
-  --app-font-sans: var(--bd-font-ui);
-  --bd-font-serif: var(--kai-font-serif);
+  /*
+   * TWO product fonts — every surface resolves to one of these:
+   *   --font-ui   = Inter           (all product / UI surfaces)
+   *   --font-mono = JetBrains Mono   (code / terminal)
+   * Only these two are loaded (apps/web/src/main.tsx). The --bd-font-* /
+   * --kai-font-* / --font-* names below are deprecated FORWARDERS kept for
+   * back-compat — migrate consumers to the two canonical names, then delete.
+   * (Instrument Serif removed: it was referenced but never loaded or used.)
+   */
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* deprecated forwarders → resolve to the two canonical fonts above */
+  --bd-font-ui: var(--font-ui);
+  --bd-font-prose: var(--font-ui);
+  --bd-font-display: var(--font-ui);
+  --bd-font-mono: var(--font-mono);
+  --kai-font-display: var(--font-ui);
+  --kai-font-sans: var(--font-ui);
+  --kai-font-mono: var(--font-mono);
+  --font-display: var(--font-ui);
+  --font-sans: var(--font-ui);
+  --font-nav: var(--font-ui);
+  --app-font-sans: var(--font-ui);
 
   /* KAI fixed content accents (theme-independent, home/marketing content). */
   --kai-brand-k: #f06138;
