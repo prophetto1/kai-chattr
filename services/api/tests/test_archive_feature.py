@@ -246,10 +246,9 @@ class ImportExportApiTests(unittest.TestCase):
         app.room_settings = {
             "title": "chattr",
             "username": "user",
-            "font": "sans",
+            "fonts": {},
             "channels": ["general"],
             "history_limit": "all",
-            "contrast": "normal",
             "custom_roles": [],
         }
 

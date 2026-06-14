@@ -13,10 +13,11 @@ export type ThemeCatalog = {
   selected_theme: string
 }
 
+export type FontSlot = 'ui' | 'display' | 'prose' | 'mono'
+
 export type WorkbenchSettings = {
   selected_theme?: string
-  font?: string
-  contrast?: string
+  fonts?: Partial<Record<FontSlot, string>>
   [key: string]: unknown
 }
 
@@ -38,8 +39,7 @@ export type SettingsSchemaField = {
 export type WorkbenchSettingsSchema = {
   properties: {
     selected_theme?: SettingsSchemaField
-    font?: SettingsSchemaField
-    contrast?: SettingsSchemaField
+    fonts?: SettingsSchemaField
   }
   required?: string[]
 }

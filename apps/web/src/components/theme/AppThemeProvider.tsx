@@ -12,31 +12,35 @@ import {
   getSettingsSchema,
   listThemes,
   patchSettings,
-  type SettingsSchemaOption,
   type WorkbenchSettings,
   type WorkbenchSettingsSchema,
 } from '@/lib/theme-api'
 import type { ThemeSummary } from '@/lib/theme-api'
+import {
+  fontSlotCatalog,
+  type FontFaceOption,
+  type FontSlotName,
+} from '@/lib/design-system'
 
 const DEFAULT_THEME_ID = 'night'
-const DEFAULT_FONT_ID = 'sans'
-const DEFAULT_CONTRAST_ID = 'normal'
+
+const FONT_SLOT_LABELS: Record<FontSlotName, string> = {
+  ui: 'Interface',
+  display: 'Display',
+  prose: 'Reading',
+  mono: 'Mono',
+}
+
+const FONT_SLOT_DESCRIPTIONS: Record<FontSlotName, string> = {
+  ui: 'Chrome, menus, and dense body — the workhorse face.',
+  display: 'Headings, page titles, and brand moments.',
+  prose: 'Chat messages and long-form reading.',
+  mono: 'Terminal, code, and diffs.',
+}
 
 const FALLBACK_THEMES: ThemeSummary[] = [
-  {
-    id: 'day',
-    label: 'Day',
-    description: 'Light token palette',
-    color_scheme: 'light',
-    html_classes: [],
-  },
-  {
-    id: 'night',
-    label: 'Night',
-    description: 'Default dark token palette',
-    color_scheme: 'dark',
-    html_classes: ['dark'],
-  },
+  { id: 'day', label: 'Day', description: 'Light token palette', color_scheme: 'light', html_classes: [] },
+  { id: 'night', label: 'Night', description: 'Default dark token palette', color_scheme: 'dark', html_classes: ['dark'] },
   {
     id: 'catppuccin',
     label: 'Catppuccin',
@@ -44,13 +48,7 @@ const FALLBACK_THEMES: ThemeSummary[] = [
     color_scheme: 'dark',
     html_classes: ['dark', 'catppuccin'],
   },
-  {
-    id: 'ember',
-    label: 'Ember',
-    description: 'Warm dark token palette',
-    color_scheme: 'dark',
-    html_classes: ['dark', 'ember'],
-  },
+  { id: 'ember', label: 'Ember', description: 'Warm dark token palette', color_scheme: 'dark', html_classes: ['dark', 'ember'] },
   {
     id: 'graphite',
     label: 'Graphite',
@@ -60,37 +58,9 @@ const FALLBACK_THEMES: ThemeSummary[] = [
   },
 ]
 
-const FALLBACK_FONT_OPTIONS: SettingsSchemaOption[] = [
-  { value: 'sans', label: 'Sans', description: 'System UI + Inter', html_classes: ['font-family-sans'] },
-  { value: 'serif', label: 'Serif', description: 'Readable display prose', html_classes: ['font-family-serif'] },
-  { value: 'mono', label: 'Mono', description: 'Monospace text and code', html_classes: ['font-family-mono'] },
-]
-
-const FALLBACK_CONTRAST_OPTIONS: SettingsSchemaOption[] = [
-  { value: 'normal', label: 'Normal', description: 'Default contrast', html_classes: ['contrast-normal'] },
-  { value: 'high', label: 'High', description: 'Increased contrast', html_classes: ['contrast-high'] },
-]
-
-function normalizeSchemaOptions(
-  options: ReadonlyArray<SettingsSchemaOption> | undefined,
-  fallback: ReadonlyArray<SettingsSchemaOption>,
-): SettingsSchemaOption[] {
-  const normalized = (options ?? [])
-    .filter((option) => !!option?.value?.trim())
-    .map((option) => ({
-      value: option.value,
-      label: option.label,
-      description: option.description,
-      color_scheme: option.color_scheme,
-      html_classes: option.html_classes ?? [],
-    }))
-
-  return normalized.length > 0 ? normalized : [...fallback]
-}
-
 function normalizeThemeOptions(
   themeCatalog: ThemeSummary[] | undefined,
-  schemaThemeOptions: ReadonlyArray<SettingsSchemaOption> | undefined,
+  schemaThemeOptions: ReadonlyArray<{ value: string; label: string; description?: string; color_scheme?: 'light' | 'dark'; html_classes?: string[] }> | undefined,
 ): ThemeSummary[] {
   if (themeCatalog && themeCatalog.length > 0) {
     return themeCatalog
@@ -109,65 +79,37 @@ function normalizeThemeOptions(
   return schemaThemes.length > 0 ? schemaThemes : FALLBACK_THEMES
 }
 
-function collectManagedClasses(...optionGroups: ReadonlyArray<ReadonlyArray<{ html_classes?: string[] }>>) {
-  const classes = new Set<string>()
-
-  for (const group of optionGroups) {
-    for (const option of group) {
-      if (!option?.html_classes) {
-        continue
-      }
-      for (const className of option.html_classes) {
-        classes.add(className)
-      }
-    }
-  }
-
-  return classes
-}
-
-function applyWorkbenchThemeSettings({
-  selectedTheme,
-  selectedFont,
-  selectedContrast,
-  themes,
-  fontOptions,
-  contrastOptions,
-}: {
-  selectedTheme: string
-  selectedFont: string
-  selectedContrast: string
-  themes: ThemeSummary[]
-  fontOptions: SettingsSchemaOption[]
-  contrastOptions: SettingsSchemaOption[]
-}) {
+function applyThemeClasses(themes: ThemeSummary[], selectedTheme: string) {
   const root = document.documentElement
 
-  const selectedThemeOption = themes.find((theme) => theme.id === selectedTheme) ?? themes[0]
-  const selectedFontOption = fontOptions.find((option) => option.value === selectedFont) ?? fontOptions[0]
-  const selectedContrastOption =
-    contrastOptions.find((option) => option.value === selectedContrast) ?? contrastOptions[0]
-
-  const managedClasses = collectManagedClasses(themes, fontOptions, contrastOptions)
-  for (const className of managedClasses) {
+  const managed = new Set<string>()
+  for (const theme of themes) {
+    for (const className of theme.html_classes ?? []) {
+      managed.add(className)
+    }
+  }
+  for (const className of managed) {
     root.classList.remove(className)
   }
 
-  for (const className of selectedThemeOption?.html_classes ?? []) {
-    root.classList.add(className)
-  }
-  for (const className of selectedFontOption?.html_classes ?? []) {
-    root.classList.add(className)
-  }
-  for (const className of selectedContrastOption?.html_classes ?? []) {
+  const selected = themes.find((theme) => theme.id === selectedTheme) ?? themes[0]
+  for (const className of selected?.html_classes ?? []) {
     root.classList.add(className)
   }
 
-  root.dataset.theme = selectedThemeOption?.id ?? DEFAULT_THEME_ID
-
-  if (selectedThemeOption?.color_scheme) {
-    root.style.colorScheme = selectedThemeOption.color_scheme
+  root.dataset.theme = selected?.id ?? DEFAULT_THEME_ID
+  if (selected?.color_scheme) {
+    root.style.colorScheme = selected.color_scheme
   }
+}
+
+export type FontSlotView = {
+  slot: FontSlotName
+  label: string
+  description: string
+  cssVariable: string
+  options: FontFaceOption[]
+  selected: string
 }
 
 type AppThemeContextValue = {
@@ -175,14 +117,10 @@ type AppThemeContextValue = {
   isLoading: boolean
   isSaving: boolean
   selectedTheme: string
-  selectedFont: string
-  selectedContrast: string
   setTheme: (themeId: string) => void
-  setFont: (font: string) => void
-  setContrast: (contrast: string) => void
   themes: ThemeSummary[]
-  fontOptions: SettingsSchemaOption[]
-  contrastOptions: SettingsSchemaOption[]
+  fontSlots: FontSlotView[]
+  setFontFamily: (slot: FontSlotName, value: string) => void
   settingsSchema: WorkbenchSettingsSchema | null
 }
 
@@ -198,20 +136,10 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
   })
 
   const themeSchemaOptions = settingsSchemaQuery.data?.properties?.selected_theme?.['x-options']
-  const fontSchemaOptions = settingsSchemaQuery.data?.properties?.font?.['x-options']
-  const contrastSchemaOptions = settingsSchemaQuery.data?.properties?.contrast?.['x-options']
   const themes = normalizeThemeOptions(themesQuery.data?.items, themeSchemaOptions)
-  const fontOptions = normalizeSchemaOptions(fontSchemaOptions, FALLBACK_FONT_OPTIONS)
-  const contrastOptions = normalizeSchemaOptions(contrastSchemaOptions, FALLBACK_CONTRAST_OPTIONS)
-
   const schemaThemeDefault = settingsSchemaQuery.data?.properties?.selected_theme?.default
-  const schemaFontDefault = settingsSchemaQuery.data?.properties?.font?.default
-  const schemaContrastDefault = settingsSchemaQuery.data?.properties?.contrast?.default
 
   const selectedThemeFromSettings = settingsQuery.data?.selected_theme
-  const selectedFontFromSettings = settingsQuery.data?.font
-  const selectedContrastFromSettings = settingsQuery.data?.contrast
-
   const selectedTheme =
     typeof selectedThemeFromSettings === 'string' && themes.some((theme) => theme.id === selectedThemeFromSettings)
       ? selectedThemeFromSettings
@@ -219,32 +147,38 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
         ? schemaThemeDefault
         : DEFAULT_THEME_ID
 
-  const selectedFont =
-    typeof selectedFontFromSettings === 'string' && fontOptions.some((option) => option.value === selectedFontFromSettings)
-      ? selectedFontFromSettings
-      : typeof schemaFontDefault === 'string' && fontOptions.some((option) => option.value === schemaFontDefault)
-        ? schemaFontDefault
-        : DEFAULT_FONT_ID
-
-  const selectedContrast =
-    typeof selectedContrastFromSettings === 'string' &&
-      contrastOptions.some((option) => option.value === selectedContrastFromSettings)
-      ? selectedContrastFromSettings
-      : typeof schemaContrastDefault === 'string' &&
-          contrastOptions.some((option) => option.value === schemaContrastDefault)
-        ? schemaContrastDefault
-        : DEFAULT_CONTRAST_ID
+  const savedFonts = settingsQuery.data?.fonts
+  const fontSlots = useMemo<FontSlotView[]>(() => {
+    return fontSlotCatalog().map((entry) => {
+      const saved = savedFonts?.[entry.slot]
+      const selected =
+        typeof saved === 'string' && entry.options.some((option) => option.value === saved)
+          ? saved
+          : entry.default
+      return {
+        slot: entry.slot,
+        label: FONT_SLOT_LABELS[entry.slot] ?? entry.slot,
+        description: FONT_SLOT_DESCRIPTIONS[entry.slot] ?? '',
+        cssVariable: entry.cssVariable,
+        options: entry.options,
+        selected,
+      }
+    })
+  }, [savedFonts])
 
   useEffect(() => {
-    applyWorkbenchThemeSettings({
-      selectedTheme,
-      selectedFont,
-      selectedContrast,
-      themes,
-      fontOptions,
-      contrastOptions,
-    })
-  }, [selectedTheme, selectedFont, selectedContrast, themes, fontOptions, contrastOptions])
+    applyThemeClasses(themes, selectedTheme)
+  }, [themes, selectedTheme])
+
+  useEffect(() => {
+    const root = document.documentElement
+    for (const slot of fontSlots) {
+      const option = slot.options.find((candidate) => candidate.value === slot.selected)
+      if (option) {
+        root.style.setProperty(slot.cssVariable, option.stack)
+      }
+    }
+  }, [fontSlots])
 
   const updateSettingsMutation = useMutation({
     mutationFn: patchSettings,
@@ -254,6 +188,7 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
       queryClient.setQueryData<WorkbenchSettings>(['app-theme', 'settings'], {
         ...(previousSettings ?? {}),
         ...incomingSettings,
+        fonts: { ...(previousSettings?.fonts ?? {}), ...(incomingSettings.fonts ?? {}) },
       })
       return { previousSettings }
     },
@@ -276,52 +211,40 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
             : settingsSchemaQuery.error instanceof Error
               ? settingsSchemaQuery.error
               : null,
-      isLoading:
-        themesQuery.isLoading ||
-        settingsQuery.isLoading ||
-        settingsSchemaQuery.isLoading,
+      isLoading: themesQuery.isLoading || settingsQuery.isLoading || settingsSchemaQuery.isLoading,
       isSaving: updateSettingsMutation.isPending,
       selectedTheme,
-      selectedFont,
-      selectedContrast,
-      setFont: (font) => {
-        if (!fontOptions.some((option) => option.value === font)) {
-          return
-        }
-        updateSettingsMutation.mutate({ font })
-      },
-      setContrast: (contrast) => {
-        if (!contrastOptions.some((option) => option.value === contrast)) {
-          return
-        }
-        updateSettingsMutation.mutate({ contrast })
-      },
       setTheme: (themeId) => {
         if (themes.some((theme) => theme.id === themeId)) {
           updateSettingsMutation.mutate({ selected_theme: themeId })
         }
       },
       themes,
-      fontOptions,
-      contrastOptions,
+      fontSlots,
+      setFontFamily: (slot, value) => {
+        const entry = fontSlotCatalog().find((candidate) => candidate.slot === slot)
+        if (!entry || !entry.options.some((option) => option.value === value)) {
+          return
+        }
+        const currentFonts = (settingsQuery.data?.fonts ?? {}) as Partial<Record<FontSlotName, string>>
+        updateSettingsMutation.mutate({ fonts: { ...currentFonts, [slot]: value } })
+      },
       settingsSchema: settingsSchemaQuery.data ?? null,
     }),
     [
-      contrastOptions,
       selectedTheme,
-      selectedFont,
-      selectedContrast,
-      settingsQuery.error,
       themes,
+      fontSlots,
+      settingsQuery.data,
+      settingsQuery.error,
+      settingsQuery.isLoading,
       themesQuery.error,
       themesQuery.isLoading,
-      fontOptions,
       settingsSchemaQuery.error,
       settingsSchemaQuery.isLoading,
-      updateSettingsMutation,
-      settingsQuery.isLoading,
       settingsSchemaQuery.data,
-    ]
+      updateSettingsMutation,
+    ],
   )
 
   return <AppThemeContext.Provider value={value}>{children}</AppThemeContext.Provider>

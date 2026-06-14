@@ -58,8 +58,7 @@ from app.database import (
 from app.schemas.workbench_settings import (
     DEFAULT_ROOM_SETTINGS,
     DEFAULT_THEME_ID,
-    WORKBENCH_CONTRAST_IDS,
-    WORKBENCH_FONT_IDS,
+    WORKBENCH_FONT_SLOTS,
     WORKBENCH_THEME_OPTIONS,
     WORKBENCH_THEME_IDS,
     WORKBENCH_SETTINGS_SCHEMA,
@@ -1420,8 +1419,6 @@ async def websocket_endpoint(websocket: WebSocket):
                     room_settings["title"] = new["title"].strip() or "noname"
                 if "username" in new and isinstance(new["username"], str):
                     room_settings["username"] = new["username"].strip() or "user"
-                if "font" in new and new["font"] in WORKBENCH_FONT_IDS:
-                    room_settings["font"] = new["font"]
                 if "max_agent_hops" in new:
                     try:
                         hops = int(new["max_agent_hops"])
@@ -1436,8 +1433,14 @@ async def websocket_endpoint(websocket: WebSocket):
                     if mention in ("all", "both", "none") or mention in agent_names:
                         router.set_default_mention(mention)
                         room_settings["default_mention"] = router.default_mention
-                if "contrast" in new and new["contrast"] in WORKBENCH_CONTRAST_IDS:
-                    room_settings["contrast"] = new["contrast"]
+                if "fonts" in new and isinstance(new["fonts"], dict):
+                    current_fonts = room_settings.get("fonts")
+                    if not isinstance(current_fonts, dict):
+                        current_fonts = {}
+                    for slot, value in new["fonts"].items():
+                        if slot in WORKBENCH_FONT_SLOTS and isinstance(value, str):
+                            current_fonts[slot] = value
+                    room_settings["fonts"] = current_fonts
                 if "selected_theme" in new:
                     selected_theme = _normalize_theme_id(new["selected_theme"])
                     if selected_theme:
@@ -1810,11 +1813,10 @@ async def patch_settings(request: Request):
         return JSONResponse({"error": "settings payload must be an object"}, status_code=400)
 
     selected_theme = body.get("selected_theme")
-    font = body.get("font")
-    contrast = body.get("contrast")
-    if selected_theme is None and font is None and contrast is None:
+    fonts = body.get("fonts")
+    if selected_theme is None and fonts is None:
         return JSONResponse(
-            {"error": "selected_theme, font, or contrast is required"},
+            {"error": "selected_theme or fonts is required"},
             status_code=400,
         )
 
@@ -1827,29 +1829,36 @@ async def patch_settings(request: Request):
             },
             status_code=400,
         )
-    if font is not None and font not in WORKBENCH_FONT_IDS:
-        return JSONResponse(
-            {
-                "error": "font is not available",
-                "available": sorted(WORKBENCH_FONT_IDS),
-            },
-            status_code=400,
-        )
-    if contrast is not None and contrast not in WORKBENCH_CONTRAST_IDS:
-        return JSONResponse(
-            {
-                "error": "contrast is not available",
-                "available": sorted(WORKBENCH_CONTRAST_IDS),
-            },
-            status_code=400,
-        )
+
+    normalized_fonts: dict | None = None
+    if fonts is not None:
+        if not isinstance(fonts, dict):
+            return JSONResponse({"error": "fonts must be an object"}, status_code=400)
+        for slot, value in fonts.items():
+            if slot not in WORKBENCH_FONT_SLOTS:
+                return JSONResponse(
+                    {
+                        "error": "font slot is not available",
+                        "available": sorted(WORKBENCH_FONT_SLOTS),
+                    },
+                    status_code=400,
+                )
+            if value is not None and not isinstance(value, str):
+                return JSONResponse({"error": "font value must be a string"}, status_code=400)
+        normalized_fonts = dict(fonts)
 
     if normalized_theme:
         room_settings["selected_theme"] = normalized_theme
-    if font is not None:
-        room_settings["font"] = font
-    if contrast is not None:
-        room_settings["contrast"] = contrast
+    if normalized_fonts is not None:
+        current_fonts = room_settings.get("fonts")
+        if not isinstance(current_fonts, dict):
+            current_fonts = {}
+        for slot, value in normalized_fonts.items():
+            if value is None:
+                current_fonts.pop(slot, None)
+            else:
+                current_fonts[slot] = value
+        room_settings["fonts"] = current_fonts
     _save_settings()
     _schedule_runtime_coroutine(broadcast_settings())
     return room_settings

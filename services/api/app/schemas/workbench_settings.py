@@ -17,7 +17,7 @@ _SCHEMA_FALLBACK: dict[str, Any] = {
     "$id": "https://kai-chattr.local/schemas/workbench-settings.schema.json",
     "title": "Workbench Settings",
     "type": "object",
-    "required": ["selected_theme", "font", "contrast"],
+    "required": ["selected_theme"],
     "properties": {
         "selected_theme": {
             "title": "Theme",
@@ -63,28 +63,18 @@ _SCHEMA_FALLBACK: dict[str, Any] = {
                 },
             ],
         },
-        "font": {
-            "title": "Font family",
-            "description": "Primary family for UI surfaces.",
-            "type": "string",
-            "enum": ["sans", "serif", "mono"],
-            "default": "sans",
-            "x-options": [
-                {"value": "sans", "label": "Sans", "description": "System UI + Inter", "html_classes": ["font-family-sans"]},
-                {"value": "serif", "label": "Serif", "description": "Readable display prose", "html_classes": ["font-family-serif"]},
-                {"value": "mono", "label": "Mono", "description": "Monospace text and code", "html_classes": ["font-family-mono"]},
-            ],
-        },
-        "contrast": {
-            "title": "Contrast",
-            "description": "Contrast level for body tokens.",
-            "type": "string",
-            "enum": ["normal", "high"],
-            "default": "normal",
-            "x-options": [
-                {"value": "normal", "label": "Normal", "description": "Default contrast for normal viewing conditions.", "html_classes": ["contrast-normal"]},
-                {"value": "high", "label": "High", "description": "Raised contrast for stronger readability.", "html_classes": ["contrast-high"]},
-            ],
+        "fonts": {
+            "title": "Fonts",
+            "description": "Per-role typeface selection. Keys are font-family slots; values are face ids from the design-system catalog.",
+            "type": "object",
+            "properties": {
+                "ui": {"type": "string"},
+                "display": {"type": "string"},
+                "prose": {"type": "string"},
+                "mono": {"type": "string"},
+            },
+            "additionalProperties": False,
+            "default": {},
         },
     },
     "additionalProperties": True,
@@ -122,15 +112,10 @@ def _options_for(property_name: str) -> tuple[ThemeOption, ...]:
 
 
 WORKBENCH_THEME_OPTIONS: tuple[ThemeOption, ...] = _options_for("selected_theme")
-WORKBENCH_FONT_OPTIONS: tuple[ThemeOption, ...] = _options_for("font")
-WORKBENCH_CONTRAST_OPTIONS: tuple[ThemeOption, ...] = _options_for("contrast")
 WORKBENCH_THEME_IDS: tuple[str, ...] = tuple(
     option["id"] for option in WORKBENCH_THEME_OPTIONS
 )
-WORKBENCH_FONT_IDS: tuple[str, ...] = tuple(option["id"] for option in WORKBENCH_FONT_OPTIONS)
-WORKBENCH_CONTRAST_IDS: tuple[str, ...] = tuple(
-    option["id"] for option in WORKBENCH_CONTRAST_OPTIONS
-)
+WORKBENCH_FONT_SLOTS: tuple[str, ...] = ("ui", "display", "prose", "mono")
 
 
 def _default_for(property_name: str, fallback: str) -> str:
@@ -139,17 +124,14 @@ def _default_for(property_name: str, fallback: str) -> str:
 
 
 DEFAULT_THEME_ID = _default_for("selected_theme", "night")
-DEFAULT_FONT_ID = _default_for("font", "sans")
-DEFAULT_CONTRAST_ID = _default_for("contrast", "normal")
 
 
 DEFAULT_ROOM_SETTINGS = {
     "title": "noname",
     "username": "user",
-    "font": DEFAULT_FONT_ID,
+    "fonts": {},
     "channels": ["general"],
     "history_limit": "all",
-    "contrast": DEFAULT_CONTRAST_ID,
     "custom_roles": [],
     "default_mention": "none",
     "selected_theme": DEFAULT_THEME_ID,

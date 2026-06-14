@@ -3,7 +3,7 @@
   "$id": "https://kai-chattr.local/schemas/workbench-settings.schema.json",
   "title": "Workbench Settings",
   "type": "object",
-  "required": ["selected_theme", "font", "contrast"],
+  "required": ["selected_theme"],
   "properties": {
     "selected_theme": {
       "title": "Theme",
@@ -49,53 +49,18 @@
         }
       ]
     },
-    "font": {
-      "title": "Font family",
-      "description": "Primary family for UI surfaces.",
-      "type": "string",
-      "enum": ["sans", "serif", "mono"],
-      "default": "sans",
-      "x-options": [
-        {
-          "value": "sans",
-          "label": "Sans",
-          "description": "System UI + Inter",
-          "html_classes": ["font-family-sans"]
-        },
-        {
-          "value": "serif",
-          "label": "Serif",
-          "description": "Readable display prose",
-          "html_classes": ["font-family-serif"]
-        },
-        {
-          "value": "mono",
-          "label": "Mono",
-          "description": "Monospace text and code",
-          "html_classes": ["font-family-mono"]
-        }
-      ]
-    },
-    "contrast": {
-      "title": "Contrast",
-      "description": "Contrast level for body tokens.",
-      "type": "string",
-      "enum": ["normal", "high"],
-      "default": "normal",
-      "x-options": [
-        {
-          "value": "normal",
-          "label": "Normal",
-          "description": "Default contrast for normal viewing conditions.",
-          "html_classes": ["contrast-normal"]
-        },
-        {
-          "value": "high",
-          "label": "High",
-          "description": "Raised contrast for stronger readability.",
-          "html_classes": ["contrast-high"]
-        }
-      ]
+    "fonts": {
+      "title": "Fonts",
+      "description": "Per-role typeface selection. Keys are font-family slots; values are face ids from the design-system catalog.",
+      "type": "object",
+      "properties": {
+        "ui": { "type": "string" },
+        "display": { "type": "string" },
+        "prose": { "type": "string" },
+        "mono": { "type": "string" }
+      },
+      "additionalProperties": false,
+      "default": {}
     }
   },
   "additionalProperties": true

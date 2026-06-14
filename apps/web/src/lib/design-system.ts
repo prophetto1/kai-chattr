@@ -10,6 +10,33 @@ type TypographyRole = DesignSystemConfig['typography']['roles'][TypographyRoleNa
 
 export const designSystem = designSystemConfig
 
+export type FontSlotName = keyof DesignSystemConfig['fontFamilies']
+export type FontFaceOption = { value: string; label: string; stack: string }
+export type FontSlotCatalogEntry = {
+  slot: FontSlotName
+  cssVariable: string
+  default: string
+  options: FontFaceOption[]
+}
+
+/** The selectable typeface catalog per font-family slot, driven by design-system.json. */
+export function fontSlotCatalog(): FontSlotCatalogEntry[] {
+  return (Object.keys(designSystemConfig.fontFamilies) as FontSlotName[]).map((slot) => {
+    const family = designSystemConfig.fontFamilies[slot] as {
+      cssVariable: string
+      default?: string
+      options?: FontFaceOption[]
+    }
+    const options = family.options ?? []
+    return {
+      slot,
+      cssVariable: family.cssVariable,
+      default: family.default ?? options[0]?.value ?? '',
+      options,
+    }
+  })
+}
+
 function fontFamilyValue(fontFamilyName: string) {
   const fontFamily = designSystemConfig.fontFamilies[fontFamilyName as FontFamilyName]
   return fontFamily ? `var(${fontFamily.cssVariable})` : 'inherit'
