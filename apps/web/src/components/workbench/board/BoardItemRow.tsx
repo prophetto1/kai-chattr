@@ -11,6 +11,7 @@ import { IconGripVertical } from '@tabler/icons-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/cn'
+import { typographyStyle } from '@/lib/design-system'
 
 type BoardItemRowProps = {
   actions?: ReactNode
@@ -65,13 +66,13 @@ export const BoardItemRow = forwardRef<HTMLDivElement, BoardItemRowProps>(
           </Button>
         ) : null}
         {status ? (
-          <Badge className={cn('h-[18px] shrink-0 rounded-[4px] px-1.5 text-[10px] leading-none', statusClassName)}>
+          <Badge className={cn('h-[18px] shrink-0 rounded-[4px] px-1.5', statusClassName)} style={typographyStyle('ui.micro')}>
             {status}
           </Badge>
         ) : null}
         <div className="min-w-0 flex-1">
           <div className="min-w-0 text-sm leading-5">{title}</div>
-          {meta ? <div className="mt-0.5 text-[11px] text-muted-foreground">{meta}</div> : null}
+          {meta ? <div className="mt-0.5 text-muted-foreground" style={typographyStyle('ui.caption')}>{meta}</div> : null}
         </div>
         {actions ? <div className="ml-1 shrink-0">{actions}</div> : null}
       </div>

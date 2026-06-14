@@ -11,6 +11,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { cn } from '@/lib/cn'
+import { typographyStyle } from '@/lib/design-system'
 
 type BoardSectionProps = {
   action?: ReactNode
@@ -46,12 +47,13 @@ export function BoardSection({
       <span className="truncate text-xs font-semibold text-foreground">{title}</span>
       <Badge
         variant="secondary"
-        className="h-[18px] min-w-[18px] justify-center rounded-full px-1.5 text-[10px] tabular-nums"
+        className="h-[18px] min-w-[18px] justify-center rounded-full px-1.5"
+        style={typographyStyle('code.stat')}
       >
         {count}
       </Badge>
       {description ? (
-        <span className="ml-0.5 min-w-0 truncate text-[11px] font-normal text-muted-foreground">
+        <span className="ml-0.5 min-w-0 truncate text-muted-foreground" style={typographyStyle('ui.caption')}>
           {description}
         </span>
       ) : null}

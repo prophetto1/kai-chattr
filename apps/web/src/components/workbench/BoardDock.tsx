@@ -59,6 +59,7 @@ import {
   normalizeRuleStatus,
 } from '@/components/workbench/board/types'
 import { chattrJson, errorMessage } from '@/lib/chattr-api'
+import { typographyStyle } from '@/lib/design-system'
 
 type DragRecord =
   | { type: 'rule'; id: number; status: RuleLaneId }
@@ -198,7 +199,7 @@ function RuleForm({
         placeholder="Write the rule details..."
         value={body}
       />
-      <div className="mt-1 flex justify-between gap-2 text-[11px] text-muted-foreground">
+      <div className="mt-1 flex justify-between gap-2 text-muted-foreground" style={typographyStyle('ui.caption')}>
         <span>{titleValue.length}/{ruleTitleMaxLength} title</span>
         <span>{body.length}/{ruleBodyMaxLength} details</span>
       </div>
@@ -269,7 +270,8 @@ function RuleRow({
       title={
         <button
           aria-expanded={expanded}
-          className="block w-full min-w-0 max-w-full truncate rounded-sm text-left !text-[13px] font-medium text-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/45"
+          className="block w-full min-w-0 max-w-full truncate rounded-sm text-left text-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/45"
+          style={typographyStyle('ui.body-strong')}
           onClick={() => setExpanded((current) => !current)}
           type="button"
         >
@@ -279,7 +281,7 @@ function RuleRow({
     >
       {expanded ? (
         <div className="min-w-0 max-w-full overflow-hidden rounded-md border border-border/50 bg-muted/20 px-2.5 py-2">
-          <div className="mb-1 text-[11px] text-muted-foreground">
+          <div className="mb-1 text-muted-foreground" style={typographyStyle('ui.caption')}>
             #{rule.id}
             {rule.author ? ` by ${rule.author}` : ''}
           </div>
@@ -368,7 +370,7 @@ function DecisionForm({
         placeholder="Reason"
         value={fields.reason}
       />
-      <div className="mt-1 flex justify-between gap-2 text-[11px] text-muted-foreground">
+      <div className="mt-1 flex justify-between gap-2 text-muted-foreground" style={typographyStyle('ui.caption')}>
         <span>{fields.title.length}/{decisionTitleMaxLength} title</span>
         <span>{fields.details.length}/{decisionDetailsMaxLength} details</span>
         <span>{fields.reason.length}/{decisionReasonMaxLength} reason</span>
@@ -426,7 +428,8 @@ function DecisionRow({
       title={
         <button
           aria-expanded={expanded}
-          className="block w-full min-w-0 max-w-full truncate rounded-sm text-left !text-[13px] font-medium text-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/45"
+          className="block w-full min-w-0 max-w-full truncate rounded-sm text-left text-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/45"
+          style={typographyStyle('ui.body-strong')}
           onClick={() => setExpanded((current) => !current)}
           type="button"
         >
@@ -436,7 +439,7 @@ function DecisionRow({
     >
       {expanded ? (
         <div className="min-w-0 max-w-full overflow-hidden rounded-md border border-border/50 bg-muted/20 px-2.5 py-2">
-          <div className="mb-1 text-[11px] text-muted-foreground">
+          <div className="mb-1 text-muted-foreground" style={typographyStyle('ui.caption')}>
             #{item.id}
             {item.updated_by ? ` updated by ${item.updated_by}` : ''}
           </div>
@@ -913,7 +916,8 @@ export function BoardDock() {
 
                 return (
                   <TabsTrigger
-                    className="group/board-tab h-11 !w-auto flex-none !justify-center rounded-none border-x-0 border-t-0 border-b-2 border-transparent bg-transparent px-0 text-[13px] font-semibold text-muted-foreground shadow-none transition-[border-color,color,transform] duration-150 after:hidden active:scale-[0.98] hover:text-foreground data-[state=active]:border-b-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:bg-transparent [&_svg]:size-4"
+                    className="group/board-tab h-11 !w-auto flex-none !justify-center rounded-none border-x-0 border-t-0 border-b-2 border-transparent bg-transparent px-0 text-muted-foreground shadow-none transition-[border-color,color,transform] duration-150 after:hidden active:scale-[0.98] hover:text-foreground data-[state=active]:border-b-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:bg-transparent [&_svg]:size-4"
+                    style={typographyStyle('ui.body-strong')}
                     disabled={loading}
                     key={tab.id}
                     value={tab.id}
@@ -921,7 +925,8 @@ export function BoardDock() {
                     <Icon className="text-muted-foreground/80 transition-colors duration-150 group-data-[state=active]/board-tab:text-foreground" />
                     <span>{tab.label}</span>
                     <Badge
-                      className="h-4 min-w-4 shrink-0 rounded-[4px] border-border/50 bg-muted/70 px-1 text-[10px] leading-none text-muted-foreground tabular-nums group-data-[state=active]/board-tab:text-foreground"
+                      className="h-4 min-w-4 shrink-0 rounded-[4px] border-border/50 bg-muted/70 px-1 text-muted-foreground group-data-[state=active]/board-tab:text-foreground"
+                      style={typographyStyle('code.stat')}
                       variant="secondary"
                     >
                       {counts[tab.id]}

@@ -28,6 +28,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/cn'
+import { typographyStyle } from '@/lib/design-system'
 
 type RuleStatus = 'active' | 'draft' | 'archived'
 
@@ -240,7 +241,7 @@ function RuleRow({
                 <div className="flex shrink-0 items-center gap-1 sm:self-start">{actions}</div>
               ) : null}
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-2 text-muted-foreground" style={typographyStyle('ui.caption')}>
               <span>{rule.meta}</span>
               <span className="size-1 rounded-full bg-border" />
               <span>{rule.sync}</span>
@@ -263,9 +264,9 @@ function RuleSection({
 }) {
   return (
     <section className="space-y-2">
-      <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+      <div className="flex items-center gap-2 text-muted-foreground" style={typographyStyle('ui.overline')}>
         <span>{label}</span>
-        <Badge className="h-4 min-w-4 px-1 text-[10px]" variant="secondary">
+        <Badge className="h-4 min-w-4 px-1" style={typographyStyle('ui.micro')} variant="secondary">
           {count}
         </Badge>
       </div>
